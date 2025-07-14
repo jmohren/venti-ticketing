@@ -1,7 +1,7 @@
 import React from 'react';
 import { Widget } from '@/core/components/Widget';
-import TicketPoolWidget from './widgets/TicketPoolWidget';
-import TechnicianLoadWidget from './widgets/TechnicianLoadWidget';
+import TicketPoolWidget from '@/app/views/ticket-pool/widgets/TicketPoolWidget';
+import TechnicianLoadWidget from '@/app/views/ticket-pool/widgets/TechnicianLoadWidget';
 
 const TicketPoolView: React.FC = () => {
   return (

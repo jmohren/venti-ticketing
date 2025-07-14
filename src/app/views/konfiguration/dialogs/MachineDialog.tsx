@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Dialog, DialogTitle, DialogContent, DialogActions, TextField, Button, Box, IconButton, Select, MenuItem, InputLabel, FormControl, Typography, List, ListItem, ListItemText } from '@mui/material';
-import { Machine, Task } from '../../../../core/hooks/useMachines';
+import { Machine, Task } from '@/core/hooks/useMachines';
 import AddIcon from '@mui/icons-material/Add';
 
 interface Props {

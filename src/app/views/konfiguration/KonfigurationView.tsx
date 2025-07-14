@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { Widget } from '@/core/components/Widget';
-import MachinesRoomsWidget from './widgets/MachinesRoomsWidget';
-import MachineCalendarWidget from './widgets/MachineCalendarWidget';
-import PlaceholderWidget from './widgets/PlaceholderWidget';
-import { Machine } from '../../../core/hooks/useMachines';
+import MachinesRoomsWidget from '@/app/views/konfiguration/widgets/MachinesRoomsWidget';
+import MachineCalendarWidget from '@/app/views/konfiguration/widgets/MachineCalendarWidget';
+import PlaceholderWidget from '@/app/views/konfiguration/widgets/PlaceholderWidget';
+import { Machine } from '@/core/hooks/useMachines';
 
 const KonfigurationView: React.FC = () => {
   const [selectedMachine, setSelectedMachine] = useState<Machine | null>(null);

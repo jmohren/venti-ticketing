@@ -1,6 +1,6 @@
 import React from 'react';
 import { Widget } from '@/core/components/Widget';
-import InstandhaltungWidget from './widgets/InstandhaltungWidget';
+import InstandhaltungWidget from '@/app/views/instandhaltung/widgets/InstandhaltungWidget';
 
 const InstandhaltungView: React.FC = () => {
   const name = 'Johannes';

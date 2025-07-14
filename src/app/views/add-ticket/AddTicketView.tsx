@@ -1,6 +1,6 @@
 import React from 'react';
 import { Widget } from '@/core/components/Widget';
-import AddTicketWidget from './widgets/AddTicketWidget';
+import AddTicketWidget from '@/app/views/add-ticket/widgets/AddTicketWidget';
 
 const AddTicketView: React.FC = () => {
   return (
