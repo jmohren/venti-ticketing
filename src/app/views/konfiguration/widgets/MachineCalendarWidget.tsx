@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Box, Typography } from '@mui/material';
-import { Machine } from '../../../../hooks/useMachines';
+import { Machine } from '../../../../core/hooks/useMachines';
 import { LocalizationProvider, DateCalendar } from '@mui/x-date-pickers';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 

@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { useTickets } from '../../../../hooks/useTickets';
+import { useTickets } from '../../../../core/hooks/useTickets';
 import { TableContainer, Table, TableHead, TableRow, TableCell, TableBody, Paper } from '@mui/material';
 
 const TechnicianLoadWidget: React.FC = () => {

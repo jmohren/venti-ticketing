@@ -4,11 +4,11 @@ import ForgotPasswordForm from './components/auth/ForgotPasswordForm'
 import ResetPasswordForm from './components/auth/ResetPasswordForm'
 import { CircularProgress, Box, Typography, Button, AppBar, Toolbar } from '@mui/material'
 import { useState, useEffect } from 'react'
-import { useAuth, LoginResponse, User } from './hooks/useAuth'
+import { useAuth, LoginResponse, User } from './core/hooks/useAuth'
 import './App.css'
 import AppMain from './app/AppMain'
 import ForcePasswordChangeScreen from './components/auth/ForcePasswordChangeScreen'
-import { resetIsAdminCache } from './hooks/useIsAdmin'
+import { resetIsAdminCache } from './core/hooks/useIsAdmin'
 
 // Minimalistic loading component for quick auth checks
 const QuickAuthCheck = () => (

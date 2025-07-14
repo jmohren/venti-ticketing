@@ -1,5 +1,5 @@
 import { AuthApiClient, authApiClient } from '../auth/AuthApiClient';
-import { appConfig } from '../../config/appConfig';
+import { appConfig } from '../../../config/appConfig';
 
 // Storage API response interfaces
 export interface StorageUploadResponse {

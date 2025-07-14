@@ -9,7 +9,7 @@ import {
   Alert,
   CircularProgress,
 } from '@mui/material';
-import { useAuth, LoginResponse } from '../../hooks/useAuth';
+import { useAuth, LoginResponse } from '../../core/hooks/useAuth';
 import { Link as RouterLink } from 'react-router-dom';
 
 interface LoginFormProps {

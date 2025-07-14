@@ -5,7 +5,7 @@ import AddTicketView from './views/add-ticket/AddTicketView';
 import TicketPoolView from './views/ticket-pool/TicketPoolView';
 import InstandhaltungView from './views/instandhaltung/InstandhaltungView';
 import KonfigurationView from './views/konfiguration/KonfigurationView';
-import { useUrlAwareNavigation } from '../hooks/useUrlState';
+import { useUrlAwareNavigation } from '../core/hooks/useUrlState';
 
 // Single source of truth for all views
 const BASE_VIEWS = [

@@ -1,6 +1,6 @@
 import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios';
 import { authApiClient, AuthApiClient } from '../auth/AuthApiClient';
-import { appConfig } from '../../config/appConfig';
+import { appConfig } from '../../../config/appConfig';
 
 // Query parameters for flexible PostgREST operations
 export type QueryParams = {

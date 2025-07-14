@@ -2,9 +2,9 @@ import React, { useState } from 'react';
 import { Box } from '@mui/material';
 import { format } from 'date-fns';
 import AddTicketDialog from '../../../../components/tickets/AddTicketDialog';
-import { useTickets, Ticket } from '../../../../hooks/useTickets';
-import SummaryCard from '../../../../components/ui/SummaryCard';
-import KanbanLane from '../../../../components/ui/KanbanLane';
+import { useTickets, Ticket } from '../../../../core/hooks/useTickets';
+import SummaryCard from '../../../../core/ui/SummaryCard';
+import KanbanLane from '../../../../core/ui/KanbanLane';
 
 const priorityColor = {
   rot: '#d32f2f',

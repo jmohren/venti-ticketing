@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Box, TextField, Button, CircularProgress, Alert, Typography } from '@mui/material';
-import { useAuth } from '../../hooks/useAuth';
+import { useAuth } from '../../core/hooks/useAuth';
 
 interface Props {
   onSuccess: () => void;

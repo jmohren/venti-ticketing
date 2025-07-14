@@ -3,7 +3,7 @@ import Widget from '../../../components/Widget';
 import MachinesRoomsWidget from './widgets/MachinesRoomsWidget';
 import MachineCalendarWidget from './widgets/MachineCalendarWidget';
 import PlaceholderWidget from './widgets/PlaceholderWidget';
-import { Machine } from '../../../hooks/useMachines';
+import { Machine } from '../../../core/hooks/useMachines';
 
 const KonfigurationView: React.FC = () => {
   const [selectedMachine, setSelectedMachine] = useState<Machine | null>(null);

@@ -17,10 +17,10 @@ import {
   Typography,
 } from '@mui/material';
 import { format } from 'date-fns';
-import { useAuth } from '../../hooks/useAuth';
+import { useAuth } from '../../core/hooks/useAuth';
 import { IconButton } from '@mui/material';
 import { CloudUpload, Delete, ZoomIn, Clear, ExpandMore } from '@mui/icons-material';
-import { TicketEvent } from '../../hooks/useTickets';
+import { TicketEvent } from '../../core/hooks/useTickets';
 import { DatePicker } from '@mui/x-date-pickers';
 import { LocalizationProvider } from '@mui/x-date-pickers';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';

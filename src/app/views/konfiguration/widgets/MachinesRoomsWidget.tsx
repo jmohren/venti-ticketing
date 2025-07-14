@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Box, Typography, Paper, TextField, IconButton, Button } from '@mui/material';
 import { styled } from '@mui/material/styles';
-import { useMachines, Machine } from '../../../../hooks/useMachines';
+import { useMachines, Machine } from '../../../../core/hooks/useMachines';
 import MachineDialog from '../../../../components/machines/MachineDialog';
 import AddIcon from '@mui/icons-material/Add';
 

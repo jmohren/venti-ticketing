@@ -9,7 +9,7 @@ import {
   Alert,
   CircularProgress,
 } from '@mui/material';
-import { useAuth } from '../../hooks/useAuth';
+import { useAuth } from '../../core/hooks/useAuth';
 import { useSearchParams, Link as RouterLink } from 'react-router-dom';
 
 const ResetPasswordForm: React.FC = () => {
