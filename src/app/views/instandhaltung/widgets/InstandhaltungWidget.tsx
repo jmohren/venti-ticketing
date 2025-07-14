@@ -1,14 +1,15 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Box } from '@mui/material';
 import { format } from 'date-fns';
 import KanbanLane from '@/core/ui/KanbanLane';
 import { useTickets, Ticket } from '@/core/hooks/useTickets';
 import AddTicketDialog from '@/app/views/add-ticket/dialogs/AddTicketDialog';
 import SummaryCard from '@/core/ui/SummaryCard';
+import { useTicketUrlState } from '@/app/utils/ticketUrlState';
 
 const priorityColor = { rot: '#d32f2f', gelb: '#f9a825', gruen: '#2e7d32' } as const;
 
-const TicketCard: React.FC<{ t: Ticket; onClick: () => void; draggable?: boolean; onDropCard: (targetId:string,e:React.DragEvent)=>void }> = ({ t, onClick, draggable, onDropCard }) => {
+const TicketCard: React.FC<{ t: Ticket; onClick: () => void; draggable?: boolean; onDropCard: (targetId:number,e:React.DragEvent)=>void }> = ({ t, onClick, draggable, onDropCard }) => {
   const createdEvent = t.events.find(ev => ev.type === 'create');
   const createdAt = createdEvent ? format(new Date(createdEvent.timestamp), 'dd.MM.yyyy') : '';
 
@@ -21,7 +22,7 @@ const TicketCard: React.FC<{ t: Ticket; onClick: () => void; draggable?: boolean
       bottomRight={createdAt}
       onClick={onClick}
       draggable={draggable}
-      dragData={t.id}
+      dragData={t.id.toString()}
       onDragOver={(e)=>e.preventDefault()}
       onDrop={(e)=> { e.stopPropagation(); onDropCard(t.id,e);} }
       data-ticketid={t.id}
@@ -33,12 +34,12 @@ interface Props { currentUser: string }
 
 const InstandhaltungWidget: React.FC<Props> = ({ currentUser }) => {
   const { tickets, updateTicket, reorderTickets } = useTickets();
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [selected, setSelected] = useState<Ticket|null>(null);
+  const { selectedTicket, isDialogOpen, openTicket, closeTicket } = useTicketUrlState();
 
   const handleDrop = (lane: 'backlog'|'progress'|'done', e: React.DragEvent) => {
     e.preventDefault();
-    const id = e.dataTransfer.getData('text/plain');
+    const idString = e.dataTransfer.getData('text/plain');
+    const id = parseInt(idString);
     const t = tickets.find(t=>t.id===id);
     if(!t) return;
 
@@ -63,9 +64,10 @@ const InstandhaltungWidget: React.FC<Props> = ({ currentUser }) => {
     updateTicket(id, partial);
   };
 
-  const handleCardDrop = (targetId:string,e:React.DragEvent)=>{
+  const handleCardDrop = (targetId:number,e:React.DragEvent)=>{
     e.preventDefault();
-    const dragId = e.dataTransfer.getData('text/plain');
+    const dragIdString = e.dataTransfer.getData('text/plain');
+    const dragId = parseInt(dragIdString);
     if(!dragId||dragId===targetId) return;
     const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
     const after = e.clientY > rect.top + rect.height/2;
@@ -87,25 +89,25 @@ const InstandhaltungWidget: React.FC<Props> = ({ currentUser }) => {
           onDrop={(e)=>handleDrop(lane as any, e)}
           paddingOverride={1}
         >
-          {list.map(t=> <TicketCard key={t.id} t={t} onClick={()=>{setSelected(t); setDialogOpen(true);}} draggable onDropCard={handleCardDrop} />)}
+          {list.map(t=> <TicketCard key={t.id} t={t} onClick={()=>openTicket(t.id)} draggable onDropCard={handleCardDrop} />)}
         </KanbanLane>
       ))}
 
-      {selected && (
+      {selectedTicket && (
         <AddTicketDialog
-          open={dialogOpen}
-          onClose={()=>setDialogOpen(false)}
+          open={isDialogOpen}
+          onClose={closeTicket}
           readOnly
           allowResponsibleEdit
-          onSave={upd => updateTicket(selected.id, { responsible: upd.responsible })}
+          onSave={upd => updateTicket(selectedTicket.id, { responsible: upd.responsible })}
           showStatus
           initialData={{
-            machine: selected.machine,
-            description: selected.description,
-            priority: selected.priority,
-            status: selected.status,
-            responsible: selected.responsible,
-            events: selected.events,
+            machine: selectedTicket.machine,
+            description: selectedTicket.description,
+            priority: selectedTicket.priority,
+            status: selectedTicket.status,
+            responsible: selectedTicket.responsible,
+            events: selectedTicket.events,
           }}
         />
       )}

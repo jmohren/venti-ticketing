@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Box } from '@mui/material';
 import { format } from 'date-fns';
 import AddTicketDialog from '@/app/views/add-ticket/dialogs/AddTicketDialog';
 import { useTickets, Ticket } from '@/core/hooks/useTickets';
 import SummaryCard from '@/core/ui/SummaryCard';
 import KanbanLane from '@/core/ui/KanbanLane';
+import { useTicketUrlState } from '@/app/utils/ticketUrlState';
 
 const priorityColor = {
   rot: '#d32f2f',
@@ -12,7 +13,7 @@ const priorityColor = {
   gruen: '#2e7d32',
 } as const;
 
-const TicketCard: React.FC<{ ticket: Ticket; onClick: () => void; draggable?: boolean; onDropCard: (targetId: string, e: React.DragEvent) => void }> = ({ ticket, onClick, draggable, onDropCard }) => {
+const TicketCard: React.FC<{ ticket: Ticket; onClick: () => void; draggable?: boolean; onDropCard: (targetId: number, e: React.DragEvent) => void }> = ({ ticket, onClick, draggable, onDropCard }) => {
   const createdEvent = ticket.events.find((ev) => ev.type === 'create');
   const createdAt = createdEvent ? format(new Date(createdEvent.timestamp), 'dd.MM.yyyy') : '';
 
@@ -25,7 +26,7 @@ const TicketCard: React.FC<{ ticket: Ticket; onClick: () => void; draggable?: bo
       bottomRight={createdAt}
       onClick={onClick}
       draggable={draggable}
-      dragData={ticket.id}
+      dragData={ticket.id.toString()}
       onDragOver={(e)=>e.preventDefault()}
       onDrop={(e)=>{ e.stopPropagation(); onDropCard(ticket.id, e); }}
       data-ticketid={ticket.id}
@@ -35,15 +36,13 @@ const TicketCard: React.FC<{ ticket: Ticket; onClick: () => void; draggable?: bo
 
 const TicketPoolWidget: React.FC = () => {
   const { tickets, updateTicket, getTicketById, reorderTickets } = useTickets();
+  const { selectedTicket, isDialogOpen, openTicket, closeTicket } = useTicketUrlState();
 
   const backlog = tickets.filter(t => t.status === 'backlog');
   const inProgress = tickets.filter(t => t.status === 'progress');
   const todayDone = tickets.filter(t => t.status === 'done' && t.completedAt && new Date(t.completedAt).toDateString() === new Date().toDateString());
 
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
-
-  const findTicket = (id: string): { lane: 'backlog' | 'progress' | 'done'; index: number } | null => {
+  const findTicket = (id: number): { lane: 'backlog' | 'progress' | 'done'; index: number } | null => {
     const idxBack = backlog.findIndex((t) => t.id === id);
     if (idxBack !== -1) return { lane: 'backlog', index: idxBack };
     const idxProg = inProgress.findIndex((t) => t.id === id);
@@ -55,8 +54,9 @@ const TicketPoolWidget: React.FC = () => {
 
   const handleDrop = (lane: 'backlog' | 'progress' | 'done', e: React.DragEvent) => {
     e.preventDefault();
-    const id = e.dataTransfer.getData('text/plain');
-    if (!id) return;
+    const idString = e.dataTransfer.getData('text/plain');
+    if (!idString) return;
+    const id = parseInt(idString);
     const ticketLoc = findTicket(id);
     if (!ticketLoc) return;
     // If same lane, do nothing
@@ -90,13 +90,14 @@ const TicketPoolWidget: React.FC = () => {
 
     // Retrieve the freshly updated ticket (including new audit event) for the dialog
     const refreshed = getTicketById(id) ?? updatedTicket;
-    setSelectedTicket(refreshed);
-    setDialogOpen(true);
+    openTicket(refreshed.id);
   };
 
-  const handleCardDrop = (targetId: string, e: React.DragEvent) => {
+  const handleCardDrop = (targetId: number, e: React.DragEvent) => {
     e.preventDefault();
-    const dragId = e.dataTransfer.getData('text/plain');
+    const dragIdString = e.dataTransfer.getData('text/plain');
+    if (!dragIdString) return;
+    const dragId = parseInt(dragIdString);
     if (!dragId || dragId === targetId) return;
     const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
     const placeAfter = e.clientY > rect.top + rect.height / 2;
@@ -118,14 +119,14 @@ const TicketPoolWidget: React.FC = () => {
           onDrop={(e) => handleDrop(lane as any, e)}
         >
           {list.map((t) => (
-            <TicketCard key={t.id} ticket={t} onClick={() => { setSelectedTicket(t); setDialogOpen(true); }} draggable onDropCard={handleCardDrop} />
+            <TicketCard key={t.id} ticket={t} onClick={() => openTicket(t.id)} draggable onDropCard={handleCardDrop} />
           ))}
         </KanbanLane>
       ))}
       {selectedTicket && (
         <AddTicketDialog
-          open={dialogOpen}
-          onClose={() => setDialogOpen(false)}
+          open={isDialogOpen}
+          onClose={closeTicket}
           readOnly
           initialData={{
             machine: selectedTicket.machine,
