@@ -38,7 +38,7 @@ const BarContainer = styled(Box)(({ theme }) => ({
   marginBottom: theme.spacing(1),
 }));
 
-const BarLabel = styled(Typography)(({ theme }) => ({
+const BarLabel = styled(Typography)(() => ({
   minWidth: 120,
   fontWeight: 500,
   fontSize: '0.875rem',
@@ -100,7 +100,7 @@ const BarChart: React.FC<BarChartProps> = ({
     if (stacked) {
       // For stacked charts, find the maximum total value across all labels
       const labels = series.length > 0 ? series[0].data.map(d => d.label) : [];
-      return Math.max(...labels.map((label, labelIndex) => 
+      return Math.max(...labels.map((_label, labelIndex) => 
         series.reduce((sum, s) => sum + (s.data[labelIndex]?.value || 0), 0)
       ));
     } else {
