@@ -1,14 +1,17 @@
-import React from 'react';
+import React, { Suspense } from 'react';
 import { useLocation } from 'react-router-dom';
 import { GridLayout } from '@/core/components/GridLayout';
-import AddTicketView from '@/app/views/add-ticket/AddTicketView';
-import TicketPoolView from '@/app/views/ticket-pool/TicketPoolView';
-import InstandhaltungView from '@/app/views/instandhaltung/InstandhaltungView';
-// import KonfigurationView from '@/app/views/konfiguration/KonfigurationView'; // TODO: Re-enable when we have a proper KonfigurationView
 import { useUrlAwareNavigation } from '@/core/hooks/useUrlState';
 import { TicketProvider } from '@/app/state/TicketProvider';
 import { MachineProvider } from '@/app/state/MachineProvider';
 import { TechnicianProvider } from '@/app/state/TechnicianProvider';
+import { Box, CircularProgress, Typography } from '@mui/material';
+
+// Lazy load views for better performance
+const AddTicketView = React.lazy(() => import('@/app/views/add-ticket/AddTicketView'));
+const TicketPoolView = React.lazy(() => import('@/app/views/ticket-pool/TicketPoolView'));
+const InstandhaltungView = React.lazy(() => import('@/app/views/instandhaltung/InstandhaltungView'));
+// const KonfigurationView = React.lazy(() => import('@/app/views/konfiguration/KonfigurationView')); // TODO: Re-enable when we have a proper KonfigurationView
 
 // Single source of truth for all views
 const BASE_VIEWS = [
@@ -17,6 +20,36 @@ const BASE_VIEWS = [
   { value: 'instandhaltung', label: 'Instandhaltung', component: InstandhaltungView },
   // { value: 'konfiguration', label: 'Konfiguration', component: KonfigurationView }, // TODO: Re-enable when we have a proper KonfigurationView
 ] as const;
+
+// Provider composition - add new providers here
+const AppProviders = ({ children }: { children: React.ReactNode }) => (
+  <TicketProvider>
+    <MachineProvider>
+      <TechnicianProvider>
+        {children}
+      </TechnicianProvider>
+    </MachineProvider>
+  </TicketProvider>
+);
+
+// Loading fallback component
+const ViewLoading = () => (
+  <Box 
+    sx={{ 
+      display: 'flex', 
+      flexDirection: 'column',
+      alignItems: 'center', 
+      justifyContent: 'center', 
+      height: '200px',
+      gap: 2
+    }}
+  >
+    <CircularProgress size={40} />
+    <Typography variant="body2" color="text.secondary">
+      Loading view...
+    </Typography>
+  </Box>
+);
 
 const AppMain: React.FC = () => {
   const location = useLocation();
@@ -52,22 +85,20 @@ const AppMain: React.FC = () => {
   const ViewComponent = currentViewConfig?.component;
 
   return (
-    <TicketProvider>
-      <MachineProvider>
-        <TechnicianProvider>
-          <GridLayout 
-            title={`App Management - ${currentView.replace('-', ' ')}`}
-            availableViews={availableViews}
-            currentView={currentView}
-            onViewChange={handleViewChange}
-            useStyledToggle={true}
-          >
-            {/* Dynamic view rendering */}
-            {ViewComponent && <ViewComponent />}
-          </GridLayout>
-        </TechnicianProvider>
-      </MachineProvider>
-    </TicketProvider>
+    <AppProviders>
+      <GridLayout 
+        title={`App Management - ${currentView.replace('-', ' ')}`}
+        availableViews={availableViews}
+        currentView={currentView}
+        onViewChange={handleViewChange}
+        useStyledToggle={true}
+      >
+        {/* Lazy loaded view rendering with Suspense */}
+        <Suspense fallback={<ViewLoading />}>
+          {ViewComponent && <ViewComponent />}
+        </Suspense>
+      </GridLayout>
+    </AppProviders>
   );
 };
 

@@ -65,7 +65,12 @@ src/app/
 - **Widgets**: View-specific building blocks
 - **Dialogs**: Dedicated UX pattern enforcement
 
-### 4. Import Patterns
+### 4. Performance Optimization
+- **Lazy Loading**: Views are loaded on-demand using React.lazy()
+- **Provider Composition**: Centralized state management with clear provider hierarchy
+- **Code Splitting**: Automatic bundle splitting for each view
+
+### 5. Import Patterns
 ```ts
 // Direct imports using absolute paths
 import { useTickets, Ticket } from '@/app/hooks/useTickets'
@@ -74,6 +79,48 @@ import { TicketDialog } from '@/app/dialogs/TicketDialog'
 ```
 
 ## File Responsibilities
+
+### AppMain.tsx
+**Purpose**: Main application orchestrator
+- Implements lazy loading for all views using React.lazy()
+- Defines provider composition for shared state
+- Handles view routing and navigation
+- Provides loading fallbacks for lazy-loaded views
+
+**Implementation Pattern**:
+```ts
+// Lazy load views for better performance
+const AddTicketView = React.lazy(() => import('@/app/views/add-ticket/AddTicketView'));
+const TicketPoolView = React.lazy(() => import('@/app/views/ticket-pool/TicketPoolView'));
+
+// Provider composition - add new providers here
+const AppProviders = ({ children }: { children: React.ReactNode }) => (
+  <TicketProvider>
+    <MachineProvider>
+      <TechnicianProvider>
+        {children}
+      </TechnicianProvider>
+    </MachineProvider>
+  </TicketProvider>
+);
+
+// Loading fallback component
+const ViewLoading = () => (
+  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '200px' }}>
+    <CircularProgress size={40} />
+    <Typography variant="body2" color="text.secondary">Loading view...</Typography>
+  </Box>
+);
+
+// Main component with Suspense wrapper
+<AppProviders>
+  <GridLayout>
+    <Suspense fallback={<ViewLoading />}>
+      {ViewComponent && <ViewComponent />}
+    </Suspense>
+  </GridLayout>
+</AppProviders>
+```
 
 ### Hooks (`/hooks/`)
 **Purpose**: Central business logic layer
@@ -137,6 +184,7 @@ export const useTickets = () => {
 - Only create when data needs to be shared across multiple views
 - Wrap app sections that need shared state
 - Keep providers focused on single domains
+- Implement Hook + State pattern for shared data
 
 **When to use**: 
 - ✅ Data used by 2+ views or widgets
@@ -144,16 +192,62 @@ export const useTickets = () => {
 - ✅ State needs to persist across navigation
 - ❌ Single widget usage (use hooks instead)
 
+**Provider Pattern**:
+```ts
+// TicketProvider.tsx
+import { restApiClient } from '@/core/api/rest/RestApiClient';
+
+interface TicketContextValue {
+  tickets: Ticket[];
+  loading: boolean;
+  fetchTickets: () => Promise<void>;
+  createTicket: (data: Omit<Ticket, 'id' | 'created_at' | 'updated_at'>) => Promise<Ticket>;
+}
+
+const TicketContext = createContext<TicketContextValue | undefined>(undefined);
+
+export const TicketProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [tickets, setTickets] = useState<Ticket[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  const fetchTickets = async () => {
+    setLoading(true);
+    try {
+      const data = await restApiClient.get<Ticket>('tickets', {
+        select: ['id', 'title', 'status', 'created_at'],
+        order: ['created_at.desc']
+      });
+      setTickets(data);
+    } catch (error) {
+      console.error('Failed to fetch tickets:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const value = useMemo(() => ({ 
+    tickets, 
+    loading, 
+    fetchTickets, 
+    createTicket 
+  }), [tickets, loading]);
+
+  return <TicketContext.Provider value={value}>{children}</TicketContext.Provider>;
+};
+```
+
 ### Views (`/views/`)
 **Purpose**: Route-level components
 - Pure composition using WidgetContainer components for positioning
 - No business logic or state management
 - Handle widget positioning via WidgetContainer gridPosition props
 - Own their specific widgets
+- Lazy-loaded for optimal performance
 
 **Example**:
 ```ts
-export const TicketPoolView = () => {
+// TicketPoolView.tsx - Default export for lazy loading
+const TicketPoolView = () => {
   return (
     <>
       <WidgetContainer
@@ -171,6 +265,8 @@ export const TicketPoolView = () => {
     </>
   );
 };
+
+export default TicketPoolView; // Default export required for React.lazy()
 ```
 
 ### Widgets (`/views/*/widgets/`)
@@ -207,6 +303,54 @@ export const TicketPoolWidget = () => {
 - Follow consistent UX patterns
 - Separate from core UI components
 
+## Performance Architecture
+
+### Lazy Loading Implementation
+All views are lazy-loaded using React.lazy() to optimize initial bundle size and improve loading performance:
+
+```ts
+// Lazy load views for better performance
+const AddTicketView = React.lazy(() => import('@/app/views/add-ticket/AddTicketView'));
+const TicketPoolView = React.lazy(() => import('@/app/views/ticket-pool/TicketPoolView'));
+const InstandhaltungView = React.lazy(() => import('@/app/views/instandhaltung/InstandhaltungView'));
+
+// Views must export default for lazy loading
+export default TicketPoolView;
+```
+
+### Provider Composition
+Centralized provider composition for clean state management:
+
+```ts
+// Provider composition - add new providers here
+const AppProviders = ({ children }: { children: React.ReactNode }) => (
+  <TicketProvider>
+    <MachineProvider>
+      <TechnicianProvider>
+        {children}
+      </TechnicianProvider>
+    </MachineProvider>
+  </TicketProvider>
+);
+```
+
+### Loading States
+Consistent loading experience across all lazy-loaded views:
+
+```ts
+const ViewLoading = () => (
+  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '200px' }}>
+    <CircularProgress size={40} />
+    <Typography variant="body2" color="text.secondary">Loading view...</Typography>
+  </Box>
+);
+
+// Usage with Suspense
+<Suspense fallback={<ViewLoading />}>
+  {ViewComponent && <ViewComponent />}
+</Suspense>
+```
+
 ## Architecture Summary
 
 ### Key Principles
@@ -216,18 +360,29 @@ export const TicketPoolWidget = () => {
 4. **Hooks = Business Logic**: All API calls and business logic live in hooks using generic API clients
 5. **Generic API Clients Only**: No business-specific API clients (use `restApiClient`, `storageApiClient`, etc.)
 6. **State = Sharing**: Only create state providers when multiple views need the same data
+7. **Lazy Loading = Performance**: All views are lazy-loaded for optimal bundle splitting
+8. **Provider Composition = Organization**: Centralized state management with clear hierarchy
 
 ### Data Flow
 ```
-Generic API Clients → Hooks (Business Queries) → Widgets (positioned by WidgetContainer in Views)
+Generic API Clients → State Providers → Hooks (Business Queries) → Widgets (positioned by WidgetContainer in Views)
+```
+
+### Performance Flow
+```
+Initial Load → Lazy Load Views → Provider State → Widget Rendering
 ```
 
 ### File Organization
 - **Co-location**: Related code stays together (types with hooks, widgets with views)
 - **Domain separation**: Each business domain has its own hook and folder structure
 - **Clear ownership**: Every file has a single, clear responsibility
+- **Lazy loading**: Views are loaded on-demand for better performance
+- **Provider composition**: Centralized state management with clear organization
 
 ### Import Strategy
 - Use `@/` absolute paths for all imports
 - No barrel files (index.ts) - import directly from source files
 - Named exports throughout the codebase
+- Default exports only for lazy-loaded views
+- Provider composition in AppMain.tsx with clear documentation
