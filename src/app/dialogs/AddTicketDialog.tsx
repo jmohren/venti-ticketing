@@ -24,6 +24,7 @@ import { TicketEvent } from '@/app/hooks/useTickets';
 import { DatePicker } from '@mui/x-date-pickers';
 import { LocalizationProvider } from '@mui/x-date-pickers';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
+import { useMachines } from '@/app/hooks/useMachines';
 
 interface TicketData {
   machine?: string;
@@ -55,6 +56,7 @@ interface AddTicketDialogProps {
  */
 const AddTicketDialog: React.FC<AddTicketDialogProps> = ({ open, onClose, readOnly = false, initialData, showStatus = false, onSave, allowResponsibleEdit = false, allowPlanEdit = false, ticketId }) => {
   const { getCurrentUser } = useAuth();
+  const { rooms } = useMachines();
 
   const EMPLOYEES = ['Max Mustermann', 'Julia Schneider', 'Ali Öztürk'];
 
@@ -77,15 +79,14 @@ const AddTicketDialog: React.FC<AddTicketDialogProps> = ({ open, onClose, readOn
 
   const canSelectMore = !readOnly && selectedFiles.length < 3;
 
-  // Hard-coded demo data – replace with API calls later
-  const LOCATION_OPTIONS = ['Werk 1 – Raum 101', 'Werk 2 – Raum 202'];
-  const MACHINES_BY_LOCATION: Record<string, string[]> = {
-    'Werk 1 – Raum 101': ['Presse 1', 'Fräse A'],
-    'Werk 2 – Raum 202': ['Schweißroboter', 'CNC Drehmaschine'],
-  };
+  // Get location options from rooms
+  const locationOptions = rooms.map(room => room.name);
 
-  // Memoised current machine list
-  const availableMachines = useMemo(() => MACHINES_BY_LOCATION[location] ?? [], [location]);
+  // Get machines for selected location
+  const availableMachines = useMemo(() => {
+    const selectedRoom = rooms.find(room => room.name === location);
+    return selectedRoom ? selectedRoom.machines.map(m => m.name) : [];
+  }, [location, rooms]);
 
   const createdAt = useMemo(() => new Date(), []);
   const creatorEmail = getCurrentUser()?.email ?? '–';
@@ -187,7 +188,7 @@ const AddTicketDialog: React.FC<AddTicketDialogProps> = ({ open, onClose, readOn
                   setMachine('');
                 }}
               >
-                {LOCATION_OPTIONS.map((loc) => (
+                {locationOptions.map((loc) => (
                   <MenuItem key={loc} value={loc}>{loc}</MenuItem>
                 ))}
               </Select>

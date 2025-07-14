@@ -56,7 +56,7 @@ const MachineItem = styled(ListItem)<{ selected?: boolean }>(({ theme, selected 
 }));
 
 interface Props {
-  onSelect: (machine: Machine & { roomId: string }) => void;
+  onSelect?: (machine: Machine & { roomId: string }) => void;
   selectedId?: string;
 }
 
@@ -108,7 +108,7 @@ const MachinesRoomsWidget: React.FC<Props> = ({ onSelect, selectedId }) => {
   };
 
   const handleMachineSelect = (machine: Machine, roomId: string) => {
-    onSelect({ ...machine, roomId });
+    onSelect?.({ ...machine, roomId });
   };
 
   const handleAddRoom = () => {

@@ -6,13 +6,14 @@ import PlaceholderWidget from '@/app/views/konfiguration/widgets/PlaceholderWidg
 import { Machine } from '@/app/hooks/useMachines';
 
 const KonfigurationView: React.FC = () => {
-  const [selectedMachine, setSelectedMachine] = useState<Machine | null>(null);
+  const [selectedMachine, setSelectedMachine] = useState<(Machine & { roomId: string }) | null>(null);
 
   return (
   <>
     <WidgetContainer
       title="Maschinen & Räume"
-      gridPosition={{ columnStart: 1, columnSpan: 6, rowStart: 2, rowSpan: 12 }}
+      gridPosition={{ columnStart: 1, columnSpan: 4, rowStart: 2, rowSpan: 12 }}
+      stretchContent
     >
       <MachinesRoomsWidget onSelect={setSelectedMachine} selectedId={selectedMachine?.id} />
     </WidgetContainer>

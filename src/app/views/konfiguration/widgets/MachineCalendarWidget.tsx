@@ -1,19 +1,23 @@
 import React, { useState, useMemo } from 'react';
 import { Box, Typography, List, ListItem, ListItemText, Badge } from '@mui/material';
-import { Machine } from '@/app/hooks/useMachines';
+import { Machine, useMachines } from '@/app/hooks/useMachines';
 import { useTickets } from '@/app/hooks/useTickets';
-import { DateCalendar, PickersDay, LocalizationProvider } from '@mui/x-date-pickers';
+import { DateCalendar, PickersDay, LocalizationProvider, PickersDayProps } from '@mui/x-date-pickers';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import dayjs from 'dayjs';
 import { format as formatDateFn } from 'date-fns';
 
-interface Props { machine: Machine | null; }
-
 interface CalendarEvent { date: string; label: string; color: 'primary' | 'secondary'; }
+
+interface Props { machine: (Machine & { roomId: string }) | null; }
 
 const MachineCalendarWidget: React.FC<Props> = ({ machine }) => {
   const { tickets } = useTickets();
+  const { getRoom } = useMachines();
   const [selectedDay, setSelectedDay] = useState<Date>(new Date());
+
+  // Get room name for the selected machine
+  const room = machine ? getRoom(machine.roomId) : null;
 
   // build events for the current machine
   const events: CalendarEvent[] = useMemo(() => {
@@ -47,15 +51,25 @@ const MachineCalendarWidget: React.FC<Props> = ({ machine }) => {
     return result;
   }, [machine, tickets]);
 
-  const renderDay = (day: Date, _value: any, DayComponentProps: any) => {
-    if (isNaN(day.getTime())) {
-      return <PickersDay {...DayComponentProps} day={day} />;
+  const CustomDay = (props: PickersDayProps<Date>) => {
+    const { day, ...other } = props;
+    
+    // Ensure day is a valid Date object
+    if (!day || !(day instanceof Date)) {
+      return <PickersDay {...other} day={day} />;
     }
+
     const dateStr = formatDateFn(day, 'yyyy-MM-dd');
     const hasEvent = events.some(e => e.date === dateStr);
+    
     return (
-      <Badge key={dateStr} overlap="circular" variant={hasEvent ? 'dot' : undefined} color="primary">
-        <PickersDay {...DayComponentProps} day={day} />
+      <Badge 
+        key={dateStr} 
+        overlap="circular" 
+        variant={hasEvent ? 'dot' : undefined} 
+        color="primary"
+      >
+        <PickersDay {...other} day={day} />
       </Badge>
     );
   };
@@ -67,9 +81,14 @@ const MachineCalendarWidget: React.FC<Props> = ({ machine }) => {
       <Typography variant="h6">Maschinen-Kalender</Typography>
       {machine ? (
         <>
-          <Typography variant="subtitle2" sx={{ mb:1 }}>{machine.name} – {machine.room}</Typography>
+          <Typography variant="subtitle2" sx={{ mb:1 }}>{machine.name} – {room?.name || 'Unbekannter Raum'}</Typography>
           <LocalizationProvider dateAdapter={AdapterDateFns}>
-            <DateCalendar value={selectedDay} onChange={(d)=>setSelectedDay(d as Date)} slots={{ day: renderDay as any }} sx={{ alignSelf:'center' }} />
+            <DateCalendar 
+              value={selectedDay} 
+              onChange={(d)=>setSelectedDay(d as Date)} 
+              slots={{ day: CustomDay }} 
+              sx={{ alignSelf:'center' }} 
+            />
           </LocalizationProvider>
           <Box sx={{ flex:1, overflowY:'auto' }}>
             {eventsForSelected.length === 0 ? (

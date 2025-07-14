@@ -3,8 +3,13 @@ import { useState, useCallback } from 'react';
 export interface Machine {
   id: string;
   name: string;
-  room: string;
   tasks?: Task[];
+}
+
+export interface Room {
+  id: string;
+  name: string;
+  machines: Machine[];
 }
 
 export interface Task {
@@ -13,26 +18,106 @@ export interface Task {
   recurrence: 'daily' | 'weekly' | 'yearly' | 'custom';
 }
 
-let mockMachines: Machine[] = [
-  { id: 'm1', name: 'Presse 1', room: 'Werk 1 – Raum 101', tasks: [] },
-  { id: 'm2', name: 'Fräse A', room: 'Werk 1 – Raum 102', tasks: [] },
-  { id: 'm3', name: 'Schweißroboter', room: 'Werk 2 – Raum 202', tasks: [] },
+// Mock data with hierarchical structure
+let mockRooms: Room[] = [
+  {
+    id: 'r1',
+    name: 'Werk 1 – Raum 101',
+    machines: [
+      { id: 'm1', name: 'Presse 1', tasks: [] },
+      { id: 'm2', name: 'Fräse A', tasks: [] },
+    ]
+  },
+  {
+    id: 'r2', 
+    name: 'Werk 2 – Raum 202',
+    machines: [
+      { id: 'm3', name: 'Schweißroboter', tasks: [] },
+    ]
+  },
+  {
+    id: 'r3',
+    name: 'Werk 1 – Raum 103',
+    machines: []
+  }
 ];
 
 export const useMachines = () => {
-  const [machines, setMachines] = useState<Machine[]>(() => [...mockMachines]);
+  const [rooms, setRooms] = useState<Room[]>(() => [...mockRooms]);
 
-  const addMachine = useCallback((machine: Machine) => {
-    mockMachines = [...mockMachines, machine];
-    setMachines([...mockMachines]);
+  // Room operations
+  const addRoom = useCallback((room: Room) => {
+    mockRooms = [...mockRooms, room];
+    setRooms([...mockRooms]);
   }, []);
 
-  const updateMachine = useCallback((id: string, partial: Partial<Machine>) => {
-    mockMachines = mockMachines.map(m => m.id === id ? { ...m, ...partial } : m);
-    setMachines([...mockMachines]);
+  const updateRoom = useCallback((id: string, partial: Partial<Room>) => {
+    mockRooms = mockRooms.map(r => r.id === id ? { ...r, ...partial } : r);
+    setRooms([...mockRooms]);
   }, []);
 
-  const getMachine = useCallback((id: string) => mockMachines.find(m => m.id === id), []);
+  const deleteRoom = useCallback((id: string) => {
+    mockRooms = mockRooms.filter(r => r.id !== id);
+    setRooms([...mockRooms]);
+  }, []);
 
-  return { machines, addMachine, updateMachine, getMachine };
+  // Machine operations
+  const addMachine = useCallback((roomId: string, machine: Machine) => {
+    mockRooms = mockRooms.map(r => 
+      r.id === roomId 
+        ? { ...r, machines: [...r.machines, machine] }
+        : r
+    );
+    setRooms([...mockRooms]);
+  }, []);
+
+  const updateMachine = useCallback((roomId: string, machineId: string, partial: Partial<Machine>) => {
+    mockRooms = mockRooms.map(r =>
+      r.id === roomId
+        ? { ...r, machines: r.machines.map(m => m.id === machineId ? { ...m, ...partial } : m) }
+        : r
+    );
+    setRooms([...mockRooms]);
+  }, []);
+
+  const deleteMachine = useCallback((roomId: string, machineId: string) => {
+    mockRooms = mockRooms.map(r =>
+      r.id === roomId
+        ? { ...r, machines: r.machines.filter(m => m.id !== machineId) }
+        : r
+    );
+    setRooms([...mockRooms]);
+  }, []);
+
+  // Utility functions
+  const getRoom = useCallback((id: string) => mockRooms.find(r => r.id === id), []);
+  
+  const getMachine = useCallback((roomId: string, machineId: string) => {
+    const room = mockRooms.find(r => r.id === roomId);
+    return room?.machines.find(m => m.id === machineId);
+  }, []);
+
+  // Get all machines (flat list) for backward compatibility
+  const getAllMachines = useCallback(() => {
+    return mockRooms.flatMap(room => 
+      room.machines.map(machine => ({ 
+        ...machine, 
+        room: room.name,
+        roomId: room.id 
+      }))
+    );
+  }, []);
+
+  return { 
+    rooms, 
+    addRoom, 
+    updateRoom, 
+    deleteRoom,
+    addMachine, 
+    updateMachine, 
+    deleteMachine,
+    getRoom,
+    getMachine,
+    getAllMachines
+  };
 }; 

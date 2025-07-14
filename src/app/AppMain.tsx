@@ -4,7 +4,7 @@ import { GridLayout } from '@/core/components/GridLayout';
 import AddTicketView from '@/app/views/add-ticket/AddTicketView';
 import TicketPoolView from '@/app/views/ticket-pool/TicketPoolView';
 import InstandhaltungView from '@/app/views/instandhaltung/InstandhaltungView';
-import KonfigurationView from '@/app/views/konfiguration/KonfigurationView';
+// import KonfigurationView from '@/app/views/konfiguration/KonfigurationView'; // TODO: Re-enable when we have a proper KonfigurationView
 import { useUrlAwareNavigation } from '@/core/hooks/useUrlState';
 
 // Single source of truth for all views
@@ -12,7 +12,7 @@ const BASE_VIEWS = [
   { value: 'add-ticket', label: 'Ticket anlegen', component: AddTicketView },
   { value: 'ticket-pool', label: 'Ticket Pool', component: TicketPoolView },
   { value: 'instandhaltung', label: 'Instandhaltung', component: InstandhaltungView },
-  { value: 'konfiguration', label: 'Konfiguration', component: KonfigurationView },
+  // { value: 'konfiguration', label: 'Konfiguration', component: KonfigurationView }, // TODO: Re-enable when we have a proper KonfigurationView
 ] as const;
 
 const AppMain: React.FC = () => {

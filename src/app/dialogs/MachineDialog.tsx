@@ -12,14 +12,13 @@ interface Props {
 
 const MachineDialog: React.FC<Props> = ({ open, onClose, onSave, initial }) => {
   const [name, setName] = useState(initial?.name || '');
-  const [room, setRoom] = useState(initial?.room || '');
   const [tasks, setTasks] = useState<Task[]>(initial?.tasks || []);
   const [taskDialogOpen, setTaskDialogOpen] = useState(false);
   const [editTask, setEditTask] = useState<Task | null>(null);
 
   const handleSave = () => {
     if (!name.trim()) return;
-    const machine: Machine = initial ? { ...initial, name, room, tasks } : { id: Date.now().toString(), name, room, tasks };
+    const machine: Machine = initial ? { ...initial, name, tasks } : { id: Date.now().toString(), name, tasks };
     onSave(machine);
     onClose();
   };
@@ -36,11 +35,15 @@ const MachineDialog: React.FC<Props> = ({ open, onClose, onSave, initial }) => {
       <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
         <DialogTitle>{initial ? 'Maschine bearbeiten' : 'Neue Maschine'}</DialogTitle>
         <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 3, mt: 1 }}>
-          {/* Name & room row */}
-          <Box sx={{ display:'flex', gap:2 }}>
-            <TextField label="Maschine" value={name} onChange={e=>setName(e.target.value)} size="small" sx={{ flex:1 }} />
-            <TextField label="Raum" value={room} onChange={e=>setRoom(e.target.value)} size="small" sx={{ flex:1 }} />
-          </Box>
+          {/* Machine name */}
+          <TextField 
+            label="Maschine Name" 
+            value={name} 
+            onChange={e => setName(e.target.value)} 
+            size="small" 
+            fullWidth
+            placeholder="z.B. Presse 1"
+          />
 
           {/* Wartungsplan section */}
           <Box>

@@ -2,6 +2,8 @@ import React from 'react';
 import { WidgetContainer } from '@/core/components/WidgetContainer';
 import TicketPoolWidget from '@/app/views/ticket-pool/widgets/TicketPoolWidget';
 import TechnicianLoadWidget from '@/app/views/ticket-pool/widgets/TechnicianLoadWidget';
+import MachinesRoomsWidget from '@/app/views/ticket-pool/widgets/MachinesRoomsWidget';
+
 
 const TicketPoolView: React.FC = () => {
   return (
@@ -21,6 +23,14 @@ const TicketPoolView: React.FC = () => {
         elevation={3}
       >
         <TechnicianLoadWidget />
+      </WidgetContainer>
+
+      <WidgetContainer
+        title="Maschinen & Räume"
+        gridPosition={{ columnStart: 7, columnSpan: 6, rowStart: 8, rowSpan: 6 }}
+        stretchContent
+      >
+        <MachinesRoomsWidget />
       </WidgetContainer>
     </>
   );
