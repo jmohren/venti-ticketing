@@ -44,10 +44,10 @@ export class GenericStorageApiClient implements StorageApiClient {
   private baseUrl: string;
   private appName: string;
 
-  constructor(authClient?: AuthApiClient, baseUrl?: string, appName?: string) {
+  constructor(authClient?: AuthApiClient, baseUrl?: string, appName: string = appConfig.api.app) {
     this.authClient = authClient || authApiClient;
     this.baseUrl = (baseUrl || appConfig.api.baseUrl).replace(/\/$/, '');
-    this.appName = appName || 'morning-routine'; // Default storage app name with dash
+    this.appName = appName;
   }
 
   /**

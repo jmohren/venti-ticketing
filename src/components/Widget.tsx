@@ -39,6 +39,8 @@ interface WidgetProps {
   noPadding?: boolean;
   gridPosition?: GridPosition;
   showDate?: boolean;
+  /** If true, children will be stretched to full width/height without aspect-ratio wrapper */
+  stretchContent?: boolean;
 }
 
 /**
@@ -59,6 +61,7 @@ const Widget: React.FC<WidgetProps> = ({
   noPadding = true, // Default to no padding
   gridPosition,
   showDate = false,
+  stretchContent = false,
 }) => {
   // Format current date as dd.mm.yy with dots
   const formatDateWithDots = (date: Date): string => {
@@ -96,37 +99,38 @@ const Widget: React.FC<WidgetProps> = ({
         )}
         
         <WidgetContent sx={{ padding: noPadding ? 0 : 1 }}>
-          {/* CSS approach that maintains aspect ratio while maximizing space */}
-          <Box sx={{
-            width: '100%',
-            height: '100%',
-            display: 'flex',
-            justifyContent: 'center',
-            alignWidgets: 'center',
-          }}>
+          {stretchContent ? (
+            <Box sx={{ width: '100%', height: '100%' }}>
+              {children}
+            </Box>
+          ) : (
             <Box sx={{
-              position: 'relative',
               width: '100%',
               height: '100%',
               display: 'flex',
               justifyContent: 'center',
               alignWidgets: 'center',
-              '& > *': {
-                position: 'relative',
-                maxWidth: '100%', 
-                maxHeight: '100%',
-                // Use auto for both to maintain aspect ratio
-                width: 'auto', 
-                height: 'auto',
-                // But ensure at least one dimension is 100%
-                // This is the key - will scale to either 100% width or 100% height
-                // while maintaining aspect ratio
-                objectFit: 'contain'
-              }
             }}>
-              {children}
+              <Box sx={{
+                position: 'relative',
+                width: '100%',
+                height: '100%',
+                display: 'flex',
+                justifyContent: 'center',
+                alignWidgets: 'center',
+                '& > *': {
+                  position: 'relative',
+                  maxWidth: '100%', 
+                  maxHeight: '100%',
+                  width: 'auto', 
+                  height: 'auto',
+                  objectFit: 'contain'
+                }
+              }}>
+                {children}
+              </Box>
             </Box>
-          </Box>
+          )}
         </WidgetContent>
       </StyledWidget>
     </Box>

@@ -1,12 +1,18 @@
 import React from 'react';
 import { useLocation } from 'react-router-dom';
 import GridLayout from '../components/GridLayout';
-import StartView from './views/start/StartView';
+import AddTicketView from './views/add-ticket/AddTicketView';
+import TicketPoolView from './views/ticket-pool/TicketPoolView';
+import InstandhaltungView from './views/instandhaltung/InstandhaltungView';
+import KonfigurationView from './views/konfiguration/KonfigurationView';
 import { useUrlAwareNavigation } from '../hooks/useUrlState';
 
 // Single source of truth for all views
 const BASE_VIEWS = [
-  { value: 'start', label: 'Start', component: StartView },
+  { value: 'add-ticket', label: 'Ticket anlegen', component: AddTicketView },
+  { value: 'ticket-pool', label: 'Ticket Pool', component: TicketPoolView },
+  { value: 'instandhaltung', label: 'Instandhaltung', component: InstandhaltungView },
+  { value: 'konfiguration', label: 'Konfiguration', component: KonfigurationView },
 ] as const;
 
 const AppMain: React.FC = () => {

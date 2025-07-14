@@ -1,19 +1,19 @@
 import React from 'react';
 import Widget from '../../../components/Widget';
-import StartWidget from './widgets/StartWidget';
+import AddTicketWidget from './widgets/AddTicketWidget';
 
-const StartView: React.FC = () => {
+const AddTicketView: React.FC = () => {
   return (
     <>
-      {/* Start Widget */}
-      <Widget 
+      <Widget
+        title="Ticket anlegen"
         gridPosition={{ columnStart: 1, columnSpan: 12, rowStart: 2, rowSpan: 12 }}
         elevation={3}
       >
-        <StartWidget />
+        <AddTicketWidget />
       </Widget>
     </>
   );
 };
 
-export default StartView; 
+export default AddTicketView; 

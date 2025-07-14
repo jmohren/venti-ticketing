@@ -17,23 +17,12 @@ export const getAppConfig = (): AppConfig => {
 
   const config: AppConfig = {
     auth: {
-      appName: import.meta.env.VITE_APP_NAME || 'SQDCI Board',
+      appName: import.meta.env.VITE_APP_NAME,
     },
     api: {
-      // Development: Always use proxy (like before when it worked)
-      // Production: Use environment variable
-      authBaseUrl: import.meta.env.VITE_BACKEND_URL || "https://morpheus.api.get-morpheus-ai.com",
-      // isDevelopment 
-      //   ? 'http://localhost:5173'  // Proxy routes to backend (env var or fallback)
-      //   : import.meta.env.VITE_BACKEND_URL,
-      
-      baseUrl: import.meta.env.VITE_BACKEND_URL || "https://morpheus.api.get-morpheus-ai.com",
-      // isDevelopment 
-      //   ? 'http://localhost:5173'  // Proxy routes to backend (env var or fallback)
-      //   : import.meta.env.VITE_BACKEND_URL,
-      
-      // App name for PostgREST endpoints (/rest/{app}/table)
-      app: import.meta.env.VITE_APP_NAME || 'morning_routine',
+      authBaseUrl: import.meta.env.VITE_BACKEND_URL,
+      baseUrl: import.meta.env.VITE_BACKEND_URL,
+      app: import.meta.env.VITE_APP_NAME,
     },
     environment: isDevelopment ? 'development' : 'production'
   };
