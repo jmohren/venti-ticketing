@@ -80,10 +80,11 @@ const AddTicketDialog: React.FC<AddTicketDialogProps> = ({ open, onClose, readOn
   const canSelectMore = !readOnly && selectedFiles.length < 3;
 
   // Get location options from rooms
-  const locationOptions = rooms.map(room => room.name);
+  const locationOptions = rooms?.map(room => room.name) || [];
 
   // Get machines for selected location
   const availableMachines = useMemo(() => {
+    if (!rooms || rooms.length === 0 || !location) return [];
     const selectedRoom = rooms.find(room => room.name === location);
     return selectedRoom ? selectedRoom.machines.map(m => m.name) : [];
   }, [location, rooms]);
@@ -93,6 +94,9 @@ const AddTicketDialog: React.FC<AddTicketDialogProps> = ({ open, onClose, readOn
 
   const createdAt = useMemo(() => new Date(), []);
   const creatorEmail = getCurrentUser()?.email ?? '–';
+
+  // Machine FormControl is disabled when no location is selected, in readOnly mode, or no machines available
+  const machineDisabled = !location || readOnly || availableMachines.length === 0;
 
   const formValidBase = description.trim().length > 0 && location && machine;
   const formValid = readOnly && allowResponsibleEdit ? true : formValidBase;
@@ -181,7 +185,7 @@ const AddTicketDialog: React.FC<AddTicketDialogProps> = ({ open, onClose, readOn
 
           {/* Standort Auswahl */}
           <Box sx={{ display: 'flex', gap: 2 }}>
-            <FormControl fullWidth>
+            <FormControl fullWidth disabled={readOnly}>
               <InputLabel>Standort / Raum</InputLabel>
               <Select
                 label="Standort / Raum"
@@ -197,7 +201,7 @@ const AddTicketDialog: React.FC<AddTicketDialogProps> = ({ open, onClose, readOn
               </Select>
             </FormControl>
 
-            <FormControl fullWidth disabled={!location || readOnly}>
+            <FormControl fullWidth disabled={machineDisabled}>
               <InputLabel>Maschine / Gerät</InputLabel>
               <Select
                 label="Maschine / Gerät"
