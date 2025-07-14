@@ -4,7 +4,7 @@ import { LogoutOutlined, PersonOutline } from '@mui/icons-material';
 import { WidgetContainer } from '@/core/components/WidgetContainer';
 import { User } from '@/core/api/auth/AuthApiClient';
 
-interface AppHeaderProps {
+interface NavigatorBarProps {
   user?: User;
   onLogout?: () => void;
   currentView?: string;
@@ -19,7 +19,7 @@ interface AppHeaderProps {
   };
 }
 
-const AppHeader: React.FC<AppHeaderProps> = ({
+const NavigatorBar: React.FC<NavigatorBarProps> = ({
   user,
   onLogout,
   currentView = 'daily-routine',
@@ -226,4 +226,4 @@ const AppHeader: React.FC<AppHeaderProps> = ({
   );
 };
 
-export { AppHeader }; 
+export { NavigatorBar }; 

@@ -3,9 +3,10 @@ import { LoginForm } from '@/core/pages/LoginForm'
 import { ForgotPasswordForm } from '@/core/pages/ForgotPasswordForm'
 import { ResetPasswordForm } from '@/core/pages/ResetPasswordForm'
 import { ForcePasswordChangeScreen } from '@/core/pages/ForcePasswordChangeScreen'
-import { CircularProgress, Box, Typography, Button, AppBar, Toolbar } from '@mui/material'
+import { CircularProgress, Box, Typography, Button, AppBar as MuiAppBar, Toolbar } from '@mui/material'
 import { useState, useEffect } from 'react'
 import { useAuth, LoginResponse, User } from '@/core/hooks/useAuth'
+import { authApiClient } from '@/core/api/auth/AuthApiClient'
 import '@/App.css'
 import AppMain from '@/app/AppMain'
 import { resetIsAdminCache } from '@/core/hooks/useIsAdmin'
@@ -42,22 +43,27 @@ const Loading = () => (
   </Box>
 );
 
-// Header component with logout
-const AppHeader: React.FC<{ user: User; onLogout: () => void }> = ({ user, onLogout }) => (
-  <AppBar position="static">
-    <Toolbar>
-      <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
-        Build your Application
-      </Typography>
-      <Typography variant="body1" sx={{ mr: 2 }}>
-        Welcome, {user.email}
-      </Typography>
-      <Button color="inherit" onClick={onLogout}>
-        Logout
-      </Button>
-    </Toolbar>
-  </AppBar>
-);
+// Application bar component with logout and profile name support
+const AppBar: React.FC<{ user: User; onLogout: () => void }> = ({ user, onLogout }) => {
+  // Get display name: use firstName from profile, fallback to email
+  const displayName = user.profile?.firstName || user.email;
+  
+  return (
+    <MuiAppBar position="static">
+      <Toolbar>
+        <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
+          Build your Application
+        </Typography>
+        <Typography variant="body1" sx={{ mr: 2 }}>
+          Welcome, {displayName}!
+        </Typography>
+        <Button color="inherit" onClick={onLogout}>
+          Logout
+        </Button>
+      </Toolbar>
+    </MuiAppBar>
+  );
+};
 
 // Protected route component with hybrid authentication approach
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -116,6 +122,23 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
     checkAuth();
   }, [isAuthenticated, getCurrentUser, initializeSession, isSessionInitialized, hasAuthenticationIndicators, sessionChecked, isLoggingOut, needsPasswordReset]);
 
+  // Subscribe to AuthApiClient user changes to keep user state in sync
+  useEffect(() => {
+    const unsubscribe = authApiClient.subscribe((updatedUser: User | null) => {
+      console.log('🔄 User data updated from AuthApiClient:', updatedUser);
+      if (updatedUser) {
+        console.log('📝 Setting user state to:', updatedUser);
+        setUser(updatedUser);
+      }
+    });
+    return unsubscribe;
+  }, []);
+
+  // Debug: Log user state changes
+  useEffect(() => {
+    console.log('🔍 ProtectedRoute user state changed:', user);
+  }, [user]);
+
   // Handle logout
   const handleLogout = async () => {
     setIsLoggingOut(true);
@@ -144,6 +167,8 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
   };
 
   // Render based on authentication state
+  console.log('🎯 ProtectedRoute render - authState:', authState, 'user:', user);
+  
   switch (authState) {
     case 'checking':
       return <Loading />;
@@ -154,14 +179,16 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
     case 'verified':
       if (!user) {
         // Edge case: should not happen, but fallback to quick check
+        console.log('⚠️ No user data in verified state, showing QuickAuthCheck');
         return <QuickAuthCheck />;
       }
       if (forceReset) {
         return <ForcePasswordChangeScreen onSuccess={() => setForceReset(false)} />;
       }
+      console.log('✅ Rendering AppBar with user:', user);
       return (
         <>
-          <AppHeader user={user} onLogout={handleLogout} />
+          <AppBar user={user} onLogout={handleLogout} />
           {children}
         </>
       );
@@ -169,17 +196,28 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
     case 'unauthenticated':
       return (
         <LoginForm 
-          onLoginSuccess={(loginData: LoginResponse) => {
-            const newUser = {
-              userId: loginData.userId,
-              email: loginData.email,
-              roles: loginData.roles
-            };
-            setUser(newUser);
-            if (needsPasswordReset()) {
-              setForceReset(true);
+          onLoginSuccess={async (loginData: LoginResponse) => {
+            // Get the complete user data from authApiClient instead of just the login response
+            const currentUser = getCurrentUser();
+            if (currentUser) {
+              setUser(currentUser);
+              if (needsPasswordReset()) {
+                setForceReset(true);
+              }
+              setAuthState('verified');
+            } else {
+              // Fallback: create user from login response (won't have profile data)
+              const newUser = {
+                userId: loginData.userId,
+                email: loginData.email,
+                roles: loginData.roles
+              };
+              setUser(newUser);
+              if (needsPasswordReset()) {
+                setForceReset(true);
+              }
+              setAuthState('verified');
             }
-            setAuthState('verified');
           }} 
         />
       );

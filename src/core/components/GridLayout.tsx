@@ -1,6 +1,6 @@
 import React, { ReactNode } from 'react';
 import { Box, styled, Grid } from '@mui/material';
-import { AppHeader } from '@/core/components/AppHeader';
+import { NavigatorBar } from '@/core/components/NavigatorBar';
 
 // Styled components for the Grid
 const GridContainer = styled(Box)(({ }) => ({
@@ -68,7 +68,7 @@ const GridLayout: React.FC<GridLayoutProps> = ({
             }}
           >
             {/* Header Widget */}
-            <AppHeader 
+            <NavigatorBar 
               currentView={currentView}
               onViewChange={onViewChange}
               availableViews={availableViews}
