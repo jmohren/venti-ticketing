@@ -1,5 +1,5 @@
 import React from 'react';
-import { Widget } from 'core/components';
+import { Widget } from '@/core/components/Widget';
 import InstandhaltungWidget from './widgets/InstandhaltungWidget';
 
 const InstandhaltungView: React.FC = () => {

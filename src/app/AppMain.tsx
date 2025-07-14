@@ -1,11 +1,11 @@
 import React from 'react';
 import { useLocation } from 'react-router-dom';
-import { GridLayout } from 'core/components';
-import AddTicketView from './views/add-ticket/AddTicketView';
-import TicketPoolView from './views/ticket-pool/TicketPoolView';
-import InstandhaltungView from './views/instandhaltung/InstandhaltungView';
-import KonfigurationView from './views/konfiguration/KonfigurationView';
-import { useUrlAwareNavigation } from '../core/hooks/useUrlState';
+import { GridLayout } from '@/core/components/GridLayout';
+import AddTicketView from '@/app/views/add-ticket/AddTicketView';
+import TicketPoolView from '@/app/views/ticket-pool/TicketPoolView';
+import InstandhaltungView from '@/app/views/instandhaltung/InstandhaltungView';
+import KonfigurationView from '@/app/views/konfiguration/KonfigurationView';
+import { useUrlAwareNavigation } from '@/core/hooks/useUrlState';
 
 // Single source of truth for all views
 const BASE_VIEWS = [

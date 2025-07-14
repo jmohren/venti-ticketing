@@ -1,6 +1,6 @@
 import React from 'react';
 import { Box, ToggleButtonGroup, ToggleButton } from '@mui/material';
-import { Widget } from 'core/components';
+import { Widget } from '@/core/components/Widget';
 
 interface AppHeaderProps {
   currentView?: string;

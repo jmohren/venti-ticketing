@@ -1,5 +1,5 @@
 import { useCallback } from 'react';
-import { adminApiClient, AdminUser, CreateUserResponse, ListUsersResponse, DeleteUserResponse, CreateRoleResponse, AssignRoleResponse, UserRolesResponse, RevokeRoleResponse } from 'core/api';
+import { adminApiClient, AdminUser, CreateUserResponse, ListUsersResponse, DeleteUserResponse, CreateRoleResponse, AssignRoleResponse, UserRolesResponse, RevokeRoleResponse } from '@/core/api/admin/AdminApiClient';
 
 /**
  * Pure admin hook to consume the AdminApiClient easily from React components.

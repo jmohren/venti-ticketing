@@ -1,6 +1,6 @@
 import React, { ReactNode } from 'react';
 import { Box, styled, Grid } from '@mui/material';
-import { AppHeader } from 'core/components';
+import { AppHeader } from '@/core/components/AppHeader';
 
 // Styled components for the Grid
 const GridContainer = styled(Box)(({ }) => ({
