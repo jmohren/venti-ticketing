@@ -1,5 +1,5 @@
 import React from 'react';
-import Widget from '../../../components/Widget';
+import { Widget } from 'core/components';
 import TicketPoolWidget from './widgets/TicketPoolWidget';
 import TechnicianLoadWidget from './widgets/TechnicianLoadWidget';
 

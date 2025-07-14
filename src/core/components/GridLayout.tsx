@@ -1,6 +1,6 @@
 import React, { ReactNode } from 'react';
 import { Box, styled, Grid } from '@mui/material';
-import AppHeader from './AppHeader';
+import { AppHeader } from 'core/components';
 
 // Styled components for the Grid
 const GridContainer = styled(Box)(({ }) => ({
@@ -82,4 +82,4 @@ const GridLayout: React.FC<GridLayoutProps> = ({
   );
 };
 
-export default GridLayout; 
+export { GridLayout }; 

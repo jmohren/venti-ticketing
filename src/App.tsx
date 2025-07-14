@@ -1,13 +1,10 @@
 import { BrowserRouter, Routes, Route, useNavigate } from 'react-router-dom'
-import LoginForm from './components/auth/LoginForm'
-import ForgotPasswordForm from './components/auth/ForgotPasswordForm'
-import ResetPasswordForm from './components/auth/ResetPasswordForm'
+import { LoginForm, ForgotPasswordForm, ResetPasswordForm, ForcePasswordChangeScreen } from 'core/pages'
 import { CircularProgress, Box, Typography, Button, AppBar, Toolbar } from '@mui/material'
 import { useState, useEffect } from 'react'
 import { useAuth, LoginResponse, User } from './core/hooks/useAuth'
 import './App.css'
 import AppMain from './app/AppMain'
-import ForcePasswordChangeScreen from './components/auth/ForcePasswordChangeScreen'
 import { resetIsAdminCache } from './core/hooks/useIsAdmin'
 
 // Minimalistic loading component for quick auth checks

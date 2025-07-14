@@ -1,6 +1,6 @@
 import React from 'react';
 import { useLocation } from 'react-router-dom';
-import GridLayout from '../components/GridLayout';
+import { GridLayout } from 'core/components';
 import AddTicketView from './views/add-ticket/AddTicketView';
 import TicketPoolView from './views/ticket-pool/TicketPoolView';
 import InstandhaltungView from './views/instandhaltung/InstandhaltungView';

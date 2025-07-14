@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Box } from '@mui/material';
 import { format } from 'date-fns';
-import AddTicketDialog from '../../../../components/tickets/AddTicketDialog';
+import AddTicketDialog from '../../../../core/components/tickets/AddTicketDialog';
 import { useTickets, Ticket } from '../../../../core/hooks/useTickets';
 import SummaryCard from '../../../../core/ui/SummaryCard';
 import KanbanLane from '../../../../core/ui/KanbanLane';

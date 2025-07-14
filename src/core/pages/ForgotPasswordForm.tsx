@@ -107,4 +107,4 @@ const ForgotPasswordForm: React.FC = () => {
   );
 };
 
-export default ForgotPasswordForm; 
+export { ForgotPasswordForm }; 

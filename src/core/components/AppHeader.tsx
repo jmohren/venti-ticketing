@@ -1,6 +1,6 @@
 import React from 'react';
 import { Box, ToggleButtonGroup, ToggleButton } from '@mui/material';
-import Widget from './Widget';
+import { Widget } from 'core/components';
 
 interface AppHeaderProps {
   currentView?: string;
@@ -112,4 +112,4 @@ const AppHeader: React.FC<AppHeaderProps> = ({
   );
 };
 
-export default AppHeader; 
+export { AppHeader }; 

@@ -75,4 +75,4 @@ const ForcePasswordChangeScreen: React.FC<Props> = ({ onSuccess }) => {
   );
 };
 
-export default ForcePasswordChangeScreen; 
+export { ForcePasswordChangeScreen }; 

@@ -1,5 +1,5 @@
 import React from 'react';
-import Widget from '../../../components/Widget';
+import { Widget } from 'core/components';
 import AddTicketWidget from './widgets/AddTicketWidget';
 
 const AddTicketView: React.FC = () => {

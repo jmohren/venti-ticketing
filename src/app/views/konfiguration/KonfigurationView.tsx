@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import Widget from '../../../components/Widget';
+import { Widget } from 'core/components';
 import MachinesRoomsWidget from './widgets/MachinesRoomsWidget';
 import MachineCalendarWidget from './widgets/MachineCalendarWidget';
 import PlaceholderWidget from './widgets/PlaceholderWidget';

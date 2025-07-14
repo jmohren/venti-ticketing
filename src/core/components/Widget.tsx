@@ -137,4 +137,4 @@ const Widget: React.FC<WidgetProps> = ({
   );
 };
 
-export default Widget; 
+export { Widget }; 
