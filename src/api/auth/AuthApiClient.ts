@@ -41,7 +41,7 @@ export class CookieAuthApiClient implements AuthApiClient {
   private refreshing: Promise<void> | null = null;
   private currentUser: User | null = null;
   private sessionInitialized: boolean = false;
-  private refreshInterval: NodeJS.Timeout | null = null;
+  private refreshInterval: ReturnType<typeof setInterval> | null = null;
   private authBaseUrl: string;
   private needsPasswordReset: boolean = false;
 
