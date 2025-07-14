@@ -2,7 +2,7 @@ import React from 'react';
 import { Box } from '@mui/material';
 import { format } from 'date-fns';
 import KanbanLane from '@/core/ui/KanbanLane';
-import { useTickets, Ticket } from '@/core/hooks/useTickets';
+import { useTickets, Ticket } from '@/app/hooks/useTickets';
 import AddTicketDialog from '@/app/views/add-ticket/dialogs/AddTicketDialog';
 import SummaryCard from '@/core/ui/SummaryCard';
 import { useTicketUrlState } from '@/app/utils/ticketUrlState';

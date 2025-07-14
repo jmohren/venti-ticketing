@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { Box, Typography, List, ListItem, ListItemText, Badge } from '@mui/material';
-import { Machine } from '@/core/hooks/useMachines';
-import { useTickets } from '@/core/hooks/useTickets';
+import { Machine } from '@/app/hooks/useMachines';
+import { useTickets } from '@/app/hooks/useTickets';
 import { DateCalendar, PickersDay, LocalizationProvider } from '@mui/x-date-pickers';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import dayjs from 'dayjs';

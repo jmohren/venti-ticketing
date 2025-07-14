@@ -1,5 +1,5 @@
 import { useNumberParam } from '@/core/hooks/useUrlState';
-import { useTickets } from '@/core/hooks/useTickets';
+import { useTickets } from '@/app/hooks/useTickets';
 
 /**
  * Hook for managing ticket dialog state through URL parameters
