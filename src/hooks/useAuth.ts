@@ -10,11 +10,10 @@ export interface AuthenticatedApiOptions extends RequestInit {
 export type { LoginResponse, User };
 
 /**
- * Pure auth hook - decoupled from business logic
- * Only handles authentication concerns
+ * Comprehensive auth hook – still delegates network logic to authApiClient.
+ * For global reactive `user` value, components can also use `state/AuthProvider`.
  */
 export const useAuth = () => {
-  
   const login = useCallback(async (email: string, password: string): Promise<LoginResponse> => {
     const user = await authApiClient.login(email, password);
     return {
@@ -30,7 +29,7 @@ export const useAuth = () => {
   }, []);
 
   const authenticatedFetch = useCallback(async (
-    url: string, 
+    url: string,
     options: AuthenticatedApiOptions = {}
   ): Promise<Response> => {
     const { requiresAuth = true, ...fetchOptions } = options;
@@ -120,4 +119,4 @@ export const useAuth = () => {
     changePassword,
     needsPasswordReset,
   };
-}; 
+};

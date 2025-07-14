@@ -31,6 +31,8 @@ export interface AuthApiClient {
   confirmPasswordReset(token: string, newPassword: string): Promise<void>;
   changePassword(currentPassword: string, newPassword: string): Promise<void>;
   needsReset(): boolean;
+  /** Subscribe to user changes. Returns an unsubscribe function */
+  subscribe(listener: (user: User | null) => void): () => void;
 }
 
 /**
@@ -45,8 +47,30 @@ export class CookieAuthApiClient implements AuthApiClient {
   private authBaseUrl: string;
   private needsPasswordReset: boolean = false;
 
+  /** Listeners that react to user changes */
+  private listeners: Set<(user: User | null) => void> = new Set();
+
   constructor(authBaseUrl?: string) {
     this.authBaseUrl = authBaseUrl || appConfig.api.authBaseUrl;
+  }
+
+  /** Allow external code (e.g. React provider) to listen to user changes */
+  subscribe(listener: (user: User | null) => void): () => void {
+    this.listeners.add(listener);
+    // Immediately send current state so consumer starts consistent
+    listener(this.currentUser);
+    return () => this.listeners.delete(listener);
+  }
+
+  /** Notify all subscribers of the current user state */
+  private notifyUserChanged() {
+    this.listeners.forEach((cb) => {
+      try {
+        cb(this.currentUser);
+      } catch (e) {
+        console.warn('[AuthApiClient] listener threw', e);
+      }
+    });
   }
 
   async login(email: string, password: string): Promise<User> {
@@ -102,6 +126,8 @@ export class CookieAuthApiClient implements AuthApiClient {
       }
 
       this.startAutoRefresh();
+      // Notify listeners about new user
+      this.notifyUserChanged();
       
       return this.currentUser;
     } catch (error) {
@@ -123,6 +149,8 @@ export class CookieAuthApiClient implements AuthApiClient {
     } finally {
       this.currentUser = null;
       this.sessionInitialized = false;
+      // Inform subscribers that we logged out
+      this.notifyUserChanged();
     }
   }
 
@@ -162,6 +190,7 @@ export class CookieAuthApiClient implements AuthApiClient {
             email: dataEmail,
             roles
           };
+          this.notifyUserChanged();
         }
         
         this.sessionInitialized = true;
@@ -239,6 +268,7 @@ export class CookieAuthApiClient implements AuthApiClient {
               email: data.email,
               roles: data.roles || []
             };
+            this.notifyUserChanged();
           }
         } catch (jsonError) {
           console.log('ℹ️ Response has no JSON body - verification only');
