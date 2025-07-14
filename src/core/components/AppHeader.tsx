@@ -1,6 +1,6 @@
 import React from 'react';
 import { Box, ToggleButtonGroup, ToggleButton } from '@mui/material';
-import { Widget } from '@/core/components/Widget';
+import { WidgetContainer } from '@/core/components/WidgetContainer';
 
 interface AppHeaderProps {
   currentView?: string;
@@ -81,7 +81,7 @@ const AppHeader: React.FC<AppHeaderProps> = ({
   } : {};
 
   return (
-    <Widget gridPosition={gridPosition}>
+    <WidgetContainer gridPosition={gridPosition}>
       <Box sx={{ 
         width: '100%',
         height: '100%',
@@ -108,7 +108,7 @@ const AppHeader: React.FC<AppHeaderProps> = ({
           </ToggleButtonGroup>
         </Box>
       </Box>
-    </Widget>
+    </WidgetContainer>
   );
 };
 

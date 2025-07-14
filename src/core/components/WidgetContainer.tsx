@@ -54,7 +54,7 @@ interface WidgetProps {
  * @param gridPosition - Optional grid positioning configuration (column/row start/span)
  * @param showDate - If true, displays the current date in the header (DD.MM.YY format)
  */
-const Widget: React.FC<WidgetProps> = ({ 
+const WidgetContainer: React.FC<WidgetProps> = ({ 
   title, 
   elevation = 3, 
   children,
@@ -137,4 +137,4 @@ const Widget: React.FC<WidgetProps> = ({
   );
 };
 
-export { Widget }; 
+export { WidgetContainer }; 

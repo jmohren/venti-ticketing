@@ -1,17 +1,17 @@
 import React from 'react';
-import { Widget } from '@/core/components/Widget';
+import { WidgetContainer } from '@/core/components/WidgetContainer';
 import AddTicketWidget from '@/app/views/add-ticket/widgets/AddTicketWidget';
 
 const AddTicketView: React.FC = () => {
   return (
     <>
-      <Widget
+      <WidgetContainer
         title="Ticket anlegen"
         gridPosition={{ columnStart: 1, columnSpan: 12, rowStart: 2, rowSpan: 12 }}
         elevation={3}
       >
         <AddTicketWidget />
-      </Widget>
+      </WidgetContainer>
     </>
   );
 };
