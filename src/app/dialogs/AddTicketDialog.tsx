@@ -19,7 +19,7 @@ import {
 import { format } from 'date-fns';
 import { useAuth } from '@/core/hooks/useAuth';
 import { IconButton } from '@mui/material';
-import { CloudUpload, Delete, ZoomIn, Clear, ExpandMore } from '@mui/icons-material';
+import { CloudUpload, Delete, ZoomIn, Clear, ExpandMore, ContentCopy } from '@mui/icons-material';
 import { TicketEvent } from '@/app/hooks/useTickets';
 import { DatePicker } from '@mui/x-date-pickers';
 import { LocalizationProvider } from '@mui/x-date-pickers';
@@ -45,6 +45,7 @@ interface AddTicketDialogProps {
   onSave?: (updated: Partial<TicketData>) => void;
   allowResponsibleEdit?: boolean;
   allowPlanEdit?: boolean;
+  ticketId?: number; // For generating deep link URLs
 }
 
 /**
@@ -52,7 +53,7 @@ interface AddTicketDialogProps {
  * The full form will be expanded later – for now we only collect
  * a short description and priority so that we can wire up the workflow.
  */
-const AddTicketDialog: React.FC<AddTicketDialogProps> = ({ open, onClose, readOnly = false, initialData, showStatus = false, onSave, allowResponsibleEdit = false, allowPlanEdit = false }) => {
+const AddTicketDialog: React.FC<AddTicketDialogProps> = ({ open, onClose, readOnly = false, initialData, showStatus = false, onSave, allowResponsibleEdit = false, allowPlanEdit = false, ticketId }) => {
   const { getCurrentUser } = useAuth();
 
   const EMPLOYEES = ['Max Mustermann', 'Julia Schneider', 'Ali Öztürk'];
@@ -68,6 +69,9 @@ const AddTicketDialog: React.FC<AddTicketDialogProps> = ({ open, onClose, readOn
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewIndex, setPreviewIndex] = useState(0);
+
+  // Copy URL state
+  const [copyButtonText, setCopyButtonText] = useState('Link kopieren');
 
   const previewItems = selectedFiles.map(file => URL.createObjectURL(file));
 
@@ -103,6 +107,29 @@ const AddTicketDialog: React.FC<AddTicketDialogProps> = ({ open, onClose, readOn
     });
     if (onSave) onSave({ description, priority, location, machine, status: initialData?.status, responsible, plannedCompletion: plannedDate ? plannedDate.toISOString() : null });
     onClose();
+  };
+
+  const handleCopyUrl = async () => {
+    if (!ticketId) return;
+    
+    try {
+      const currentUrl = new URL(window.location.href);
+      currentUrl.searchParams.set('ticket', ticketId.toString());
+      
+      await navigator.clipboard.writeText(currentUrl.toString());
+      setCopyButtonText('Kopiert!');
+      
+      // Reset button text after 2 seconds
+      setTimeout(() => {
+        setCopyButtonText('Link kopieren');
+      }, 2000);
+    } catch (error) {
+      console.error('Failed to copy URL:', error);
+      setCopyButtonText('Fehler');
+      setTimeout(() => {
+        setCopyButtonText('Link kopieren');
+      }, 2000);
+    }
   };
 
   const statusLabelMap: Record<string, string> = { backlog: 'Backlog', progress: 'In Bearbeitung', done: 'Erledigt' };
@@ -335,11 +362,28 @@ const AddTicketDialog: React.FC<AddTicketDialogProps> = ({ open, onClose, readOn
           )}
         </Box>
       </DialogContent>
-      <DialogActions>
-        <Button onClick={onClose} color="inherit">{readOnly ? 'Schließen' : 'Abbrechen'}</Button>
-        {(!readOnly || allowResponsibleEdit) && (
-          <Button onClick={handleSave} variant="contained" disabled={!formValid}>Speichern</Button>
-        )}
+      <DialogActions sx={{ justifyContent: 'space-between' }}>
+        {/* Left side - Copy URL button (only show for existing tickets) */}
+        <Box>
+          {ticketId && (
+            <Button 
+              onClick={handleCopyUrl} 
+              startIcon={<ContentCopy />}
+              size="small"
+              variant="outlined"
+            >
+              {copyButtonText}
+            </Button>
+          )}
+        </Box>
+
+        {/* Right side - Action buttons */}
+        <Box sx={{ display: 'flex', gap: 1 }}>
+          <Button onClick={onClose} color="inherit">{readOnly ? 'Schließen' : 'Abbrechen'}</Button>
+          {(!readOnly || allowResponsibleEdit) && (
+            <Button onClick={handleSave} variant="contained" disabled={!formValid}>Speichern</Button>
+          )}
+        </Box>
       </DialogActions>
     </Dialog>
 

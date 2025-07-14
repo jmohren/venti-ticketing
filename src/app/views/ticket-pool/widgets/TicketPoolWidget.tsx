@@ -1,11 +1,11 @@
 import React from 'react';
 import { Box } from '@mui/material';
 import { format } from 'date-fns';
-import AddTicketDialog from '@/app/views/add-ticket/dialogs/AddTicketDialog';
+import AddTicketDialog from '@/app/dialogs/AddTicketDialog';
 import { useTickets, Ticket } from '@/app/hooks/useTickets';
 import SummaryCard from '@/core/ui/SummaryCard';
 import KanbanLane from '@/core/ui/KanbanLane';
-import { useTicketUrlState } from '@/app/utils/ticketUrlState';
+import { useTicketUrlState } from '@/app/hooks/useTicketUrlState';
 
 const priorityColor = {
   rot: '#d32f2f',
@@ -128,6 +128,7 @@ const TicketPoolWidget: React.FC = () => {
           open={isDialogOpen}
           onClose={closeTicket}
           readOnly
+          ticketId={selectedTicket.id}
           initialData={{
             machine: selectedTicket.machine,
             description: selectedTicket.description,

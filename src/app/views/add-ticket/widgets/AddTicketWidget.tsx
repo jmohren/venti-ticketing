@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Button, Box } from '@mui/material';
-import AddTicketDialog from '@/app/views/add-ticket/dialogs/AddTicketDialog';
+import AddTicketDialog from '@/app/dialogs/AddTicketDialog';
 
 const AddTicketWidget: React.FC = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
