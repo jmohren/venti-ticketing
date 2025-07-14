@@ -21,6 +21,7 @@ const TicketPoolView: React.FC = () => {
         title="Techniker Auslastung"
         gridPosition={{ columnStart: 7, columnSpan: 6, rowStart: 2, rowSpan: 6 }}
         elevation={3}
+        stretchContent
       >
         <TechnicianLoadWidget />
       </WidgetContainer>
