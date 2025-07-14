@@ -1,6 +1,6 @@
 import { useCallback } from 'react';
-import { authApiClient } from '../api/auth/AuthApiClient';
-import type { LoginResponse, User } from '../api/auth/AuthApiClient';
+import { authApiClient } from 'core/api';
+import type { LoginResponse, User } from 'core/api';
 
 export interface AuthenticatedApiOptions extends RequestInit {
   requiresAuth?: boolean;

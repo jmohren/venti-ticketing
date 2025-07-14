@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
-import { Box, Typography, Paper, TextField, IconButton, Button } from '@mui/material';
+import { Box, Typography, Paper, TextField, IconButton } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import { useMachines, Machine } from '../../../../core/hooks/useMachines';
-import MachineDialog from '../../../../components/machines/MachineDialog';
+import MachineDialog from '../dialogs/MachineDialog';
 import AddIcon from '@mui/icons-material/Add';
 
 const Card = styled(Paper)<{ selected?: boolean }>(({ theme, selected }) => ({

@@ -1,6 +1,6 @@
 import { useAuth } from './useAuth';
 import { useEffect, useState } from 'react';
-import { adminApiClient } from '../api/admin/AdminApiClient';
+import { adminApiClient } from 'core/api';
 
 // Module-level cache: persisted for lifetime of page.
 let cachedIsAdmin: boolean | null = null;
