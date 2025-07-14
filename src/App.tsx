@@ -5,10 +5,10 @@ import { ResetPasswordForm } from '@/core/pages/ResetPasswordForm'
 import { ForcePasswordChangeScreen } from '@/core/pages/ForcePasswordChangeScreen'
 import { CircularProgress, Box, Typography, Button, AppBar, Toolbar } from '@mui/material'
 import { useState, useEffect } from 'react'
-import { useAuth, LoginResponse, User } from './core/hooks/useAuth'
-import './App.css'
-import AppMain from './app/AppMain'
-import { resetIsAdminCache } from './core/hooks/useIsAdmin'
+import { useAuth, LoginResponse, User } from '@/core/hooks/useAuth'
+import '@/App.css'
+import AppMain from '@/app/AppMain'
+import { resetIsAdminCache } from '@/core/hooks/useIsAdmin'
 
 // Minimalistic loading component for quick auth checks
 const QuickAuthCheck = () => (
