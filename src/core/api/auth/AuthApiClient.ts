@@ -9,10 +9,17 @@ export interface LoginResponse {
   needsPasswordReset?: boolean;
 }
 
+export interface ProfileData {
+  firstName?: string;
+  lastName?: string;
+  isComplete: boolean;
+}
+
 export interface User {
   userId: string;
   email: string;
   roles: string[];
+  profile?: ProfileData;
 }
 
 export interface AuthApiClient {
@@ -30,6 +37,7 @@ export interface AuthApiClient {
   requestPasswordReset(email: string): Promise<void>;
   confirmPasswordReset(token: string, newPassword: string): Promise<void>;
   changePassword(currentPassword: string, newPassword: string): Promise<void>;
+  updateProfile(firstName: string, lastName: string): Promise<ProfileData>;
   needsReset(): boolean;
   /** Subscribe to user changes. Returns an unsubscribe function */
   subscribe(listener: (user: User | null) => void): () => void;
@@ -99,10 +107,21 @@ export class CookieAuthApiClient implements AuthApiClient {
           ? data.user.roles
           : [];
 
+      // Extract profile data from metadata if available
+      let profileData: ProfileData | undefined;
+      if (data.metadata?.profile) {
+        profileData = {
+          firstName: data.metadata.profile.firstName || undefined,
+          lastName: data.metadata.profile.lastName || undefined,
+          isComplete: !!data.metadata.profile.isComplete
+        };
+      }
+
       this.currentUser = {
         userId: dataUserId,
         email: dataEmail,
-        roles: initialRoles
+        roles: initialRoles,
+        profile: profileData
       };
       
       this.sessionInitialized = true;
@@ -185,10 +204,22 @@ export class CookieAuthApiClient implements AuthApiClient {
 
         if (dataUserId && dataEmail) {
           const roles = rolesFromBody.length ? rolesFromBody : this.extractRolesFromFrontToken(response.headers);
+          
+          // Extract profile data from metadata if available
+          let profileData: ProfileData | undefined;
+          if (data.metadata?.profile) {
+            profileData = {
+              firstName: data.metadata.profile.firstName || undefined,
+              lastName: data.metadata.profile.lastName || undefined,
+              isComplete: !!data.metadata.profile.isComplete
+            };
+          }
+
           this.currentUser = {
             userId: dataUserId,
             email: dataEmail,
-            roles
+            roles,
+            profile: profileData
           };
           this.notifyUserChanged();
         }
@@ -263,10 +294,21 @@ export class CookieAuthApiClient implements AuthApiClient {
           const data = await response.json();
           
           if (data.userId && data.email) {
+            // Extract profile data if available
+            let profileData: ProfileData | undefined;
+            if (data.profile) {
+              profileData = {
+                firstName: data.profile.firstName || undefined,
+                lastName: data.profile.lastName || undefined,
+                isComplete: !!data.profile.isComplete
+              };
+            }
+
             this.currentUser = {
               userId: data.userId,
               email: data.email,
-              roles: data.roles || []
+              roles: data.roles || [],
+              profile: profileData
             };
             this.notifyUserChanged();
           }
@@ -490,6 +532,40 @@ export class CookieAuthApiClient implements AuthApiClient {
 
     // clear flag
     this.needsPasswordReset = false;
+  }
+
+  async updateProfile(firstName: string, lastName: string): Promise<ProfileData> {
+    const res = await fetch(`${this.authBaseUrl}/auth/profile/update`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      credentials: 'include',
+      body: JSON.stringify({ firstName, lastName })
+    });
+
+    if (!res.ok) {
+      const err = await this.extractErrorMessage(res);
+      throw new Error(err || 'Profile update failed');
+    }
+
+    const data = await res.json();
+    const profileData: ProfileData = data.profile || {
+      firstName,
+      lastName,
+      isComplete: true
+    };
+
+    // Update current user with new profile data
+    if (this.currentUser) {
+      this.currentUser = {
+        ...this.currentUser,
+        profile: profileData
+      };
+      this.notifyUserChanged();
+    }
+
+    return profileData;
   }
 
   needsReset(): boolean {

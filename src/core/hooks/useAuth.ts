@@ -1,12 +1,12 @@
 import { useCallback } from 'react';
-import { authApiClient, LoginResponse, User } from '@/core/api/auth/AuthApiClient';
+import { authApiClient, LoginResponse, User, ProfileData } from '@/core/api/auth/AuthApiClient';
 
 export interface AuthenticatedApiOptions extends RequestInit {
   requiresAuth?: boolean;
 }
 
 // Re-export types for convenience
-export type { LoginResponse, User };
+export type { LoginResponse, User, ProfileData };
 
 /**
  * Comprehensive auth hook – still delegates network logic to authApiClient.
@@ -101,6 +101,10 @@ export const useAuth = () => {
     return authApiClient.needsReset();
   }, []);
 
+  const updateProfile = useCallback(async (firstName: string, lastName: string) => {
+    return await authApiClient.updateProfile(firstName, lastName);
+  }, []);
+
   return {
     login,
     logout,
@@ -117,5 +121,6 @@ export const useAuth = () => {
     confirmPasswordReset,
     changePassword,
     needsPasswordReset,
+    updateProfile,
   };
 };
