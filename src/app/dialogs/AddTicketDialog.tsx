@@ -25,6 +25,7 @@ import { DatePicker } from '@mui/x-date-pickers';
 import { LocalizationProvider } from '@mui/x-date-pickers';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { useMachines } from '@/app/hooks/useMachines';
+import { useTechnicians } from '@/app/hooks/useTechnicians';
 
 interface TicketData {
   machine?: string;
@@ -43,10 +44,10 @@ interface AddTicketDialogProps {
   readOnly?: boolean;
   initialData?: TicketData;
   showStatus?: boolean;
-  onSave?: (updated: Partial<TicketData>) => void;
+  onSave?: (data: TicketData) => void;
   allowResponsibleEdit?: boolean;
   allowPlanEdit?: boolean;
-  ticketId?: number; // For generating deep link URLs
+  ticketId?: number;
 }
 
 /**
@@ -57,8 +58,7 @@ interface AddTicketDialogProps {
 const AddTicketDialog: React.FC<AddTicketDialogProps> = ({ open, onClose, readOnly = false, initialData, showStatus = false, onSave, allowResponsibleEdit = false, allowPlanEdit = false, ticketId }) => {
   const { getCurrentUser } = useAuth();
   const { rooms } = useMachines();
-
-  const EMPLOYEES = ['Max Mustermann', 'Julia Schneider', 'Ali Öztürk'];
+  const { getTechnicianNames } = useTechnicians();
 
   const [description, setDescription] = useState(initialData?.description || '');
   const [priority, setPriority] = useState<'rot' | 'gelb' | 'gruen'>(initialData?.priority || 'rot');
@@ -87,6 +87,9 @@ const AddTicketDialog: React.FC<AddTicketDialogProps> = ({ open, onClose, readOn
     const selectedRoom = rooms.find(room => room.name === location);
     return selectedRoom ? selectedRoom.machines.map(m => m.name) : [];
   }, [location, rooms]);
+
+  // Get technician names
+  const technicianNames = getTechnicianNames();
 
   const createdAt = useMemo(() => new Date(), []);
   const creatorEmail = getCurrentUser()?.email ?? '–';
@@ -251,7 +254,7 @@ const AddTicketDialog: React.FC<AddTicketDialogProps> = ({ open, onClose, readOn
               onChange={(e) => setResponsible(e.target.value as string)}
             >
               <MenuItem value=""><em>Niemand</em></MenuItem>
-              {EMPLOYEES.map(emp => (
+              {technicianNames.map(emp => (
                 <MenuItem key={emp} value={emp}>{emp}</MenuItem>
               ))}
             </Select>

@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { useTickets } from '@/app/hooks/useTickets';
-import { Box, Typography, useTheme } from '@mui/material';
+import { Box, Typography, useTheme, Chip } from '@mui/material';
 import BarChart, { BarChartSeries } from '@/core/ui/BarChart';
 
 const TechnicianLoadWidget: React.FC = () => {
@@ -36,7 +36,7 @@ const TechnicianLoadWidget: React.FC = () => {
     const series: BarChartSeries[] = [
       {
         name: 'Backlog',
-        color: theme.palette.warning.main,
+        color: theme.palette.primary.dark,
         data: sortedTechnicians.map(tech => ({
           label: tech.name,
           value: tech.backlog
@@ -44,7 +44,7 @@ const TechnicianLoadWidget: React.FC = () => {
       },
       {
         name: 'In Bearbeitung',
-        color: theme.palette.info.main,
+        color: theme.palette.primary.light,
         data: sortedTechnicians.map(tech => ({
           label: tech.name,
           value: tech.progress
@@ -66,13 +66,37 @@ const TechnicianLoadWidget: React.FC = () => {
   }
 
   return (
-    <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-      <BarChart 
-        series={chartData}
-        stacked={true}
-        showValues={true}
-        height={300}
-      />
+    <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+      {/* Legend */}
+      <Box sx={{ p: 2, pb: 1, display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+        <Chip
+          label="Backlog"
+          size="small"
+          sx={{
+            backgroundColor: theme.palette.primary.dark,
+            color: theme.palette.primary.contrastText,
+            '& .MuiChip-label': { fontWeight: 500 }
+          }}
+        />
+        <Chip
+          label="In Bearbeitung"
+          size="small"
+          sx={{
+            backgroundColor: theme.palette.primary.light,
+            color: theme.palette.primary.contrastText,
+            '& .MuiChip-label': { fontWeight: 500 }
+          }}
+        />
+      </Box>
+      
+      {/* Chart */}
+      <Box sx={{ flex: 1, overflowY: 'auto' }}>
+        <BarChart 
+          series={chartData}
+          stacked={true}
+          showValues={true}
+        />
+      </Box>
     </Box>
   );
 };

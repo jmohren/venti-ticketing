@@ -3,7 +3,7 @@ import { WidgetContainer } from '@/core/components/WidgetContainer';
 import InstandhaltungWidget from '@/app/views/instandhaltung/widgets/InstandhaltungWidget';
 
 const InstandhaltungView: React.FC = () => {
-  const name = 'Johannes';
+  const name = 'Johannes Mohren';
 
   return (
     <WidgetContainer

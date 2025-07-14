@@ -6,6 +6,9 @@ import TicketPoolView from '@/app/views/ticket-pool/TicketPoolView';
 import InstandhaltungView from '@/app/views/instandhaltung/InstandhaltungView';
 // import KonfigurationView from '@/app/views/konfiguration/KonfigurationView'; // TODO: Re-enable when we have a proper KonfigurationView
 import { useUrlAwareNavigation } from '@/core/hooks/useUrlState';
+import { TicketProvider } from '@/app/state/TicketProvider';
+import { MachineProvider } from '@/app/state/MachineProvider';
+import { TechnicianProvider } from '@/app/state/TechnicianProvider';
 
 // Single source of truth for all views
 const BASE_VIEWS = [
@@ -49,16 +52,22 @@ const AppMain: React.FC = () => {
   const ViewComponent = currentViewConfig?.component;
 
   return (
-    <GridLayout 
-      title={`App Management - ${currentView.replace('-', ' ')}`}
-      availableViews={availableViews}
-      currentView={currentView}
-      onViewChange={handleViewChange}
-      useStyledToggle={true}
-    >
-      {/* Dynamic view rendering */}
-      {ViewComponent && <ViewComponent />}
-    </GridLayout>
+    <TicketProvider>
+      <MachineProvider>
+        <TechnicianProvider>
+          <GridLayout 
+            title={`App Management - ${currentView.replace('-', ' ')}`}
+            availableViews={availableViews}
+            currentView={currentView}
+            onViewChange={handleViewChange}
+            useStyledToggle={true}
+          >
+            {/* Dynamic view rendering */}
+            {ViewComponent && <ViewComponent />}
+          </GridLayout>
+        </TechnicianProvider>
+      </MachineProvider>
+    </TicketProvider>
   );
 };
 

@@ -79,7 +79,7 @@ const StackedBarSegment = styled(Box)<{ width: number; color: string }>(({ theme
   transition: 'width 0.3s ease',
 }));
 
-const ValueLabel = styled(Typography)(({ theme }) => ({
+const ValueLabel = styled(Typography)(() => ({
   minWidth: 30,
   textAlign: 'right',
   fontSize: '0.875rem',
@@ -96,9 +96,18 @@ const BarChart: React.FC<BarChartProps> = ({
   const theme = useTheme();
   
   // Calculate max value if not provided
-  const calculatedMaxValue = maxValue || Math.max(
-    ...series.flatMap(s => s.data.map(d => d.value))
-  );
+  const calculatedMaxValue = maxValue || (() => {
+    if (stacked) {
+      // For stacked charts, find the maximum total value across all labels
+      const labels = series.length > 0 ? series[0].data.map(d => d.label) : [];
+      return Math.max(...labels.map((label, labelIndex) => 
+        series.reduce((sum, s) => sum + (s.data[labelIndex]?.value || 0), 0)
+      ));
+    } else {
+      // For regular charts, find the maximum individual value
+      return Math.max(...series.flatMap(s => s.data.map(d => d.value)));
+    }
+  })();
 
   // Get all unique labels
   const labels = series.length > 0 ? series[0].data.map(d => d.label) : [];
@@ -138,7 +147,7 @@ const BarChart: React.FC<BarChartProps> = ({
                           width={segmentPercentage}
                           color={color}
                         >
-                          {value > 0 && segmentPercentage > 20 ? value : ''}
+                          {value > 0 ? value : ''}
                         </StackedBarSegment>
                       );
                     })}
