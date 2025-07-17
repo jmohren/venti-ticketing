@@ -98,8 +98,6 @@ const InstandhaltungWidget: React.FC<Props> = ({ currentUser }) => {
           open={isDialogOpen}
           onClose={closeTicket}
           readOnly
-          allowResponsibleEdit
-          onSave={upd => updateTicket(selectedTicket.id, { responsible: upd.responsible })}
           showStatus
           ticketId={selectedTicket.id}
           initialData={{
@@ -109,6 +107,7 @@ const InstandhaltungWidget: React.FC<Props> = ({ currentUser }) => {
             status: selectedTicket.status,
             responsible: selectedTicket.responsible,
             events: selectedTicket.events,
+            images: selectedTicket.images,
           }}
         />
       )}

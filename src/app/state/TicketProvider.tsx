@@ -18,6 +18,8 @@ export interface Ticket {
   responsible?: string;
   completedAt?: string | null;
   plannedCompletion?: string | null;
+  /** Attached images (URLs or base64 data) */
+  images?: string[];
   /** Audit trail of important events */
   events: TicketEvent[];
 }

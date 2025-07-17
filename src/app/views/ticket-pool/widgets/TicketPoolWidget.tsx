@@ -137,6 +137,7 @@ const TicketPoolWidget: React.FC = () => {
             responsible: selectedTicket.responsible,
             events: selectedTicket.events,
             plannedCompletion: selectedTicket.plannedCompletion,
+            images: selectedTicket.images,
           }}
           showStatus
           onSave={(upd) => updateTicket(selectedTicket.id, { responsible: upd.responsible || '', plannedCompletion: upd.plannedCompletion ?? selectedTicket.plannedCompletion })}

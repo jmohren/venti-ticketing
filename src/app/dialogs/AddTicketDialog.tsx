@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -36,6 +36,7 @@ interface TicketData {
   responsible?: string;
   events?: TicketEvent[];
   plannedCompletion?: string | null;
+  images?: string[];
 }
 
 interface AddTicketDialogProps {
@@ -61,23 +62,44 @@ const AddTicketDialog: React.FC<AddTicketDialogProps> = ({ open, onClose, readOn
   const { getTechnicianNames } = useTechnicians();
 
   const [description, setDescription] = useState(initialData?.description || '');
-  const [priority, setPriority] = useState<'rot' | 'gelb' | 'gruen'>(initialData?.priority || 'rot');
+  const [priority, setPriority] = useState<'rot' | 'gelb' | 'gruen'>(initialData?.priority || 'gruen');
   const [location, setLocation] = useState(initialData?.location || '');
   const [machine, setMachine] = useState(initialData?.machine || '');
   const [responsible, setResponsible] = useState(initialData?.responsible || '');
   const [plannedDate, setPlannedDate] = useState<Date | null>(initialData?.plannedCompletion ? new Date(initialData.plannedCompletion) : null);
 
-  // Image upload state (allow up to 3 images)
+  // Image upload state (allow up to 3 images total)
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [existingImages, setExistingImages] = useState<string[]>([]);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewIndex, setPreviewIndex] = useState(0);
 
   // Copy URL state
   const [copyButtonText, setCopyButtonText] = useState('Link kopieren');
 
-  const previewItems = selectedFiles.map(file => URL.createObjectURL(file));
+  // Reset form when dialog opens
+  useEffect(() => {
+    if (open) {
+      // Reset all form fields to initial values when dialog opens
+      setDescription(initialData?.description || '');
+      setPriority(initialData?.priority || 'gruen');
+      setLocation(initialData?.location || '');
+      setMachine(initialData?.machine || '');
+      setResponsible(initialData?.responsible || '');
+      setPlannedDate(initialData?.plannedCompletion ? new Date(initialData.plannedCompletion) : null);
+      setSelectedFiles([]);
+      setExistingImages(initialData?.images || []);
+      setPreviewOpen(false);
+      setPreviewIndex(0);
+      setCopyButtonText('Link kopieren');
+    }
+  }, [open, initialData]);
 
-  const canSelectMore = !readOnly && selectedFiles.length < 3;
+  // Combine existing images and new uploads for preview
+  const newFileItems = selectedFiles.map(file => URL.createObjectURL(file));
+  const previewItems = [...existingImages, ...newFileItems];
+
+  const canSelectMore = !readOnly && previewItems.length < 3;
 
   // Get location options from rooms
   const locationOptions = rooms?.map(room => room.name) || [];
@@ -110,10 +132,19 @@ const AddTicketDialog: React.FC<AddTicketDialogProps> = ({ open, onClose, readOn
       machine,
       description,
       priority,
-      images: selectedFiles.length,
+      images: previewItems.length,
       responsible,
     });
-    if (onSave) onSave({ description, priority, location, machine, status: initialData?.status, responsible, plannedCompletion: plannedDate ? plannedDate.toISOString() : null });
+    if (onSave) onSave({ 
+      description, 
+      priority, 
+      location, 
+      machine, 
+      status: initialData?.status, 
+      responsible, 
+      plannedCompletion: plannedDate ? plannedDate.toISOString() : null,
+      images: previewItems // Pass combined existing and new images
+    });
     onClose();
   };
 
@@ -249,20 +280,22 @@ const AddTicketDialog: React.FC<AddTicketDialogProps> = ({ open, onClose, readOn
             </Select>
           </FormControl>
 
-          {/* Responsible */}
-          <FormControl fullWidth disabled={readOnly && !allowResponsibleEdit}>
-            <InputLabel>Verantwortlich</InputLabel>
-            <Select
-              label="Verantwortlich"
-              value={responsible}
-              onChange={(e) => setResponsible(e.target.value as string)}
-            >
-              <MenuItem value=""><em>Niemand</em></MenuItem>
-              {technicianNames.map(emp => (
-                <MenuItem key={emp} value={emp}>{emp}</MenuItem>
-              ))}
-            </Select>
-          </FormControl>
+          {/* Responsible - show when explicitly allowed for editing OR in read-only mode */}
+          {(allowResponsibleEdit || readOnly) && (
+            <FormControl fullWidth disabled={readOnly && !allowResponsibleEdit}>
+              <InputLabel>Verantwortlich</InputLabel>
+              <Select
+                label="Verantwortlich"
+                value={responsible}
+                onChange={(e) => setResponsible(e.target.value as string)}
+              >
+                <MenuItem value=""><em>Niemand</em></MenuItem>
+                {technicianNames.map(emp => (
+                  <MenuItem key={emp} value={emp}>{emp}</MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          )}
 
           {/* Planned completion date (Pool) */}
           {allowPlanEdit && (
@@ -287,7 +320,7 @@ const AddTicketDialog: React.FC<AddTicketDialogProps> = ({ open, onClose, readOn
                 const files = Array.from(e.target.files ?? []);
                 if (!files.length) return;
 
-                const remainingSlots = 3 - selectedFiles.length;
+                const remainingSlots = 3 - previewItems.length;
                 if (remainingSlots <= 0) return;
 
                 const filesToAdd = files.slice(0, remainingSlots);
@@ -304,7 +337,6 @@ const AddTicketDialog: React.FC<AddTicketDialogProps> = ({ open, onClose, readOn
                 startIcon={<CloudUpload />}
                 size="small"
                 fullWidth
-                sx={{ mb: 1 }}
               >
                 {selectedFiles.length === 0 ? 'Bild auswählen' : 'Weiteres Bild hinzufügen'}
               </Button>
@@ -312,61 +344,122 @@ const AddTicketDialog: React.FC<AddTicketDialogProps> = ({ open, onClose, readOn
 
             {previewItems.length > 0 && (
               <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                {previewItems.map((src, idx) => (
-                  <Box key={idx} sx={{ position: 'relative' }}>
-                    <Box
-                      component="img"
-                      src={src}
-                      alt={`Bild ${idx + 1}`}
-                      sx={{ width: '100%', border: '1px solid #e0e0e0', borderRadius: 1 }}
-                      onClick={() => {
-                        setPreviewIndex(idx);
-                        setPreviewOpen(true);
-                      }}
-                    />
+                {previewItems.map((src, idx) => {
+                  const isExisting = idx < existingImages.length;
+                  const isNewFile = idx >= existingImages.length;
+                  
+                  return (
+                    <Box key={idx} sx={{ position: 'relative' }}>
+                      <Box
+                        component="img"
+                        src={src}
+                        alt={`Bild ${idx + 1}`}
+                        sx={{ width: '100%', border: '1px solid #e0e0e0', borderRadius: 1 }}
+                        onClick={() => {
+                          setPreviewIndex(idx);
+                          setPreviewOpen(true);
+                        }}
+                      />
 
-                    {!readOnly && (
-                    <IconButton
-                      onClick={() => {
-                        setPreviewIndex(idx);
-                        setPreviewOpen(true);
-                      }}
-                      sx={{ position: 'absolute', top: 8, right: 8, backgroundColor: 'rgba(255,255,255,0.8)' }}
-                      size="small"
-                    >
-                      <ZoomIn fontSize="small" />
-                    </IconButton>
-                    )}
+                      {!readOnly && (
+                      <IconButton
+                        onClick={() => {
+                          setPreviewIndex(idx);
+                          setPreviewOpen(true);
+                        }}
+                        sx={{ position: 'absolute', top: 8, right: 8, backgroundColor: 'rgba(255,255,255,0.8)' }}
+                        size="small"
+                      >
+                        <ZoomIn fontSize="small" />
+                      </IconButton>
+                      )}
 
-                    <IconButton
-                      onClick={() => setSelectedFiles(prev => prev.filter((_, i) => i !== idx))}
-                      sx={{ position: 'absolute', top: 8, left: 8, backgroundColor: 'rgba(255,255,255,0.8)', color: 'error.main' }}
-                      size="small"
-                    >
-                      <Delete fontSize="small" />
-                    </IconButton>
-                  </Box>
-                ))}
+                      {!readOnly && (
+                        <IconButton
+                          onClick={() => {
+                            if (isExisting) {
+                              // Remove from existing images
+                              setExistingImages(prev => prev.filter((_, i) => i !== idx));
+                            } else {
+                              // Remove from new files
+                              const newFileIndex = idx - existingImages.length;
+                              setSelectedFiles(prev => prev.filter((_, i) => i !== newFileIndex));
+                            }
+                          }}
+                          sx={{ position: 'absolute', top: 8, left: 8, backgroundColor: 'rgba(255,255,255,0.8)', color: 'error.main' }}
+                          size="small"
+                        >
+                          <Delete fontSize="small" />
+                        </IconButton>
+                      )}
+                    </Box>
+                  );
+                })}
               </Box>
             )}
           </Box>
 
           {/* Audit Trail */}
           {initialData?.events && initialData.events.length > 0 && (
-            <Accordion sx={{ mt: 2 }}>
-              <AccordionSummary expandIcon={<ExpandMore />}>
-                <Typography variant="subtitle1">Historie</Typography>
-              </AccordionSummary>
-              <AccordionDetails>
-                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                  {initialData.events.map((ev, idx) => (
-                    <Typography key={idx} variant="body2">
-                      {format(new Date(ev.timestamp), 'dd.MM.yyyy HH:mm')} – {eventLabel(ev)}
-                    </Typography>
-                  ))}
-                </Box>
-              </AccordionDetails>
-            </Accordion>
+            <Box>
+              <Box sx={{ 
+                height: '1px', 
+                backgroundColor: 'grey.300', 
+                mb: 1 
+              }} />
+              <Accordion sx={{ 
+                boxShadow: 'none', 
+                border: 'none',
+                margin: '0 !important',
+                backgroundColor: 'grey.50',
+                borderRadius: '8px !important',
+                '&:before': {
+                  display: 'none'
+                },
+                '&.Mui-expanded': {
+                  margin: '0 !important'
+                },
+                '&.MuiAccordion-root': {
+                  margin: '0 !important'
+                },
+                '&.MuiAccordion-root.Mui-expanded': {
+                  margin: '0 !important'
+                },
+                '& .MuiAccordionSummary-root': {
+                  borderRadius: '8px 8px 0 0 !important'
+                },
+                '& .MuiAccordionDetails-root': {
+                  borderRadius: '0 0 8px 8px !important'
+                }
+              }}>
+                <AccordionSummary 
+                  expandIcon={<ExpandMore />}
+                  sx={{
+                    '&.Mui-expanded': {
+                      borderBottom: '1px solid',
+                      borderColor: 'grey.300'
+                    },
+                    '& .MuiAccordionSummary-content': {
+                      margin: '12px 0 !important'
+                    },
+                    '& .MuiAccordionSummary-content.Mui-expanded': {
+                      margin: '12px 0 !important'
+                    }
+                  }}
+                >
+                  <Typography variant="subtitle1">Historie</Typography>
+                </AccordionSummary>
+                <AccordionDetails>
+                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                    {initialData.events.map((ev, idx) => (
+                      <Typography key={idx} variant="body2">
+                        {format(new Date(ev.timestamp), 'dd.MM.yyyy HH:mm')} – {eventLabel(ev)}
+                      </Typography>
+                    ))}
+                  </Box>
+                </AccordionDetails>
+              </Accordion>
+            </Box>
           )}
         </Box>
       </DialogContent>
