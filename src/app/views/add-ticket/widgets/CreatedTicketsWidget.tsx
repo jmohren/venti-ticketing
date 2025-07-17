@@ -156,6 +156,7 @@ const CreatedTicketsWidget: React.FC = () => {
             description: selectedTicket.description,
             priority: selectedTicket.priority,
             status: selectedTicket.status,
+            location: selectedTicket.location,
             responsible: selectedTicket.responsible,
             events: selectedTicket.events,
             images: selectedTicket.images,

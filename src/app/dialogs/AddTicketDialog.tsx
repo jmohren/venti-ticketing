@@ -343,7 +343,7 @@ const AddTicketDialog: React.FC<AddTicketDialogProps> = ({ open, onClose, readOn
             )}
 
             {previewItems.length > 0 && (
-              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
                 {previewItems.map((src, idx) => {
                   const isExisting = idx < existingImages.length;
                   const isNewFile = idx >= existingImages.length;

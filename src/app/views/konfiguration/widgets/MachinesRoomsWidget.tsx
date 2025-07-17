@@ -72,7 +72,7 @@ const MachinesRoomsWidget: React.FC<Props> = ({ onSelect, selectedId }) => {
   } = useMachines();
   
   const [search, setSearch] = useState('');
-  const [expandedRooms, setExpandedRooms] = useState<Set<string>>(new Set(['r1', 'r2'])); // Default expanded
+  const [expandedRooms, setExpandedRooms] = useState<Set<string>>(new Set()); // All rooms collapsed by default
   
   // Room dialog state
   const [roomDialogOpen, setRoomDialogOpen] = useState(false);

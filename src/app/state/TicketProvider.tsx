@@ -15,6 +15,7 @@ export interface Ticket {
   description: string;
   priority: TicketPriority;
   status: TicketStatus;
+  location?: string;
   responsible?: string;
   completedAt?: string | null;
   plannedCompletion?: string | null;

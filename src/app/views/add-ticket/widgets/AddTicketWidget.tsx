@@ -84,6 +84,7 @@ const AddTicketWidget: React.FC = () => {
       description: data.description || '',
       priority: data.priority || 'gruen',
       status: 'backlog', // New tickets always start as backlog
+      location: data.location || '', // Store the room/location information
       responsible: '', // New tickets are unassigned initially
       completedAt: null,
       plannedCompletion: null, // No planned completion during creation
