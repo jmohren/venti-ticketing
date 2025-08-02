@@ -22,6 +22,7 @@ const statusLabel = {
   backlog: 'Backlog',
   progress: 'In Bearbeitung',
   done: 'Erledigt',
+  archived: 'Archiviert',
 } as const;
 
 const CreatedTicketsWidget: React.FC = () => {
@@ -156,10 +157,13 @@ const CreatedTicketsWidget: React.FC = () => {
             description: selectedTicket.description,
             priority: selectedTicket.priority,
             status: selectedTicket.status,
-            location: selectedTicket.location,
+            type: selectedTicket.type,
+            category: selectedTicket.category,
             responsible: selectedTicket.responsible,
             events: selectedTicket.events,
             images: selectedTicket.images,
+            raumnummer: selectedTicket.raumnummer,
+            equipmentNummer: selectedTicket.equipmentNummer,
           }}
         />
       )}

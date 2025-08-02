@@ -27,7 +27,7 @@ const TicketPoolView: React.FC = () => {
       </WidgetContainer>
 
       <WidgetContainer
-        title="Maschinen & Räume"
+        title="Maschinen"
         gridPosition={{ columnStart: 7, columnSpan: 6, rowStart: 8, rowSpan: 6 }}
         stretchContent
       >

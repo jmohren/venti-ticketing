@@ -6,6 +6,7 @@ import { useTickets, Ticket } from '@/app/hooks/useTickets';
 import SummaryCard from '@/core/ui/SummaryCard';
 import KanbanLane from '@/core/ui/KanbanLane';
 import { useTicketUrlState } from '@/app/hooks/useTicketUrlState';
+import { useAuth } from '@/core/hooks/useAuth';
 
 const priorityColor = {
   rot: '#d32f2f',
@@ -35,8 +36,9 @@ const TicketCard: React.FC<{ ticket: Ticket; onClick: () => void; draggable?: bo
 };
 
 const TicketPoolWidget: React.FC = () => {
-  const { tickets, updateTicket, getTicketById, reorderTickets } = useTickets();
+  const { tickets, updateTicket, getTicketById, reorderTickets, archiveTickets } = useTickets();
   const { selectedTicket, isDialogOpen, openTicket, closeTicket } = useTicketUrlState();
+  const { getCurrentUser } = useAuth();
 
   const backlog = tickets.filter(t => t.status === 'backlog');
   const inProgress = tickets.filter(t => t.status === 'progress');
@@ -86,7 +88,7 @@ const TicketPoolWidget: React.FC = () => {
       // Moving out of done → reset completion timestamp
       partial.completedAt = null;
     }
-    updateTicket(id, partial);
+    updateTicket(id, partial, getCurrentUser() || undefined);
 
     // Retrieve the freshly updated ticket (including new audit event) for the dialog
     const refreshed = getTicketById(id) ?? updatedTicket;
@@ -104,12 +106,16 @@ const TicketPoolWidget: React.FC = () => {
     reorderTickets(dragId, targetId, placeAfter);
   };
 
+  const handleArchiveTicket = (ticketId: number) => {
+    archiveTickets([ticketId]);
+    closeTicket(); // Close the dialog after archiving
+  };
+
   return (
     <Box sx={{ display: 'flex', gap: 1, height: '100%' }}>
       {([
         ['Backlog', backlog, 'backlog'],
-        ['In Progress', inProgress, 'progress'],
-        ['Done (Heute)', todayDone, 'done'],
+        ['In Progress', inProgress, 'progress']
       ] as const).map(([title, list, lane]) => (
         <KanbanLane
           sx={{ flex: 1.2 }}
@@ -123,6 +129,20 @@ const TicketPoolWidget: React.FC = () => {
           ))}
         </KanbanLane>
       ))}
+      
+      {/* Done lane */}
+      <KanbanLane
+        sx={{ flex: 1.2 }}
+        key="done"
+        header="Done (Heute)"
+        onDragOver={(e) => e.preventDefault()}
+        onDrop={(e) => handleDrop('done', e)}
+      >
+        {todayDone.map((t) => (
+          <TicketCard key={t.id} ticket={t} onClick={() => openTicket(t.id)} draggable onDropCard={handleCardDrop} />
+        ))}
+      </KanbanLane>
+
       {selectedTicket && (
         <AddTicketDialog
           open={isDialogOpen}
@@ -133,17 +153,27 @@ const TicketPoolWidget: React.FC = () => {
             machine: selectedTicket.machine,
             description: selectedTicket.description,
             priority: selectedTicket.priority,
-            status: selectedTicket.status,
-            location: selectedTicket.location,
+            status: selectedTicket.status as any,
+            type: selectedTicket.type,
+            category: selectedTicket.category,
             responsible: selectedTicket.responsible,
             events: selectedTicket.events,
             plannedCompletion: selectedTicket.plannedCompletion,
             images: selectedTicket.images,
+            raumnummer: selectedTicket.raumnummer,
+            equipmentNummer: selectedTicket.equipmentNummer,
           }}
           showStatus
-          onSave={(upd) => updateTicket(selectedTicket.id, { responsible: upd.responsible || '', plannedCompletion: upd.plannedCompletion ?? selectedTicket.plannedCompletion })}
+          onSave={(upd) => updateTicket(selectedTicket.id, { 
+            responsible: upd.responsible || '', 
+            plannedCompletion: upd.plannedCompletion ?? selectedTicket.plannedCompletion,
+            category: upd.category ?? selectedTicket.category
+          }, getCurrentUser() || undefined)}
           allowResponsibleEdit
           allowPlanEdit
+          allowWorkTracking
+          showArchiveButton={selectedTicket.status === 'done'}
+          onArchive={() => handleArchiveTicket(selectedTicket.id)}
         />
       )}
     </Box>

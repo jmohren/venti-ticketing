@@ -9,15 +9,20 @@ import { Box, CircularProgress, Typography } from '@mui/material';
 
 // Lazy load views for better performance
 const AddTicketView = React.lazy(() => import('@/app/views/add-ticket/AddTicketView'));
+const MaschinenView = React.lazy(() => import('@/app/views/maschinen/MaschinenView'));
 const TicketPoolView = React.lazy(() => import('@/app/views/ticket-pool/TicketPoolView'));
 const InstandhaltungView = React.lazy(() => import('@/app/views/instandhaltung/InstandhaltungView'));
-// const KonfigurationView = React.lazy(() => import('@/app/views/konfiguration/KonfigurationView')); // TODO: Re-enable when we have a proper KonfigurationView
+const WissensdatenbankView = React.lazy(() => import('@/app/views/wissensdatenbank/WissensdatenbankView'));
+const CalendarView = React.lazy(() => import('@/app/views/calendar/CalendarView'));
 
 // Single source of truth for all views
 const BASE_VIEWS = [
   { value: 'add-ticket', label: 'Ticket anlegen', component: AddTicketView },
+  { value: 'maschinen', label: 'Maschinen', component: MaschinenView },
   { value: 'ticket-pool', label: 'Ticket Pool', component: TicketPoolView },
   { value: 'instandhaltung', label: 'Instandhaltung', component: InstandhaltungView },
+  { value: 'wissensdatenbank', label: 'Wissensdatenbank', component: WissensdatenbankView },
+  { value: 'calendar', label: 'Kalender', component: CalendarView },
   // { value: 'konfiguration', label: 'Konfiguration', component: KonfigurationView }, // TODO: Re-enable when we have a proper KonfigurationView
 ] as const;
 

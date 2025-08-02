@@ -19,24 +19,29 @@ import {
 import { format } from 'date-fns';
 import { useAuth } from '@/core/hooks/useAuth';
 import { IconButton } from '@mui/material';
-import { CloudUpload, Delete, ZoomIn, Clear, ExpandMore, ContentCopy } from '@mui/icons-material';
-import { TicketEvent } from '@/app/hooks/useTickets';
+import { CloudUpload, Delete, ZoomIn, Clear, ExpandMore, ContentCopy, Archive, Send, AttachFile, Close, CameraAlt, Image, PlayArrow, Pause } from '@mui/icons-material';
+import { TicketEvent, useTickets } from '@/app/hooks/useTickets';
 import { DatePicker } from '@mui/x-date-pickers';
 import { LocalizationProvider } from '@mui/x-date-pickers';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
-import { useMachines } from '@/app/hooks/useMachines';
+
 import { useTechnicians } from '@/app/hooks/useTechnicians';
 
 interface TicketData {
   machine?: string;
   description?: string;
   priority?: 'rot' | 'gelb' | 'gruen';
-  location?: string;
-  status?: 'backlog' | 'progress' | 'done';
+  status?: 'backlog' | 'progress' | 'done' | 'archived';
+  type?: 'verwaltung' | 'betrieb';
+  category?: 'elektrisch' | 'mechanisch';
   responsible?: string;
   events?: TicketEvent[];
   plannedCompletion?: string | null;
   images?: string[];
+  // Verwaltung specific fields
+  raumnummer?: string;
+  // Betrieb specific fields
+  equipmentNummer?: string;
 }
 
 interface AddTicketDialogProps {
@@ -49,6 +54,9 @@ interface AddTicketDialogProps {
   allowResponsibleEdit?: boolean;
   allowPlanEdit?: boolean;
   ticketId?: number;
+  showArchiveButton?: boolean;
+  onArchive?: () => void;
+  allowWorkTracking?: boolean; // Only show work tracking in specific views
 }
 
 /**
@@ -56,17 +64,21 @@ interface AddTicketDialogProps {
  * The full form will be expanded later – for now we only collect
  * a short description and priority so that we can wire up the workflow.
  */
-const AddTicketDialog: React.FC<AddTicketDialogProps> = ({ open, onClose, readOnly = false, initialData, showStatus = false, onSave, allowResponsibleEdit = false, allowPlanEdit = false, ticketId }) => {
+const AddTicketDialog: React.FC<AddTicketDialogProps> = ({ open, onClose, readOnly = false, initialData, showStatus = false, onSave, allowResponsibleEdit = false, allowPlanEdit = false, ticketId, showArchiveButton = false, onArchive, allowWorkTracking = false }) => {
   const { getCurrentUser } = useAuth();
-  const { rooms } = useMachines();
+  const { updateTicket } = useTickets();
   const { getTechnicianNames } = useTechnicians();
 
   const [description, setDescription] = useState(initialData?.description || '');
   const [priority, setPriority] = useState<'rot' | 'gelb' | 'gruen'>(initialData?.priority || 'gruen');
-  const [location, setLocation] = useState(initialData?.location || '');
+
   const [machine, setMachine] = useState(initialData?.machine || '');
   const [responsible, setResponsible] = useState(initialData?.responsible || '');
   const [plannedDate, setPlannedDate] = useState<Date | null>(initialData?.plannedCompletion ? new Date(initialData.plannedCompletion) : null);
+  const [ticketType, setTicketType] = useState<'verwaltung' | 'betrieb'>(initialData?.type || 'betrieb');
+  const [category, setCategory] = useState<'elektrisch' | 'mechanisch'>(initialData?.category || 'mechanisch');
+  const [raumnummer, setRaumnummer] = useState(initialData?.raumnummer || '');
+  const [equipmentNummer, setEquipmentNummer] = useState(initialData?.equipmentNummer || '');
 
   // Image upload state (allow up to 3 images total)
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
@@ -76,6 +88,31 @@ const AddTicketDialog: React.FC<AddTicketDialogProps> = ({ open, onClose, readOn
 
   // Copy URL state
   const [copyButtonText, setCopyButtonText] = useState('Link kopieren');
+  
+  // Chat functionality state
+  const [commentText, setCommentText] = useState('');
+  const [localEvents, setLocalEvents] = useState<TicketEvent[]>(initialData?.events || []);
+  const [commentImages, setCommentImages] = useState<File[]>([]);
+
+  // Detect if user is on mobile device
+  const isMobile = useMemo(() => {
+    return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+  }, []);
+
+  // Check if work is currently in progress
+  const isWorkInProgress = useMemo(() => {
+    const currentUser = getCurrentUser();
+    const userEmail = currentUser?.email || 'Demo User';
+    
+    // Find the most recent work event for the current user
+    const workEvents = localEvents.filter(event => 
+      (event.type === 'work_started' || event.type === 'work_paused') &&
+      event.details?.startsWith(userEmail)
+    ).sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+    
+    const lastWorkEvent = workEvents[0];
+    return lastWorkEvent?.type === 'work_started';
+  }, [localEvents, getCurrentUser]);
 
   // Reset form when dialog opens
   useEffect(() => {
@@ -83,15 +120,22 @@ const AddTicketDialog: React.FC<AddTicketDialogProps> = ({ open, onClose, readOn
       // Reset all form fields to initial values when dialog opens
       setDescription(initialData?.description || '');
       setPriority(initialData?.priority || 'gruen');
-      setLocation(initialData?.location || '');
+
       setMachine(initialData?.machine || '');
       setResponsible(initialData?.responsible || '');
       setPlannedDate(initialData?.plannedCompletion ? new Date(initialData.plannedCompletion) : null);
+      setTicketType(initialData?.type || 'betrieb');
+      setCategory(initialData?.category || 'mechanisch');
+      setRaumnummer(initialData?.raumnummer || '');
+      setEquipmentNummer(initialData?.equipmentNummer || '');
       setSelectedFiles([]);
       setExistingImages(initialData?.images || []);
       setPreviewOpen(false);
       setPreviewIndex(0);
       setCopyButtonText('Link kopieren');
+      setCommentText('');
+      setLocalEvents(initialData?.events || []);
+      setCommentImages([]);
     }
   }, [open, initialData]);
 
@@ -101,15 +145,7 @@ const AddTicketDialog: React.FC<AddTicketDialogProps> = ({ open, onClose, readOn
 
   const canSelectMore = !readOnly && previewItems.length < 3;
 
-  // Get location options from rooms
-  const locationOptions = rooms?.map(room => room.name) || [];
 
-  // Get machines for selected location
-  const availableMachines = useMemo(() => {
-    if (!rooms || rooms.length === 0 || !location) return [];
-    const selectedRoom = rooms.find(room => room.name === location);
-    return selectedRoom ? selectedRoom.machines.map(m => m.name) : [];
-  }, [location, rooms]);
 
   // Get technician names
   const technicianNames = getTechnicianNames();
@@ -117,10 +153,11 @@ const AddTicketDialog: React.FC<AddTicketDialogProps> = ({ open, onClose, readOn
   const createdAt = useMemo(() => new Date(), []);
   const creatorEmail = getCurrentUser()?.email ?? '–';
 
-  // Machine FormControl is disabled when no location is selected, in readOnly mode, or no machines available
-  const machineDisabled = !location || readOnly || availableMachines.length === 0;
 
-  const formValidBase = description.trim().length > 0 && location && machine;
+
+  const formValidBase = description.trim().length > 0 && 
+    (ticketType === 'verwaltung' ? raumnummer.trim().length > 0 : 
+     ticketType === 'betrieb' ? machine.trim().length > 0 && equipmentNummer.trim().length > 0 : false);
   const formValid = readOnly && allowResponsibleEdit ? true : formValidBase;
 
   const handleSave = () => {
@@ -128,7 +165,6 @@ const AddTicketDialog: React.FC<AddTicketDialogProps> = ({ open, onClose, readOn
     console.log('Create ticket', {
       created_at: createdAt.toISOString(),
       created_by: creatorEmail,
-      location,
       machine,
       description,
       priority,
@@ -138,12 +174,15 @@ const AddTicketDialog: React.FC<AddTicketDialogProps> = ({ open, onClose, readOn
     if (onSave) onSave({ 
       description, 
       priority, 
-      location, 
-      machine, 
+      machine: ticketType === 'verwaltung' ? 'Verwaltung' : machine, 
       status: initialData?.status, 
+      type: ticketType,
+      category,
       responsible, 
       plannedCompletion: plannedDate ? plannedDate.toISOString() : null,
-      images: previewItems // Pass combined existing and new images
+      images: previewItems, // Pass combined existing and new images
+      raumnummer: ticketType === 'verwaltung' ? raumnummer : undefined,
+      equipmentNummer: ticketType === 'betrieb' ? equipmentNummer : undefined
     });
     onClose();
   };
@@ -171,13 +210,98 @@ const AddTicketDialog: React.FC<AddTicketDialogProps> = ({ open, onClose, readOn
     }
   };
 
-  const statusLabelMap: Record<string, string> = { backlog: 'Backlog', progress: 'In Bearbeitung', done: 'Erledigt' };
+  const statusLabelMap: Record<string, string> = { backlog: 'Backlog', progress: 'In Bearbeitung', done: 'Erledigt', archived: 'Archiviert' };
 
   const eventLabel = (ev: TicketEvent) => {
     if (ev.type === 'create') return 'Ticket erstellt';
     if (ev.type === 'assign') return ev.details ?? 'Zugewiesen';
     if (ev.type === 'status_update') return ev.details ?? 'Status geändert';
+    if (ev.type === 'comment') return ev.details ?? 'Kommentar';
+    if (ev.type === 'work_started') return ev.details ?? 'Arbeit begonnen';
+    if (ev.type === 'work_paused') return ev.details ?? 'Arbeit pausiert';
     return ev.type;
+  };
+
+  const handleSendComment = async () => {
+    if ((!commentText.trim() && commentImages.length === 0) || !ticketId) return;
+    
+    const currentUser = getCurrentUser();
+    // For development/demo purposes, use a more meaningful fallback
+    const userDisplayName = currentUser?.email || 'Demo User';
+    
+    // Convert images to base64 URLs for storage
+    const imageUrls: string[] = [];
+    for (const file of commentImages) {
+      try {
+        const base64 = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result as string);
+          reader.onerror = reject;
+          reader.readAsDataURL(file);
+        });
+        imageUrls.push(base64);
+      } catch (error) {
+        console.error('Failed to convert image to base64:', error);
+      }
+    }
+    
+    const newEvent: TicketEvent = {
+      timestamp: new Date().toISOString(),
+      type: 'comment',
+      details: `${userDisplayName}: ${commentText.trim()}`,
+      images: imageUrls.length > 0 ? imageUrls : undefined
+    };
+
+    // Update local state for immediate UI update
+    const updatedEvents = [...localEvents, newEvent];
+    setLocalEvents(updatedEvents);
+    
+    // Update the ticket in the backend
+    updateTicket(ticketId, { events: updatedEvents }, getCurrentUser() || undefined);
+    
+    // Clear the comment text and images
+    setCommentText('');
+    setCommentImages([]);
+  };
+
+  const handleStartWork = () => {
+    if (!ticketId) return;
+    
+    const currentUser = getCurrentUser();
+    const userDisplayName = currentUser?.email || 'Demo User';
+    
+    const newEvent: TicketEvent = {
+      timestamp: new Date().toISOString(),
+      type: 'work_started',
+      details: `${userDisplayName}: Arbeit begonnen`
+    };
+
+    // Update local state for immediate UI update
+    const updatedEvents = [...localEvents, newEvent];
+    setLocalEvents(updatedEvents);
+    
+    // Update the ticket in the backend
+    updateTicket(ticketId, { events: updatedEvents }, getCurrentUser() || undefined);
+  };
+
+  const handlePauseWork = () => {
+    if (!ticketId) return;
+    
+    const currentUser = getCurrentUser();
+    const userDisplayName = currentUser?.email || 'Demo User';
+    
+    const newEvent: TicketEvent = {
+      timestamp: new Date().toISOString(),
+      type: 'work_paused',
+      details: `${userDisplayName}: Arbeit pausiert`
+    };
+
+    // Update local state for immediate UI update
+    const updatedEvents = [...localEvents, newEvent];
+    setLocalEvents(updatedEvents);
+    
+    // Update the ticket in the backend
+    updateTicket(ticketId, { events: updatedEvents }, getCurrentUser() || undefined);
   };
 
   return (
@@ -214,37 +338,75 @@ const AddTicketDialog: React.FC<AddTicketDialogProps> = ({ open, onClose, readOn
             />
           </Box>
 
-          {/* Standort Auswahl */}
+          {/* Ticket Type Selection */}
           <Box sx={{ display: 'flex', gap: 2 }}>
             <FormControl fullWidth disabled={readOnly}>
-              <InputLabel>Standort / Raum</InputLabel>
+              <InputLabel>Ticket Typ</InputLabel>
               <Select
-                label="Standort / Raum"
-                value={location}
+                label="Ticket Typ"
+                value={ticketType}
                 onChange={(e) => {
-                  setLocation(e.target.value as string);
-                  setMachine('');
+                                  setTicketType(e.target.value as 'verwaltung' | 'betrieb');
+                // Reset fields when changing type
+                setMachine('');
+                setRaumnummer('');
+                setEquipmentNummer('');
                 }}
               >
-                {locationOptions.map((loc) => (
-                  <MenuItem key={loc} value={loc}>{loc}</MenuItem>
-                ))}
+                <MenuItem value="betrieb">Betrieb</MenuItem>
+                <MenuItem value="verwaltung">Verwaltung</MenuItem>
               </Select>
             </FormControl>
 
-            <FormControl fullWidth disabled={machineDisabled}>
-              <InputLabel>Maschine / Gerät</InputLabel>
+            <FormControl fullWidth disabled={readOnly && !allowResponsibleEdit}>
+              <InputLabel>Kategorie</InputLabel>
               <Select
-                label="Maschine / Gerät"
-                value={machine}
-                onChange={(e) => setMachine(e.target.value as string)}
+                label="Kategorie"
+                value={category}
+                onChange={(e) => setCategory(e.target.value as 'elektrisch' | 'mechanisch')}
               >
-                {availableMachines.map((m) => (
-                  <MenuItem key={m} value={m}>{m}</MenuItem>
-                ))}
+                <MenuItem value="mechanisch">Mechanisch</MenuItem>
+                <MenuItem value="elektrisch">Elektrisch</MenuItem>
               </Select>
             </FormControl>
           </Box>
+
+          {/* Conditional fields based on ticket type */}
+          {ticketType === 'verwaltung' ? (
+            // Verwaltung fields
+            <TextField
+              label="Raumnummer"
+              value={raumnummer}
+              onChange={(e) => setRaumnummer(e.target.value)}
+              size="small"
+              fullWidth
+              disabled={readOnly}
+              placeholder="z.B. A-204, B-101"
+            />
+          ) : (
+            // Betrieb fields
+            <Box sx={{ display: 'flex', gap: 2 }}>
+              <TextField
+                label="Maschine"
+                value={machine}
+                onChange={(e) => setMachine(e.target.value)}
+                size="small"
+                fullWidth
+                disabled={readOnly}
+                placeholder="z.B. Presse 1, Fräse A"
+              />
+              
+              <TextField
+                label="Equipment Nummer"
+                value={equipmentNummer}
+                onChange={(e) => setEquipmentNummer(e.target.value)}
+                size="small"
+                fullWidth
+                disabled={readOnly}
+                placeholder="z.B. EQ-001, EQ-205"
+              />
+            </Box>
+          )}
 
           {/* Statusanzeige (nur Pool) */}
           {showStatus && initialData?.status && (
@@ -295,6 +457,41 @@ const AddTicketDialog: React.FC<AddTicketDialogProps> = ({ open, onClose, readOn
                 ))}
               </Select>
             </FormControl>
+          )}
+
+          {/* Work tracking controls */}
+          {ticketId && allowWorkTracking && (
+            <Box sx={{ 
+              display: 'flex',
+              gap: 1,
+              alignItems: 'center',
+              mt: 1
+            }}>
+              <Typography variant="body2" sx={{ color: 'text.secondary', mr: 1 }}>
+                Arbeitszeit:
+              </Typography>
+              {!isWorkInProgress ? (
+                <Button
+                  variant="contained"
+                  color="success"
+                  size="small"
+                  startIcon={<PlayArrow />}
+                  onClick={handleStartWork}
+                >
+                  Arbeit beginnen
+                </Button>
+              ) : (
+                <Button
+                  variant="contained"
+                  color="warning"
+                  size="small"
+                  startIcon={<Pause />}
+                  onClick={handlePauseWork}
+                >
+                  Arbeit pausieren
+                </Button>
+              )}
+            </Box>
           )}
 
           {/* Planned completion date (Pool) */}
@@ -449,14 +646,265 @@ const AddTicketDialog: React.FC<AddTicketDialogProps> = ({ open, onClose, readOn
                 >
                   <Typography variant="subtitle1">Historie</Typography>
                 </AccordionSummary>
-                <AccordionDetails>
-                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                    {initialData.events.map((ev, idx) => (
-                      <Typography key={idx} variant="body2">
-                        {format(new Date(ev.timestamp), 'dd.MM.yyyy HH:mm')} – {eventLabel(ev)}
-                      </Typography>
-                    ))}
+                <AccordionDetails sx={{ pt: 1 }}>
+                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                    {localEvents.map((ev, idx) => {
+                      const timestamp = format(new Date(ev.timestamp), 'dd.MM.yyyy HH:mm');
+                      
+                      // Extract user name and content from details
+                      const getUserAndContent = (event: TicketEvent) => {
+                        const details = event.details || '';
+                        
+                        if (event.type === 'comment') {
+                          // Format: "user@email.com: message"
+                          const colonIndex = details.indexOf(':');
+                          if (colonIndex > 0) {
+                            return {
+                              userName: details.substring(0, colonIndex).trim(),
+                              content: details.substring(colonIndex + 1).trim()
+                            };
+                          }
+                        } else if (event.type === 'create') {
+                          // Format: "user@email.com: Ticket erstellt" or just "Ticket erstellt"
+                          const colonIndex = details.indexOf(':');
+                          if (colonIndex > 0) {
+                            return {
+                              userName: details.substring(0, colonIndex).trim(),
+                              content: details.substring(colonIndex + 1).trim()
+                            };
+                          } else {
+                            return {
+                              userName: 'System',
+                              content: eventLabel(event)
+                            };
+                          }
+                        } else {
+                          // Other events: "user@email.com: action" or just "action"
+                          const colonIndex = details.indexOf(':');
+                          if (colonIndex > 0) {
+                            return {
+                              userName: details.substring(0, colonIndex).trim(),
+                              content: details.substring(colonIndex + 1).trim()
+                            };
+                          } else {
+                            return {
+                              userName: 'System',
+                              content: details || eventLabel(event)
+                            };
+                          }
+                        }
+                        
+                        return {
+                          userName: 'System',
+                          content: eventLabel(event)
+                        };
+                      };
+                      
+                      const { userName, content } = getUserAndContent(ev);
+                      
+                      return (
+                        <Box key={idx} sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+                          {/* User Name - Datetime header */}
+                          <Typography 
+                            variant="caption" 
+                            sx={{ 
+                              color: 'grey.600',
+                              fontSize: '0.75rem',
+                              fontWeight: 500
+                            }}
+                          >
+                            {userName} - {timestamp}
+                          </Typography>
+                          
+                          {/* Content */}
+                          <Typography 
+                            variant="body2" 
+                            sx={{ 
+                              color: 'grey.800',
+                              fontSize: '0.875rem',
+                              fontWeight: 'normal',
+                              wordBreak: 'break-word',
+                              overflowWrap: 'break-word',
+                              whiteSpace: 'pre-wrap',
+                              lineHeight: 1.4
+                            }}
+                          >
+                            {content}
+                          </Typography>
+                          
+                          {/* Comment Images */}
+                          {ev.images && ev.images.length > 0 && (
+                            <Box sx={{ 
+                              display: 'flex', 
+                              flexWrap: 'wrap', 
+                              gap: 1, 
+                              mt: 1 
+                            }}>
+                              {ev.images.map((imageUrl, imgIdx) => (
+                                <Box
+                                  key={imgIdx}
+                                  sx={{
+                                    width: 80,
+                                    height: 80,
+                                    borderRadius: 1,
+                                    overflow: 'hidden',
+                                    border: '1px solid',
+                                    borderColor: 'grey.300',
+                                    cursor: 'pointer',
+                                    '&:hover': {
+                                      opacity: 0.8
+                                    }
+                                  }}
+                                  onClick={() => {
+                                    // TODO: Open image preview
+                                    window.open(imageUrl, '_blank');
+                                  }}
+                                >
+                                  <img
+                                    src={imageUrl}
+                                    alt={`Comment image ${imgIdx + 1}`}
+                                    style={{
+                                      width: '100%',
+                                      height: '100%',
+                                      objectFit: 'cover'
+                                    }}
+                                  />
+                                </Box>
+                              ))}
+                            </Box>
+                          )}
+                        </Box>
+                      );
+                    })}
                   </Box>
+                  
+                  {/* Chat input field */}
+                  {ticketId && (
+                    <Box sx={{
+                      mt: 2,
+                      pt: 2,
+                      borderTop: '1px solid',
+                      borderColor: 'grey.300'
+                    }}>
+                      {/* Comment Images Preview */}
+                      {commentImages.length > 0 && (
+                        <Box sx={{ 
+                          display: 'flex', 
+                          flexWrap: 'wrap', 
+                          gap: 1, 
+                          mb: 2 
+                        }}>
+                          {commentImages.map((file, idx) => (
+                            <Box
+                              key={idx}
+                              sx={{
+                                position: 'relative',
+                                width: 60,
+                                height: 60,
+                                borderRadius: 1,
+                                overflow: 'hidden',
+                                border: '1px solid',
+                                borderColor: 'grey.300'
+                              }}
+                            >
+                              <img
+                                src={URL.createObjectURL(file)}
+                                alt={`Comment preview ${idx + 1}`}
+                                style={{
+                                  width: '100%',
+                                  height: '100%',
+                                  objectFit: 'cover'
+                                }}
+                              />
+                              <IconButton
+                                size="small"
+                                sx={{
+                                  position: 'absolute',
+                                  top: -4,
+                                  right: -4,
+                                  backgroundColor: 'error.main',
+                                  color: 'white',
+                                  width: 20,
+                                  height: 20,
+                                  '&:hover': {
+                                    backgroundColor: 'error.dark'
+                                  }
+                                }}
+                                onClick={() => {
+                                  setCommentImages(prev => prev.filter((_, i) => i !== idx));
+                                }}
+                              >
+                                <Close sx={{ fontSize: 12 }} />
+                              </IconButton>
+                            </Box>
+                          ))}
+                        </Box>
+                      )}
+                      
+                      {/* Hidden file input for comment images */}
+                      <input
+                        id="comment-image-input"
+                        type="file"
+                        accept="image/*"
+                        multiple={!isMobile} // Single image on mobile for camera
+                        {...(isMobile && { capture: "environment" })} // Use rear camera on mobile
+                        onChange={(e) => {
+                          const files = Array.from(e.target.files ?? []);
+                          if (!files.length) return;
+                          
+                          // Limit to 5 images per comment
+                          const remainingSlots = 5 - commentImages.length;
+                          if (remainingSlots <= 0) return;
+                          
+                          const filesToAdd = files.slice(0, remainingSlots);
+                          setCommentImages(prev => [...prev, ...filesToAdd]);
+                        }}
+                        style={{ display: 'none' }}
+                      />
+                      
+                      {/* Chat input area */}
+                      <Box sx={{
+                        display: 'flex',
+                        gap: 1,
+                        alignItems: 'flex-end'
+                      }}>
+                        <TextField
+                          fullWidth
+                          size="small"
+                          placeholder="Arbeitsschritte dokumentieren..."
+                          value={commentText}
+                          onChange={(e) => setCommentText(e.target.value)}
+                          multiline
+                          maxRows={3}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' && !e.shiftKey) {
+                              e.preventDefault();
+                              handleSendComment();
+                            }
+                          }}
+                        />
+                        <IconButton
+                          component="label"
+                          htmlFor="comment-image-input"
+                          disabled={commentImages.length >= 5}
+                          color="primary"
+                          size="small"
+                          title={isMobile ? "Foto aufnehmen" : "Bild auswählen"}
+                        >
+                          {isMobile ? <CameraAlt /> : <Image />}
+                        </IconButton>
+                        <IconButton
+                          onClick={handleSendComment}
+                          disabled={!commentText.trim() && commentImages.length === 0}
+                          color="primary"
+                          size="small"
+                          title="Nachricht senden"
+                        >
+                          <Send />
+                        </IconButton>
+                      </Box>
+                    </Box>
+                  )}
                 </AccordionDetails>
               </Accordion>
             </Box>
@@ -474,6 +922,20 @@ const AddTicketDialog: React.FC<AddTicketDialogProps> = ({ open, onClose, readOn
               variant="outlined"
             >
               {copyButtonText}
+            </Button>
+          )}
+        </Box>
+
+        {/* Left side - Archive button (if applicable) */}
+        <Box sx={{ display: 'flex', gap: 1 }}>
+          {showArchiveButton && onArchive && (
+            <Button 
+              onClick={onArchive} 
+              color="warning" 
+              variant="outlined"
+              startIcon={<Archive />}
+            >
+              Archivieren
             </Button>
           )}
         </Box>

@@ -1,354 +1,248 @@
 import React, { useState } from 'react';
-import { 
-  Box, 
-  Typography, 
-  Paper, 
-  TextField, 
-  IconButton, 
-  Collapse, 
-  List, 
-  ListItem, 
+import {
+  Box,
+  TextField,
+  InputAdornment,
+  List,
+  ListItem,
+  ListItemButton,
   ListItemText,
-  ListItemSecondaryAction,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  Button
+  Typography,
+  IconButton,
+  Chip,
+  Paper,
+  Button,
 } from '@mui/material';
 import { styled } from '@mui/material/styles';
-import { useMachines, Machine, Room } from '@/app/hooks/useMachines';
-import MachineDialog from '@/app/dialogs/MachineDialog';
+import SearchIcon from '@mui/icons-material/Search';
 import AddIcon from '@mui/icons-material/Add';
-import ExpandLessIcon from '@mui/icons-material/ExpandLess';
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
-import FolderIcon from '@mui/icons-material/Folder';
-import MemoryIcon from '@mui/icons-material/Memory';
-
-const RoomCard = styled(Paper)(({ theme }) => ({
-  marginBottom: theme.spacing(1),
-  borderRadius: 8,
-  overflow: 'hidden',
-}));
-
-const RoomHeader = styled(Box)(({ theme }) => ({
-  padding: theme.spacing(1, 2),
-  backgroundColor: theme.palette.grey[50],
-  borderBottom: `1px solid ${theme.palette.divider}`,
-  display: 'flex',
-  alignItems: 'center',
-  cursor: 'pointer',
-  '&:hover': {
-    backgroundColor: theme.palette.grey[100],
-  },
-}));
-
-const MachineItem = styled(ListItem)<{ selected?: boolean }>(({ theme, selected }) => ({
-  paddingLeft: theme.spacing(4),
-  borderLeft: selected ? `4px solid ${theme.palette.primary.main}` : `4px solid transparent`,
-  backgroundColor: selected ? theme.palette.action.selected : undefined,
-  cursor: 'pointer',
-  '&:hover': {
-    backgroundColor: theme.palette.action.hover,
-  },
-}));
+import { useMachines, Machine } from '@/app/hooks/useMachines';
+import MachineDialog from '@/app/dialogs/MachineDialog';
 
 interface Props {
-  onSelect?: (machine: Machine & { roomId: string }) => void;
+  onSelect?: (machine: Machine) => void;
   selectedId?: string;
 }
 
+// Styled components matching existing table design patterns
+const MachineListHeader = styled(Box)(({ theme }) => ({
+  backgroundColor: theme.palette.grey[50],
+  borderBottom: `2px solid ${theme.palette.grey[300]}`,
+  padding: '12px 16px',
+  fontWeight: 'bold',
+  display: 'flex',
+  justifyContent: 'space-between',
+  alignItems: 'center',
+}));
+
+const StyledListItemButton = styled(ListItemButton)(({ theme }) => ({
+  padding: '12px 16px',
+  borderRadius: 0,
+  margin: 0,
+  borderBottom: `1px solid ${theme.palette.divider}`,
+  '&:hover': {
+    backgroundColor: 'rgba(0, 0, 0, 0.04)',
+  },
+  '&.Mui-selected': {
+    backgroundColor: `${theme.palette.primary.light}20`,
+    '&:hover': {
+      backgroundColor: `${theme.palette.primary.light}30`,
+    },
+  },
+}));
+
+const MachineItem = styled(Box)({
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'space-between',
+  width: '100%',
+});
+
 const MachinesRoomsWidget: React.FC<Props> = ({ onSelect, selectedId }) => {
-  const { 
-    rooms, 
-    addRoom, 
-    updateRoom, 
-    deleteRoom,
-    addMachine, 
-    updateMachine, 
-    deleteMachine 
-  } = useMachines();
+  const { machines, addMachine, updateMachine, deleteMachine } = useMachines();
   
   const [search, setSearch] = useState('');
-  const [expandedRooms, setExpandedRooms] = useState<Set<string>>(new Set()); // All rooms collapsed by default
-  
-  // Room dialog state
-  const [roomDialogOpen, setRoomDialogOpen] = useState(false);
-  const [editRoom, setEditRoom] = useState<Room | null>(null);
-  
-  // Machine dialog state
   const [machineDialogOpen, setMachineDialogOpen] = useState(false);
-  const [editMachine, setEditMachine] = useState<{ machine: Machine; roomId: string } | null>(null);
-  const [selectedRoomForNewMachine, setSelectedRoomForNewMachine] = useState<string | null>(null);
+  const [editMachine, setEditMachine] = useState<Machine | null>(null);
 
-  // Filter rooms and machines based on search
-  const filteredRooms = rooms.map(room => ({
-    ...room,
-    machines: room.machines.filter(machine => 
-      machine.name.toLowerCase().includes(search.toLowerCase()) ||
-      room.name.toLowerCase().includes(search.toLowerCase())
-    )
-  })).filter(room => 
-    room.name.toLowerCase().includes(search.toLowerCase()) ||
-    room.machines.length > 0
+  // Filter machines based on search
+  const filteredMachines = machines.filter(machine => 
+    machine.name.toLowerCase().includes(search.toLowerCase()) ||
+    machine.machineNumber.toLowerCase().includes(search.toLowerCase())
   );
 
-  const toggleRoom = (roomId: string) => {
-    setExpandedRooms(prev => {
-      const newSet = new Set(prev);
-      if (newSet.has(roomId)) {
-        newSet.delete(roomId);
-      } else {
-        newSet.add(roomId);
-      }
-      return newSet;
-    });
+  const handleMachineSelect = (machine: Machine) => {
+    onSelect?.(machine);
   };
 
-  const handleMachineSelect = (machine: Machine, roomId: string) => {
-    onSelect?.({ ...machine, roomId });
-  };
-
-  const handleAddRoom = () => {
-    setEditRoom(null);
-    setRoomDialogOpen(true);
-  };
-
-  const handleEditRoom = (room: Room) => {
-    setEditRoom(room);
-    setRoomDialogOpen(true);
-  };
-
-  const handleDeleteRoom = (roomId: string) => {
-    if (window.confirm('Raum und alle enthaltenen Maschinen löschen?')) {
-      deleteRoom(roomId);
-    }
-  };
-
-  const handleAddMachine = (roomId: string) => {
+  const handleAddMachine = () => {
     setEditMachine(null);
-    setSelectedRoomForNewMachine(roomId);
     setMachineDialogOpen(true);
   };
 
-  const handleEditMachine = (machine: Machine, roomId: string) => {
-    setEditMachine({ machine, roomId });
-    setSelectedRoomForNewMachine(null);
+  const handleEditMachine = (machine: Machine) => {
+    setEditMachine(machine);
     setMachineDialogOpen(true);
   };
 
-  const handleDeleteMachine = (roomId: string, machineId: string) => {
+  const handleDeleteMachine = (machineId: string) => {
     if (window.confirm('Maschine löschen?')) {
-      deleteMachine(roomId, machineId);
+      deleteMachine(machineId);
     }
-  };
-
-  const handleRoomSave = (roomData: { name: string }) => {
-    if (editRoom) {
-      updateRoom(editRoom.id, { name: roomData.name });
-    } else {
-      addRoom({ 
-        id: Date.now().toString(), 
-        name: roomData.name, 
-        machines: [] 
-      });
-    }
-    setRoomDialogOpen(false);
   };
 
   const handleMachineSave = (machine: Machine) => {
     if (editMachine) {
-      updateMachine(editMachine.roomId, machine.id, machine);
-    } else if (selectedRoomForNewMachine) {
-      addMachine(selectedRoomForNewMachine, machine);
+      updateMachine(machine.id, machine);
+    } else {
+      addMachine(machine);
     }
     setMachineDialogOpen(false);
+    setEditMachine(null);
   };
 
   return (
     <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
-        <TextField 
-          size="small" 
-          placeholder="Suchen..." 
-          value={search} 
-          onChange={e => setSearch(e.target.value)} 
-          fullWidth 
-        />
-        <IconButton 
-          color="primary" 
-          onClick={handleAddRoom}
-          title="Neuer Raum"
-        >
-          <AddIcon />
-        </IconButton>
-      </Box>
+      {/* Header with search and add button */}
+      <Paper sx={{ border: 1, borderColor: 'divider', height: '100%', display: 'flex', flexDirection: 'column' }}>
+        <MachineListHeader>
+          <Typography variant="subtitle2" fontWeight="bold">
+            Maschinen ({filteredMachines.length})
+          </Typography>
+          <Button
+            size="small"
+            startIcon={<AddIcon />}
+            onClick={handleAddMachine}
+            variant="contained"
+            sx={{ minWidth: 'auto' }}
+          >
+            Hinzufügen
+          </Button>
+        </MachineListHeader>
 
-      <Box sx={{ flex: 1, overflowY: 'auto' }}>
-        {filteredRooms.map(room => (
-          <RoomCard key={room.id}>
-            <RoomHeader onClick={() => toggleRoom(room.id)}>
-              <FolderIcon sx={{ mr: 1, color: 'text.secondary' }} />
-              <Typography fontWeight={600} sx={{ flex: 1 }}>
-                {room.name}
-              </Typography>
-              <Typography variant="body2" color="text.secondary" sx={{ mr: 1 }}>
-                {room.machines.length} Maschinen
-              </Typography>
-              <IconButton
-                size="small"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleAddMachine(room.id);
-                }}
-                title="Maschine hinzufügen"
-              >
-                <AddIcon fontSize="small" />
-              </IconButton>
-              <IconButton
-                size="small"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleEditRoom(room);
-                }}
-                title="Raum bearbeiten"
-              >
-                <EditIcon fontSize="small" />
-              </IconButton>
-              <IconButton
-                size="small"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleDeleteRoom(room.id);
-                }}
-                title="Raum löschen"
-                color="error"
-              >
-                <DeleteIcon fontSize="small" />
-              </IconButton>
-              {expandedRooms.has(room.id) ? <ExpandLessIcon /> : <ExpandMoreIcon />}
-            </RoomHeader>
-            
-            <Collapse in={expandedRooms.has(room.id)}>
-              <List disablePadding>
-                {room.machines.map(machine => (
-                  <MachineItem
-                    key={machine.id}
-                    selected={machine.id === selectedId}
-                    onClick={() => handleMachineSelect(machine, room.id)}
-                  >
-                    <MemoryIcon sx={{ mr: 2, color: 'text.secondary' }} />
-                    <ListItemText primary={machine.name} />
-                    <ListItemSecondaryAction>
-                      <IconButton
-                        edge="end"
-                        size="small"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleEditMachine(machine, room.id);
-                        }}
-                        title="Maschine bearbeiten"
-                      >
-                        <EditIcon fontSize="small" />
-                      </IconButton>
-                      <IconButton
-                        edge="end"
-                        size="small"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleDeleteMachine(room.id, machine.id);
-                        }}
-                        title="Maschine löschen"
-                        color="error"
-                      >
-                        <DeleteIcon fontSize="small" />
-                      </IconButton>
-                    </ListItemSecondaryAction>
-                  </MachineItem>
-                ))}
-                {room.machines.length === 0 && (
-                  <ListItem sx={{ pl: 4 }}>
-                    <ListItemText 
-                      primary="Keine Maschinen" 
-                      secondary="Klicken Sie auf + um eine Maschine hinzuzufügen"
-                    />
-                  </ListItem>
-                )}
-              </List>
-            </Collapse>
-          </RoomCard>
-        ))}
-        
-        {filteredRooms.length === 0 && (
-          <Box sx={{ textAlign: 'center', mt: 4 }}>
+        {/* Search */}
+        <Box sx={{ p: 2, borderBottom: 1, borderColor: 'divider' }}>
+          <TextField
+            fullWidth
+            size="small"
+            placeholder="Maschinen durchsuchen..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <SearchIcon color="action" />
+                </InputAdornment>
+              ),
+            }}
+          />
+        </Box>
+
+        {/* Machine List */}
+        {filteredMachines.length === 0 ? (
+          <Box sx={{ textAlign: 'center', mt: 4, p: 2 }}>
             <Typography color="text.secondary">
-              {search ? 'Keine Ergebnisse gefunden' : 'Keine Räume vorhanden'}
+              {search ? 'Keine Maschinen gefunden' : 'Keine Maschinen verfügbar'}
             </Typography>
+            {!search && (
+              <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                Klicken Sie auf "Hinzufügen" um eine neue Maschine zu erstellen
+              </Typography>
+            )}
           </Box>
+        ) : (
+          <List sx={{ flex: 1, overflow: 'auto', p: 0 }}>
+            {filteredMachines.map((machine) => {
+              const isSelected = selectedId === machine.id;
+              const taskCount = machine.tasks?.length || 0;
+              
+              return (
+                <ListItem key={machine.id} disablePadding>
+                  <StyledListItemButton
+                    selected={isSelected}
+                    onClick={() => handleMachineSelect(machine)}
+                  >
+                    <MachineItem>
+                      <Box sx={{ flex: 1 }}>
+                        <ListItemText
+                          primary={
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
+                              <Typography variant="body2" fontWeight={isSelected ? 'bold' : 'normal'}>
+                                {machine.name}
+                              </Typography>
+                              <Chip
+                                label={machine.machineNumber}
+                                size="small"
+                                variant="outlined"
+                                sx={{ 
+                                  fontSize: '0.7rem',
+                                  height: 20,
+                                  color: 'primary.main',
+                                  borderColor: 'primary.main',
+                                }}
+                              />
+                            </Box>
+                          }
+                          secondary={
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                              <Chip
+                                label={`${taskCount} Wartungsaufgaben`}
+                                size="small"
+                                variant="outlined"
+                                sx={{ 
+                                  fontSize: '0.7rem',
+                                  height: 18,
+                                  color: 'text.secondary',
+                                  borderColor: 'text.secondary',
+                                }}
+                              />
+                            </Box>
+                          }
+                        />
+                      </Box>
+                      <Box sx={{ display: 'flex', gap: 0.5 }}>
+                        <IconButton
+                          size="small"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleEditMachine(machine);
+                          }}
+                        >
+                          <EditIcon fontSize="small" />
+                        </IconButton>
+                        <IconButton
+                          size="small"
+                          color="error"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteMachine(machine.id);
+                          }}
+                        >
+                          <DeleteIcon fontSize="small" />
+                        </IconButton>
+                      </Box>
+                    </MachineItem>
+                  </StyledListItemButton>
+                </ListItem>
+              );
+            })}
+          </List>
         )}
-      </Box>
-
-      {/* Room Dialog */}
-      <Dialog open={roomDialogOpen} onClose={() => setRoomDialogOpen(false)} maxWidth="sm" fullWidth>
-        <RoomDialog
-          room={editRoom}
-          onSave={handleRoomSave}
-          onCancel={() => setRoomDialogOpen(false)}
-        />
-      </Dialog>
+      </Paper>
 
       {/* Machine Dialog */}
       <MachineDialog
         open={machineDialogOpen}
-        onClose={() => setMachineDialogOpen(false)}
-        initial={editMachine?.machine || null}
+        onClose={() => {
+          setMachineDialogOpen(false);
+          setEditMachine(null);
+        }}
+        initial={editMachine}
         onSave={handleMachineSave}
       />
     </Box>
-  );
-};
-
-// Simple Room Dialog Component
-interface RoomDialogProps {
-  room: Room | null;
-  onSave: (data: { name: string }) => void;
-  onCancel: () => void;
-}
-
-const RoomDialog: React.FC<RoomDialogProps> = ({ room, onSave, onCancel }) => {
-  const [name, setName] = useState(room?.name || '');
-
-  const handleSave = () => {
-    if (!name.trim()) return;
-    onSave({ name: name.trim() });
-  };
-
-  return (
-    <>
-      <DialogTitle>
-        {room ? 'Raum bearbeiten' : 'Neuer Raum'}
-      </DialogTitle>
-      <DialogContent>
-        <TextField
-          autoFocus
-          margin="dense"
-          label="Raum Name"
-          fullWidth
-          variant="outlined"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          placeholder="z.B. Werk 1 – Raum 101"
-        />
-      </DialogContent>
-      <DialogActions>
-        <Button onClick={onCancel}>Abbrechen</Button>
-        <Button onClick={handleSave} variant="contained" disabled={!name.trim()}>
-          Speichern
-        </Button>
-      </DialogActions>
-    </>
   );
 };
 

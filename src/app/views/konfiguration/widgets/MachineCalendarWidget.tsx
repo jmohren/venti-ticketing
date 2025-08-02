@@ -9,15 +9,11 @@ import { format as formatDateFn } from 'date-fns';
 
 interface CalendarEvent { date: string; label: string; color: 'primary' | 'secondary'; }
 
-interface Props { machine: (Machine & { roomId: string }) | null; }
+interface Props { machine: Machine | null; }
 
 const MachineCalendarWidget: React.FC<Props> = ({ machine }) => {
   const { tickets } = useTickets();
-  const { getRoom } = useMachines();
   const [selectedDay, setSelectedDay] = useState<Date>(new Date());
-
-  // Get room name for the selected machine
-  const room = machine ? getRoom(machine.roomId) : null;
 
   // build events for the current machine
   const events: CalendarEvent[] = useMemo(() => {
@@ -81,7 +77,7 @@ const MachineCalendarWidget: React.FC<Props> = ({ machine }) => {
       <Typography variant="h6">Maschinen-Kalender</Typography>
       {machine ? (
         <>
-          <Typography variant="subtitle2" sx={{ mb:1 }}>{machine.name} – {room?.name || 'Unbekannter Raum'}</Typography>
+          <Typography variant="subtitle2" sx={{ mb:1 }}>{machine.name} ({machine.machineNumber})</Typography>
           <LocalizationProvider dateAdapter={AdapterDateFns}>
             <DateCalendar 
               value={selectedDay} 

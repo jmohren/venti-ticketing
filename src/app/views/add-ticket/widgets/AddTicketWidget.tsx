@@ -20,7 +20,7 @@ const AddTicketWidget: React.FC = () => {
   const [qrScanOpen, setQrScanOpen] = useState(false);
   const [isScanning, setIsScanning] = useState(false);
 
-  const { rooms } = useMachines();
+  const { machines } = useMachines();
   const { addTicket } = useTickets();
   const { getCurrentUser } = useAuth();
   const { 
@@ -39,22 +39,17 @@ const AddTicketWidget: React.FC = () => {
     
     // Simulate QR code scanning delay
     setTimeout(() => {
-      // Simulate scanning a QR code that contains room and machine info
-      // Randomly select from available rooms and machines
-      if (rooms && rooms.length > 0) {
-        const randomRoomIndex = Math.floor(Math.random() * rooms.length);
-        const selectedRoom = rooms[randomRoomIndex];
+      // Simulate scanning a QR code that contains machine info
+      // Randomly select from available machines
+      if (machines && machines.length > 0) {
+        const randomMachineIndex = Math.floor(Math.random() * machines.length);
+        const selectedMachine = machines[randomMachineIndex];
         
-        if (selectedRoom.machines && selectedRoom.machines.length > 0) {
-          const randomMachineIndex = Math.floor(Math.random() * selectedRoom.machines.length);
-          const selectedMachine = selectedRoom.machines[randomMachineIndex];
-          
-          setIsScanning(false);
-          setQrScanOpen(false);
-          
-          // Open the create ticket dialog with pre-selected room and machine
-          openCreateTicket(selectedRoom.name, selectedMachine.name);
-        }
+        setIsScanning(false);
+        setQrScanOpen(false);
+        
+        // Open the create ticket dialog with pre-selected machine
+        openCreateTicket(undefined, selectedMachine.name);
       }
     }, 2000); // 2 second scanning simulation
   };
@@ -68,11 +63,14 @@ const AddTicketWidget: React.FC = () => {
     machine?: string;
     description?: string;
     priority?: 'rot' | 'gelb' | 'gruen';
-    location?: string;
-    status?: 'backlog' | 'progress' | 'done';
+    status?: 'backlog' | 'progress' | 'done' | 'archived';
+    type?: 'verwaltung' | 'betrieb';
+    category?: 'elektrisch' | 'mechanisch';
     responsible?: string;
     plannedCompletion?: string | null;
     images?: string[];
+    raumnummer?: string;
+    equipmentNummer?: string;
   }) => {
     // Generate a unique ID for the new ticket
     const newId = Date.now();
@@ -84,22 +82,19 @@ const AddTicketWidget: React.FC = () => {
       description: data.description || '',
       priority: data.priority || 'gruen',
       status: 'backlog', // New tickets always start as backlog
-      location: data.location || '', // Store the room/location information
+      type: data.type || 'betrieb', // Default to betrieb
+      category: data.category || 'mechanisch', // Default to mechanisch
       responsible: '', // New tickets are unassigned initially
       completedAt: null,
       plannedCompletion: null, // No planned completion during creation
       images: data.images || [], // Save any uploaded images
-      events: [
-        {
-          timestamp: new Date().toISOString(),
-          type: 'create',
-          details: `Ticket erstellt von ${getCurrentUser()?.email || 'Benutzer'}`
-        }
-      ]
+      raumnummer: data.raumnummer,
+      equipmentNummer: data.equipmentNummer,
+      events: [] // Events will be added by addTicket
     };
 
     // Add the ticket to the provider state
-    addTicket(newTicket);
+    addTicket(newTicket, getCurrentUser() || undefined);
     
     // Close the dialog (URL state will be cleared)
     closeCreateTicket();

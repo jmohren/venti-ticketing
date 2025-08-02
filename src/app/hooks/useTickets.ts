@@ -5,6 +5,8 @@ export type {
   Ticket, 
   TicketPriority, 
   TicketStatus, 
+  TicketType,
+  TicketCategory,
   TicketEvent 
 } from '@/app/state/TicketProvider';
 

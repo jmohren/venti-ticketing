@@ -89,7 +89,9 @@ const WidgetContainer: React.FC<WidgetProps> = ({
       <StyledWidget elevation={elevation}>
         {title && (
           <>
-            <WidgetHeader sx={{ p: 0.5, paddingLeft: 1, backgroundColor: 'primary.main', color: 'white', display: 'flex', justifyContent: 'space-between', alignWidgets: 'center' }}>
+            {/* <WidgetHeader sx={{ p: 0.5, paddingLeft: 1, backgroundColor: 'primary.main', color: 'white', display: 'flex', justifyContent: 'space-between', alignWidgets: 'center' }}> */}
+            {/* <WidgetHeader sx={{ p: 0.5, paddingLeft: 1, backgroundColor: 'white', color: 'primary.main', display: 'flex', justifyContent: 'space-between', alignWidgets: 'center' }}> */}
+            <WidgetHeader sx={{ p: 0.5, paddingLeft: 1, backgroundColor: 'grey.100', color: 'black', display: 'flex', justifyContent: 'space-between', alignWidgets: 'center' }}>
               <Typography variant="h6" noWrap>
                 {showDate ? `${title} - ${currentDate}` : title}
               </Typography>

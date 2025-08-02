@@ -6,6 +6,7 @@ import { useTickets, Ticket } from '@/app/hooks/useTickets';
 import AddTicketDialog from '@/app/dialogs/AddTicketDialog';
 import SummaryCard from '@/core/ui/SummaryCard';
 import { useTicketUrlState } from '@/app/hooks/useTicketUrlState';
+import { useAuth } from '@/core/hooks/useAuth';
 
 const priorityColor = { rot: '#d32f2f', gelb: '#f9a825', gruen: '#2e7d32' } as const;
 
@@ -35,6 +36,7 @@ interface Props { currentUser: string }
 const InstandhaltungWidget: React.FC<Props> = ({ currentUser }) => {
   const { tickets, updateTicket, reorderTickets } = useTickets();
   const { selectedTicket, isDialogOpen, openTicket, closeTicket } = useTicketUrlState();
+  const { getCurrentUser } = useAuth();
 
   const handleDrop = (lane: 'backlog'|'progress'|'done', e: React.DragEvent) => {
     e.preventDefault();
@@ -61,7 +63,7 @@ const InstandhaltungWidget: React.FC<Props> = ({ currentUser }) => {
     } else if (t.status === 'done') {
       partial.completedAt = null;
     }
-    updateTicket(id, partial);
+    updateTicket(id, partial, getCurrentUser() || undefined);
   };
 
   const handleCardDrop = (targetId:number,e:React.DragEvent)=>{
@@ -99,16 +101,20 @@ const InstandhaltungWidget: React.FC<Props> = ({ currentUser }) => {
           onClose={closeTicket}
           readOnly
           showStatus
+          allowWorkTracking
           ticketId={selectedTicket.id}
           initialData={{
             machine: selectedTicket.machine,
             description: selectedTicket.description,
             priority: selectedTicket.priority,
             status: selectedTicket.status,
-            location: selectedTicket.location,
+            type: selectedTicket.type,
+            category: selectedTicket.category,
             responsible: selectedTicket.responsible,
             events: selectedTicket.events,
             images: selectedTicket.images,
+            raumnummer: selectedTicket.raumnummer,
+            equipmentNummer: selectedTicket.equipmentNummer,
           }}
         />
       )}
