@@ -4,7 +4,7 @@ import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { de } from 'date-fns/locale';
-import { Machine, Task } from '@/app/hooks/useMachines';
+import { Machine, Task } from '@/app/state/MachineProvider';
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
@@ -36,7 +36,7 @@ const MachineDialog: React.FC<Props> = ({ open, onClose, onSave, initial }) => {
 
   const handleSave = () => {
     if (!name.trim() || !machineNumber.trim()) return;
-    const machine: Machine = initial ? { ...initial, name, machineNumber, tasks } : { id: Date.now().toString(), name, machineNumber, tasks };
+    const machine: Machine = initial ? { ...initial, name, machineNumber, tasks } : { id: Date.now(), name, machineNumber, tasks };
     onSave(machine);
     onClose();
   };
@@ -142,9 +142,9 @@ interface TaskDialogProps {
 const TaskDialog: React.FC<TaskDialogProps> = ({ open, onClose, onSave, initial }) => {
   const [title, setTitle] = useState(initial?.title || '');
   const [startDate, setStartDate] = useState<Date>(initial?.startDate ? new Date(initial.startDate) : new Date());
-  const [recurrence, setRecurrence] = useState<Task['recurrence']>(initial?.recurrence || 'weekly');
+  const [recurrence, setRecurrence] = useState<'daily' | 'weekly' | 'monthly' | 'yearly'>(initial?.recurrence || 'weekly');
   const [interval, setInterval] = useState(initial?.interval || 1);
-  const [daysOfWeek, setDaysOfWeek] = useState<number[]>(initial?.daysOfWeek || [1]); // Default to Monday
+  const [daysOfWeek, setDaysOfWeek] = useState<number[]>(initial?.daysOfWeek || [1]);
   const [dayOfMonth, setDayOfMonth] = useState(initial?.dayOfMonth || 1);
   const [month, setMonth] = useState(initial?.month || 1);
   const [endDate, setEndDate] = useState<Date | null>(initial?.endDate ? new Date(initial.endDate) : null);
@@ -201,13 +201,13 @@ const TaskDialog: React.FC<TaskDialogProps> = ({ open, onClose, onSave, initial 
           />
 
           {/* Recurrence Type */}
-        <FormControl size="small" fullWidth>
+          <FormControl size="small" fullWidth>
             <InputLabel>Wiederholung</InputLabel>
-            <Select value={recurrence} label="Wiederholung" onChange={e => setRecurrence(e.target.value as Task['recurrence'])}>
-            <MenuItem value="daily">Täglich</MenuItem>
-            <MenuItem value="weekly">Wöchentlich</MenuItem>
+            <Select value={recurrence} label="Wiederholung" onChange={e => setRecurrence(e.target.value as 'daily' | 'weekly' | 'monthly' | 'yearly')}>
+              <MenuItem value="daily">Täglich</MenuItem>
+              <MenuItem value="weekly">Wöchentlich</MenuItem>
               <MenuItem value="monthly">Monatlich</MenuItem>
-            <MenuItem value="yearly">Jährlich</MenuItem>
+              <MenuItem value="yearly">Jährlich</MenuItem>
             </Select>
           </FormControl>
 
@@ -273,8 +273,8 @@ const TaskDialog: React.FC<TaskDialogProps> = ({ open, onClose, onSave, initial 
                     {new Date(2024, i, 1).toLocaleDateString('de-DE', { month: 'long' })}
                   </MenuItem>
                 ))}
-          </Select>
-        </FormControl>
+              </Select>
+            </FormControl>
           )}
 
           {/* End Date */}
@@ -296,9 +296,9 @@ const TaskDialog: React.FC<TaskDialogProps> = ({ open, onClose, onSave, initial 
               slotProps={{ textField: { size: 'small', fullWidth: true } }}
             />
           )}
-      </DialogContent>
-      <DialogActions>
-        <Button onClick={onClose}>Abbrechen</Button>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={onClose}>Abbrechen</Button>
           <Button 
             variant="contained" 
             onClick={handleSave} 
@@ -306,8 +306,8 @@ const TaskDialog: React.FC<TaskDialogProps> = ({ open, onClose, onSave, initial 
           >
             Speichern
           </Button>
-      </DialogActions>
-    </Dialog>
+        </DialogActions>
+      </Dialog>
     </LocalizationProvider>
   );
 };

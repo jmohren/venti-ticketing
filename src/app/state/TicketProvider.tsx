@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useCallback, useMemo, useEffect } from 'react';
 import { restApiClient } from '@/core/api/rest/RestApiClient';
+import { useUser } from '@/core/state/UserProvider';
 
 export type TicketPriority = 'rot' | 'gelb' | 'gruen';
 export type TicketStatus = 'backlog' | 'progress' | 'done' | 'archived';
@@ -35,26 +36,39 @@ export interface Ticket {
   // Database fields
   created_at?: string;
   updated_at?: string;
+  // User tracking fields
+  createdByUserId?: string;
+  createdByName?: string;
 }
 
 interface TicketContextValue {
   tickets: Ticket[];
   loading: boolean;
   error: string | null;
-  addTicket: (ticket: Omit<Ticket, 'id' | 'created_at' | 'updated_at'>, currentUser?: { email?: string }) => Promise<void>;
+  addTicket: (ticket: Omit<Ticket, 'id' | 'created_at' | 'updated_at' | 'createdByUserId' | 'createdByName'>, currentUser?: { email?: string }) => Promise<void>;
   updateTicket: (id: number, partial: Partial<Ticket>, currentUser?: { email?: string }) => Promise<void>;
   getTicketById: (id: number) => Ticket | undefined;
   reorderTickets: (draggedId: number, targetId?: number, placeAfter?: boolean) => Promise<void>;
   archiveTickets: (ticketIds: number[]) => Promise<void>;
   refreshTickets: () => Promise<void>;
+  getTicketsByCreator: (userId: string) => Ticket[];
+  getMyTickets: () => Ticket[];
 }
 
 const TicketContext = createContext<TicketContextValue | undefined>(undefined);
 
 export const TicketProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { user, profile } = useUser();
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Get user display name from enhanced profile
+  const getUserDisplayName = () => {
+    if (profile?.fullName) return profile.fullName;
+    if (user?.email) return user.email.split('@')[0];
+    return 'Demo User';
+  };
 
   // Load tickets from API
   const loadTickets = useCallback(async () => {
@@ -78,18 +92,22 @@ export const TicketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     loadTickets();
   }, [loadTickets]);
 
-  const addTicket = useCallback(async (ticket: Omit<Ticket, 'id' | 'created_at' | 'updated_at'>, currentUser?: { email?: string }) => {
+  const addTicket = useCallback(async (ticket: Omit<Ticket, 'id' | 'created_at' | 'updated_at' | 'createdByUserId' | 'createdByName'>, currentUser?: { email?: string }) => {
     try {
       setError(null);
     const now = new Date().toISOString();
-      const userEmail = currentUser?.email || 'Demo User';
+      const userDisplayName = getUserDisplayName();
+      const currentUserId = user?.userId;
       
       const ticketWithEvents = {
       ...ticket,
+        // Store user tracking information
+        createdByUserId: currentUserId || undefined,
+        createdByName: userDisplayName,
         events: ticket.events ?? [{ 
           timestamp: now, 
           type: 'create' as const,
-          details: `${userEmail}: Ticket erstellt`
+          details: `${userDisplayName}: Ticket erstellt`
         }],
     };
 
@@ -117,7 +135,7 @@ export const TicketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         events = partial.events;
       } else {
         events = [...(existingTicket.events ?? [])];
-        const userEmail = currentUser?.email || 'Demo User';
+        const userDisplayName = getUserDisplayName();
 
       // Detect status change
         if (partial.status && partial.status !== existingTicket.status) {
@@ -126,7 +144,7 @@ export const TicketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           events.push({ 
             timestamp: now, 
             type: 'status_update', 
-            details: `${userEmail}: Status geändert zu "${statusLabel}"` 
+            details: `${userDisplayName}: Status geändert zu "${statusLabel}"` 
           });
       }
 
@@ -136,7 +154,7 @@ export const TicketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           events.push({ 
             timestamp: now, 
             type: 'assign', 
-            details: `${userEmail}: Zugewiesen an ${newResp}` 
+            details: `${userDisplayName}: Zugewiesen an ${newResp}` 
           });
       }
       }
@@ -219,6 +237,17 @@ export const TicketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     await loadTickets();
   }, [loadTickets]);
 
+  // Helper to get tickets created by a specific user
+  const getTicketsByCreator = useCallback((userId: string) => {
+    return tickets.filter(ticket => ticket.createdByUserId === userId);
+  }, [tickets]);
+
+  // Helper to get tickets created by current user
+  const getMyTickets = useCallback(() => {
+    if (!user?.userId) return [];
+    return getTicketsByCreator(user.userId);
+  }, [user?.userId, getTicketsByCreator]);
+
   const value = useMemo(() => ({
     tickets,
     loading,
@@ -229,7 +258,9 @@ export const TicketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     reorderTickets,
     archiveTickets,
     refreshTickets,
-  }), [tickets, loading, error, addTicket, updateTicket, getTicketById, reorderTickets, archiveTickets, refreshTickets]);
+    getTicketsByCreator,
+    getMyTickets,
+  }), [tickets, loading, error, addTicket, updateTicket, getTicketById, reorderTickets, archiveTickets, refreshTickets, getTicketsByCreator, getMyTickets]);
 
   return <TicketContext.Provider value={value}>{children}</TicketContext.Provider>;
 };

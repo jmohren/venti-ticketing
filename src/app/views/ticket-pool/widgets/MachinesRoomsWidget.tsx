@@ -23,7 +23,7 @@ import MachineDialog from '@/app/dialogs/MachineDialog';
 
 interface Props {
   onSelect?: (machine: Machine) => void;
-  selectedId?: string;
+  selectedId?: number;
 }
 
 // Styled components matching existing table design patterns
@@ -87,7 +87,7 @@ const MachinesRoomsWidget: React.FC<Props> = ({ onSelect, selectedId }) => {
     setMachineDialogOpen(true);
   };
 
-  const handleDeleteMachine = (machineId: string) => {
+  const handleDeleteMachine = (machineId: number) => {
     if (window.confirm('Maschine löschen?')) {
       deleteMachine(machineId);
     }

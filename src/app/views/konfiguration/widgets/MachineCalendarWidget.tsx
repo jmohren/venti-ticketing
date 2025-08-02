@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { Box, Typography, List, ListItem, ListItemText, Badge } from '@mui/material';
-import { Machine } from '@/app/hooks/useMachines';
+import { Machine } from '@/app/state/MachineProvider';
 import { useTickets } from '@/app/hooks/useTickets';
 import { DateCalendar, PickersDay, LocalizationProvider, PickersDayProps } from '@mui/x-date-pickers';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
@@ -23,23 +23,33 @@ const MachineCalendarWidget: React.FC<Props> = ({ machine }) => {
     tickets.filter(t => t.machine === machine.name && t.status !== 'done').forEach(t => {
       result.push({ date: dayjs().format('YYYY-MM-DD'), label: `Ticket: ${t.description}`, color: 'secondary' });
     });
-    // tasks recurrence (simple: daily tasks create event for each day of current month)
+    // tasks recurrence
     machine.tasks?.forEach(task => {
+      const start = dayjs().startOf('month');
+      const end = dayjs().endOf('month');
+      
       if (task.recurrence === 'daily') {
-        const start = dayjs().startOf('month');
-        const end = dayjs().endOf('month');
+        for (let d = start; d.isBefore(end); d = d.add(task.interval, 'day')) {
+          result.push({ date: d.format('YYYY-MM-DD'), label: task.title, color: 'primary' });
+        }
+      } else if (task.recurrence === 'weekly' && task.daysOfWeek) {
+        // For weekly with specific days, check each day in the month
         for (let d = start; d.isBefore(end); d = d.add(1, 'day')) {
+          const dayOfWeek = d.day(); // 0=Sunday, 1=Monday, etc.
+          if (task.daysOfWeek.includes(dayOfWeek)) {
+            result.push({ date: d.format('YYYY-MM-DD'), label: task.title, color: 'primary' });
+          }
+        }
+      } else if (task.recurrence === 'weekly') {
+        // Weekly without specific days - use interval
+        for (let d = start; d.isBefore(end); d = d.add(task.interval, 'week')) {
           result.push({ date: d.format('YYYY-MM-DD'), label: task.title, color: 'primary' });
         }
-      }
-      if (task.recurrence === 'weekly') {
-        const start = dayjs().startOf('month');
-        const end = dayjs().endOf('month');
-        for (let d = start; d.isBefore(end); d = d.add(1, 'week')) {
+      } else if (task.recurrence === 'monthly') {
+        for (let d = start; d.isBefore(end); d = d.add(task.interval, 'month')) {
           result.push({ date: d.format('YYYY-MM-DD'), label: task.title, color: 'primary' });
         }
-      }
-      if (task.recurrence === 'yearly') {
+      } else if (task.recurrence === 'yearly') {
         const day = dayjs().date(1); // first of month
         result.push({ date: day.format('YYYY-MM-DD'), label: task.title, color: 'primary' });
       }

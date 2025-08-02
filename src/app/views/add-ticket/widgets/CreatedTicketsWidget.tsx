@@ -26,23 +26,13 @@ const statusLabel = {
 } as const;
 
 const CreatedTicketsWidget: React.FC = () => {
-  const { tickets } = useTickets();
+  const { getMyTickets } = useTickets();
   const { getCurrentUser } = useAuth();
   const { selectedTicket, isDialogOpen, openTicket, closeTicket } = useTicketUrlState();
-  
-  const currentUserEmail = getCurrentUser()?.email;
 
-  // Filter tickets created by current user
-  const createdTickets = tickets.filter(ticket => 
-    ticket.events.some(event => 
-      event.type === 'create' && 
-      event.details?.includes(currentUserEmail || '')
-    )
-  ).sort((a, b) => {
-    // Sort by creation date (newest first)
-    const aCreated = a.events.find(e => e.type === 'create')?.timestamp || '';
-    const bCreated = b.events.find(e => e.type === 'create')?.timestamp || '';
-    return new Date(bCreated).getTime() - new Date(aCreated).getTime();
+  // Get tickets created by current user and sort by creation date (newest first)
+  const createdTickets = getMyTickets().sort((a, b) => {
+    return new Date(b.created_at || '').getTime() - new Date(a.created_at || '').getTime();
   });
 
   if (createdTickets.length === 0) {

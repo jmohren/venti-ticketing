@@ -226,7 +226,7 @@ const CalendarWidget: React.FC<CalendarWidgetProps> = ({ selectedMachine }) => {
               WebkitBoxOrient: 'vertical',
               overflow: 'hidden',
             }}>
-              🔧 {task.title}
+                                      🔧 {task.title}
             </Typography>
           </MaintenanceCardContent>
         </MaintenanceCard>
@@ -473,7 +473,7 @@ const CalendarWidget: React.FC<CalendarWidgetProps> = ({ selectedMachine }) => {
           <DialogTitle>Wartungsaufgabe Details</DialogTitle>
           <DialogContent>
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 1 }}>
-              <Typography variant="h6">{selectedMaintenanceTask.title}</Typography>
+                              <Typography variant="h6">{selectedMaintenanceTask.title}</Typography>
               <Typography variant="body2" color="text.secondary">
                 <strong>Maschine:</strong> {selectedMaintenanceTask.machineName}
               </Typography>

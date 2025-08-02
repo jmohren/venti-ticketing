@@ -15,9 +15,11 @@ import {
   AccordionSummary,
   AccordionDetails,
   Typography,
+  Autocomplete,
 } from '@mui/material';
 import { format } from 'date-fns';
 import { useAuth } from '@/core/hooks/useAuth';
+import { useUser } from '@/core/state/UserProvider';
 import { IconButton } from '@mui/material';
 import { CloudUpload, Delete, ZoomIn, Clear, ExpandMore, ContentCopy, Archive, Send, Close, CameraAlt, Image, PlayArrow, Pause } from '@mui/icons-material';
 import { TicketEvent, useTickets } from '@/app/hooks/useTickets';
@@ -26,7 +28,9 @@ import { LocalizationProvider } from '@mui/x-date-pickers';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 
 import { useTechnicians } from '@/app/hooks/useTechnicians';
+import { useMachines } from '@/app/hooks/useMachines';
 import { storageApiClient } from '@/core/api/storage/StorageApiClient';
+import { compressImage } from '@/app/utils/imageCompression';
 
 interface TicketData {
   machine?: string;
@@ -67,8 +71,56 @@ interface AddTicketDialogProps {
  */
 const AddTicketDialog: React.FC<AddTicketDialogProps> = ({ open, onClose, readOnly = false, initialData, showStatus = false, onSave, allowResponsibleEdit = false, allowPlanEdit = false, ticketId, showArchiveButton = false, onArchive, allowWorkTracking = false }) => {
   const { getCurrentUser } = useAuth();
+  const { user, profile } = useUser();
   const { updateTicket } = useTickets();
   const { getTechnicianNames } = useTechnicians();
+  const { machines } = useMachines();
+
+  // Get user display name from enhanced profile
+  const getUserDisplayName = () => {
+    if (profile?.fullName) return profile.fullName;
+    if (user?.email) return user.email.split('@')[0];
+    return 'Demo User';
+  };
+
+  // Autocomplete options for machines and equipment numbers
+  const machineOptions = useMemo(() => {
+    return machines.map(m => ({
+      label: m.name,
+      value: m.name,
+      equipmentNumber: m.machineNumber
+    }));
+  }, [machines]);
+
+  const equipmentOptions = useMemo(() => {
+    return machines.map(m => ({
+      label: m.machineNumber,
+      value: m.machineNumber,
+      machineName: m.name
+    }));
+  }, [machines]);
+
+  // Handle machine selection - auto-fill equipment number
+  const handleMachineSelect = (selectedMachine: string | null) => {
+    setMachine(selectedMachine || '');
+    if (selectedMachine) {
+      const machineData = machines.find(m => m.name === selectedMachine);
+      if (machineData) {
+        setEquipmentNummer(machineData.machineNumber);
+      }
+    }
+  };
+
+  // Handle equipment number selection - auto-fill machine
+  const handleEquipmentSelect = (selectedEquipment: string | null) => {
+    setEquipmentNummer(selectedEquipment || '');
+    if (selectedEquipment) {
+      const machineData = machines.find(m => m.machineNumber === selectedEquipment);
+      if (machineData) {
+        setMachine(machineData.name);
+      }
+    }
+  };
 
   const [description, setDescription] = useState(initialData?.description || '');
   const [priority, setPriority] = useState<'rot' | 'gelb' | 'gruen'>(initialData?.priority || 'gruen');
@@ -107,7 +159,7 @@ const AddTicketDialog: React.FC<AddTicketDialogProps> = ({ open, onClose, readOn
   // Check if work is currently in progress
   const isWorkInProgress = useMemo(() => {
     const currentUser = getCurrentUser();
-    const userEmail = currentUser?.email || 'Demo User';
+    const userEmail = currentUser?.email || user?.email || 'Demo User';
     
     // Find the most recent work event for the current user
     const workEvents = localEvents.filter(event => 
@@ -156,7 +208,7 @@ const AddTicketDialog: React.FC<AddTicketDialogProps> = ({ open, onClose, readOn
   const technicianNames = getTechnicianNames();
 
   const createdAt = useMemo(() => new Date(), []);
-  const creatorEmail = getCurrentUser()?.email ?? '–';
+  const creatorName = getUserDisplayName();
 
 
 
@@ -174,49 +226,57 @@ const AddTicketDialog: React.FC<AddTicketDialogProps> = ({ open, onClose, readOn
       // Keep existing images (already URLs)
       uploadedImageUrls.push(...existingImages);
       
-      // Upload new files to storage
+      // Upload new files to storage with compression
       for (const file of selectedFiles) {
         try {
+          // Compress image before upload
+          const compressedFile = await compressImage(file, {
+            maxWidth: 1920,
+            maxHeight: 1080,
+            quality: 0.8,
+            format: 'jpeg'
+          });
+
           // Generate unique filename: tickets/uuid.extension
-          const fileExtension = file.name.split('.').pop() || 'jpg';
+          const fileExtension = 'jpg'; // Always use jpg after compression
           const uniqueId = crypto.randomUUID();
           const filePath = `tickets/${uniqueId}.${fileExtension}`;
           
-          // Upload to storage
-          const uploadResponse = await storageApiClient.uploadFile(file, filePath);
+          // Upload compressed image to storage
+          const uploadResponse = await storageApiClient.uploadFile(compressedFile, filePath);
           // Use authenticated API URL instead of direct blob URL
           const authenticatedUrl = storageApiClient.getFileUrl(filePath);
           uploadedImageUrls.push(authenticatedUrl);
         } catch (error) {
-          console.error('Failed to upload image:', error);
+          console.error('Failed to compress or upload image:', error);
           // Continue with other images even if one fails
         }
       }
 
-      console.log('Create ticket', {
-        created_at: createdAt.toISOString(),
-        created_by: creatorEmail,
-        machine,
-        description,
-        priority,
+    console.log('Create ticket', {
+      created_at: createdAt.toISOString(),
+              created_by: creatorName,
+      machine,
+      description,
+      priority,
         images: uploadedImageUrls.length,
-        responsible,
-      });
+      responsible,
+    });
       
       if (onSave) await onSave({ 
-        description, 
-        priority, 
+      description, 
+      priority, 
         machine: ticketType === 'verwaltung' ? 'Verwaltung' : machine, 
-        status: initialData?.status, 
+      status: initialData?.status, 
         type: ticketType,
         category,
-        responsible, 
-        plannedCompletion: plannedDate ? plannedDate.toISOString() : null,
+      responsible, 
+      plannedCompletion: plannedDate ? plannedDate.toISOString() : null,
         images: uploadedImageUrls, // Pass uploaded image URLs
         raumnummer: ticketType === 'verwaltung' ? raumnummer : undefined,
         equipmentNummer: ticketType === 'betrieb' ? equipmentNummer : undefined
-      });
-      onClose();
+    });
+    onClose();
     } catch (error) {
       console.error('Failed to save ticket:', error);
       // You could show an error message to the user here
@@ -267,24 +327,32 @@ const AddTicketDialog: React.FC<AddTicketDialogProps> = ({ open, onClose, readOn
     try {
       const currentUser = getCurrentUser();
       // For development/demo purposes, use a more meaningful fallback
-      const userDisplayName = currentUser?.email || 'Demo User';
+      const userDisplayName = getUserDisplayName();
       
-      // Upload images to storage and get URLs
+      // Upload images to storage with compression and get URLs
       const imageUrls: string[] = [];
       for (const file of commentImages) {
         try {
+          // Compress image before upload
+          const compressedFile = await compressImage(file, {
+            maxWidth: 1920,
+            maxHeight: 1080,
+            quality: 0.8,
+            format: 'jpeg'
+          });
+
           // Generate unique filename: tickets/uuid.extension
-          const fileExtension = file.name.split('.').pop() || 'jpg';
+          const fileExtension = 'jpg'; // Always use jpg after compression
           const uniqueId = crypto.randomUUID();
           const filePath = `tickets/${uniqueId}.${fileExtension}`;
           
-                  // Upload to storage
-        const uploadResponse = await storageApiClient.uploadFile(file, filePath);
-        // Use authenticated API URL instead of direct blob URL
-        const authenticatedUrl = storageApiClient.getFileUrl(filePath);
-        imageUrls.push(authenticatedUrl);
+          // Upload compressed image to storage
+          const uploadResponse = await storageApiClient.uploadFile(compressedFile, filePath);
+          // Use authenticated API URL instead of direct blob URL
+          const authenticatedUrl = storageApiClient.getFileUrl(filePath);
+          imageUrls.push(authenticatedUrl);
         } catch (error) {
-          console.error('Failed to upload image:', error);
+          console.error('Failed to compress or upload image:', error);
           // Continue with other images even if one fails
         }
       }
@@ -317,7 +385,7 @@ const AddTicketDialog: React.FC<AddTicketDialogProps> = ({ open, onClose, readOn
     if (!ticketId) return;
     
     const currentUser = getCurrentUser();
-    const userDisplayName = currentUser?.email || 'Demo User';
+    const userDisplayName = getUserDisplayName();
     
     const newEvent: TicketEvent = {
       timestamp: new Date().toISOString(),
@@ -337,7 +405,7 @@ const AddTicketDialog: React.FC<AddTicketDialogProps> = ({ open, onClose, readOn
     if (!ticketId) return;
     
     const currentUser = getCurrentUser();
-    const userDisplayName = currentUser?.email || 'Demo User';
+    const userDisplayName = getUserDisplayName();
     
     const newEvent: TicketEvent = {
       timestamp: new Date().toISOString(),
@@ -380,7 +448,7 @@ const AddTicketDialog: React.FC<AddTicketDialogProps> = ({ open, onClose, readOn
 
             <TextField
               label="Erstellt von"
-              value={creatorEmail}
+              value={creatorName}
               size="small"
               InputProps={{ readOnly: true }}
               sx={{ flex: 1 }}
@@ -397,7 +465,7 @@ const AddTicketDialog: React.FC<AddTicketDialogProps> = ({ open, onClose, readOn
                 onChange={(e) => {
                                   setTicketType(e.target.value as 'verwaltung' | 'betrieb');
                 // Reset fields when changing type
-                setMachine('');
+                  setMachine('');
                 setRaumnummer('');
                 setEquipmentNummer('');
                 }}
@@ -435,24 +503,50 @@ const AddTicketDialog: React.FC<AddTicketDialogProps> = ({ open, onClose, readOn
           ) : (
             // Betrieb fields
             <Box sx={{ display: 'flex', gap: 2 }}>
-              <TextField
-                label="Maschine"
-                value={machine}
-                onChange={(e) => setMachine(e.target.value)}
-                size="small"
-                fullWidth
+              <Autocomplete
+                options={equipmentOptions.map(option => option.label)}
+                value={equipmentNummer}
+                onChange={(event, newValue) => handleEquipmentSelect(newValue)}
+                onInputChange={(event, newInputValue) => {
+                  // Allow free typing while maintaining auto-complete
+                  if (event?.type === 'change') {
+                    setEquipmentNummer(newInputValue);
+                  }
+                }}
+                freeSolo
                 disabled={readOnly}
-                placeholder="z.B. Presse 1, Fräse A"
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    label="Equipment Nummer"
+                    size="small"
+                    placeholder="z.B. EQ-001, EQ-205"
+                  />
+                )}
+                sx={{ flex: 1 }}
               />
               
-              <TextField
-                label="Equipment Nummer"
-                value={equipmentNummer}
-                onChange={(e) => setEquipmentNummer(e.target.value)}
-                size="small"
-                fullWidth
+              <Autocomplete
+                options={machineOptions.map(option => option.label)}
+                value={machine}
+                onChange={(event, newValue) => handleMachineSelect(newValue)}
+                onInputChange={(event, newInputValue) => {
+                  // Allow free typing while maintaining auto-complete
+                  if (event?.type === 'change') {
+                    setMachine(newInputValue);
+                  }
+                }}
+                freeSolo
                 disabled={readOnly}
-                placeholder="z.B. EQ-001, EQ-205"
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    label="Maschine"
+                    size="small"
+                    placeholder="z.B. Presse 1, Fräse A"
+                  />
+                )}
+                sx={{ flex: 1 }}
               />
             </Box>
           )}
@@ -778,7 +872,7 @@ const AddTicketDialog: React.FC<AddTicketDialogProps> = ({ open, onClose, readOn
                             }}
                           >
                             {content}
-                          </Typography>
+                      </Typography>
                           
                           {/* Comment Images */}
                           {ev.images && ev.images.length > 0 && (

@@ -3,7 +3,7 @@ import { Task, Machine } from '@/app/state/MachineProvider';
 
 export interface TaskOccurrence {
   id: string;
-  machineId: string;
+  machineId: number;
   machineName: string;
   title: string;
   date: Date;
@@ -11,8 +11,7 @@ export interface TaskOccurrence {
 }
 
 /**
- * Generate occurrences of a recurring task within a date range
- * Only generates occurrences that fall within the specified range to avoid infinite loops
+ * Generate occurrences of a recurring task within a date range based on frequencyDays
  */
 export function generateTaskOccurrences(
   task: Task,
@@ -21,45 +20,13 @@ export function generateTaskOccurrences(
   endRange: Date
 ): TaskOccurrence[] {
   const occurrences: TaskOccurrence[] = [];
-  const taskStart = parseISO(task.startDate);
-  const taskEnd = task.endDate ? parseISO(task.endDate) : null;
   
-  // Don't generate if task starts after our range or ends before our range
-  if (isAfter(taskStart, endRange) || (taskEnd && isBefore(taskEnd, startRange))) {
-    return occurrences;
-  }
-
-  let currentDate = taskStart;
-  let iterationCount = 0;
-  const maxIterations = 1000; // Safety limit to prevent infinite loops
-
-  while (
-    (isBefore(currentDate, endRange) || isSameDay(currentDate, endRange)) &&
-    (!taskEnd || isBefore(currentDate, taskEnd) || isSameDay(currentDate, taskEnd)) &&
-    iterationCount < maxIterations
-  ) {
-    iterationCount++;
-
-    // Check if current date is within our display range
-    if (
-      (isAfter(currentDate, startRange) || isSameDay(currentDate, startRange)) &&
-      (isBefore(currentDate, endRange) || isSameDay(currentDate, endRange))
-    ) {
-      // For weekly recurrence, check if the day of week matches
-      if (task.recurrence === 'weekly' && task.daysOfWeek) {
-        const dayOfWeek = currentDate.getDay();
-        if (task.daysOfWeek.includes(dayOfWeek)) {
-          occurrences.push({
-            id: `${task.id}-${format(currentDate, 'yyyy-MM-dd')}`,
-            machineId: machine.id,
-            machineName: machine.name,
-            title: task.title,
-            date: new Date(currentDate),
-            taskId: task.id,
-          });
-        }
-      } else if (task.recurrence !== 'weekly') {
-        // For non-weekly recurrence, add the occurrence
+  if (task.recurrence === 'weekly' && task.daysOfWeek && task.daysOfWeek.length > 0) {
+    // Special handling for weekly tasks with specific days of week
+    let currentDate = new Date(startRange);
+    while (isBefore(currentDate, endRange) || isSameDay(currentDate, endRange)) {
+      const dayOfWeek = currentDate.getDay(); // 0=Sunday, 1=Monday, etc.
+      if (task.daysOfWeek.includes(dayOfWeek)) {
         occurrences.push({
           id: `${task.id}-${format(currentDate, 'yyyy-MM-dd')}`,
           machineId: machine.id,
@@ -69,62 +36,48 @@ export function generateTaskOccurrences(
           taskId: task.id,
         });
       }
+      currentDate = addDays(currentDate, 1);
     }
+  } else {
+    // Other recurrence patterns
+    let currentDate = task.startDate ? new Date(task.startDate) : new Date(startRange);
+    let iterationCount = 0;
+    const maxIterations = 1000; // Safety limit
 
-    // Move to next occurrence based on recurrence pattern
-    switch (task.recurrence) {
-      case 'daily':
-        currentDate = addDays(currentDate, task.interval);
-        break;
-      case 'weekly':
-        // For weekly, we advance by the interval in weeks, but we need to check each day
-        // within the week to see if it matches our target days
-        if (task.daysOfWeek && task.daysOfWeek.length > 0) {
-          // Find next matching day in the current week
-          let foundInCurrentWeek = false;
-          
-          // Check remaining days in current week
-          for (let i = 1; i < 8; i++) {
-            const checkDate = addDays(currentDate, i);
-            if (task.daysOfWeek.includes(checkDate.getDay())) {
-              currentDate = checkDate;
-              foundInCurrentWeek = true;
-              break;
-            }
-          }
-          
-          if (!foundInCurrentWeek) {
-            // Move to next interval of weeks and find first matching day
-            currentDate = addWeeks(currentDate, task.interval);
-            // Find first matching day in the new week
-            for (let i = 0; i < 7; i++) {
-              const checkDate = addDays(currentDate, i);
-              if (task.daysOfWeek.includes(checkDate.getDay())) {
-                currentDate = checkDate;
-                break;
-              }
-            }
-          }
-        } else {
+    while (
+      (isBefore(currentDate, endRange) || isSameDay(currentDate, endRange)) &&
+      iterationCount < maxIterations
+    ) {
+      iterationCount++;
+
+      // Only add if within our date range
+      if ((isAfter(currentDate, startRange) || isSameDay(currentDate, startRange)) &&
+          (isBefore(currentDate, endRange) || isSameDay(currentDate, endRange))) {
+        occurrences.push({
+          id: `${task.id}-${format(currentDate, 'yyyy-MM-dd')}`,
+          machineId: machine.id,
+          machineName: machine.name,
+          title: task.title,
+          date: new Date(currentDate),
+          taskId: task.id,
+        });
+      }
+
+      // Move to next occurrence based on recurrence
+      switch (task.recurrence) {
+        case 'daily':
+          currentDate = addDays(currentDate, task.interval);
+          break;
+        case 'weekly':
           currentDate = addWeeks(currentDate, task.interval);
-        }
-        break;
-      case 'monthly':
-        currentDate = addMonths(currentDate, task.interval);
-        // Adjust for day of month if specified
-        if (task.dayOfMonth) {
-          const targetDay = Math.min(task.dayOfMonth, new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0).getDate());
-          currentDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), targetDay);
-        }
-        break;
-      case 'yearly':
-        currentDate = addYears(currentDate, task.interval);
-        // Adjust for specific month and day if specified
-        if (task.month && task.dayOfMonth) {
-          const targetDay = Math.min(task.dayOfMonth, new Date(currentDate.getFullYear(), task.month, 0).getDate());
-          currentDate = new Date(currentDate.getFullYear(), task.month - 1, targetDay);
-        }
-        break;
+          break;
+        case 'monthly':
+          currentDate = addMonths(currentDate, task.interval);
+          break;
+        case 'yearly':
+          currentDate = addYears(currentDate, task.interval);
+          break;
+      }
     }
   }
 

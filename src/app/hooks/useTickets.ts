@@ -23,5 +23,7 @@ export const useTickets = () => {
     reorderTickets: context.reorderTickets,
     archiveTickets: context.archiveTickets,
     refreshTickets: context.refreshTickets,
+    getTicketsByCreator: context.getTicketsByCreator,
+    getMyTickets: context.getMyTickets,
   };
 }; 

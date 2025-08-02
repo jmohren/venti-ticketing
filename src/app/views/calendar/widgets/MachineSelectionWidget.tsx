@@ -11,6 +11,7 @@ import {
 } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import { useTickets } from '@/app/hooks/useTickets';
+import { useMachines } from '@/app/hooks/useMachines';
 
 // Styled components matching table design patterns
 const MachineListHeader = styled(Box)(({ theme }) => ({
@@ -45,17 +46,12 @@ const MachineSelectionWidget: React.FC<MachineSelectionWidgetProps> = ({
   onMachineSelect 
 }) => {
   const { tickets } = useTickets();
+  const { machines } = useMachines();
 
-  // Get unique machines from all tickets
-  const uniqueMachines = React.useMemo(() => {
-    const machines = new Set<string>();
-    tickets.forEach(ticket => {
-      if (ticket.machine && ticket.machine !== 'Verwaltung') {
-        machines.add(ticket.machine);
-      }
-    });
-    return Array.from(machines).sort();
-  }, [tickets]);
+  // Get all machines from database
+  const machineNames = React.useMemo(() => {
+    return machines.map(machine => machine.name).sort();
+  }, [machines]);
 
   // Count tickets per machine
   const getTicketCount = (machine: string) => {
@@ -74,7 +70,7 @@ const MachineSelectionWidget: React.FC<MachineSelectionWidgetProps> = ({
         </Typography>
       </MachineListHeader>
       
-      {uniqueMachines.length === 0 ? (
+      {machineNames.length === 0 ? (
         <Box sx={{ p: 2 }}>
           <Typography variant="body2" color="text.secondary">
             Keine Maschinen gefunden
@@ -82,7 +78,7 @@ const MachineSelectionWidget: React.FC<MachineSelectionWidgetProps> = ({
         </Box>
       ) : (
         <List sx={{ flex: 1, overflow: 'auto', p: 0 }}>
-          {uniqueMachines.map((machine) => {
+          {machineNames.map((machine) => {
             const ticketCount = getTicketCount(machine);
             const isSelected = selectedMachine === machine;
             

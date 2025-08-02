@@ -52,12 +52,12 @@ const AppBar: React.FC<{ user: User; onLogout: () => void }> = ({ user, onLogout
     <MuiAppBar position="static">
       <Toolbar>
         <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
-          Build your Application
+          Maintenance Ticketing
         </Typography>
-        <Typography variant="body1" sx={{ mr: 2 }}>
+        <Typography variant="h6" sx={{ mr: 2 }}>
           Welcome, {displayName}!
         </Typography>
-        <Button color="inherit" onClick={onLogout}>
+        <Button color="inherit" onClick={onLogout} sx={{ typography: 'h6' }}>
           Logout
         </Button>
       </Toolbar>
