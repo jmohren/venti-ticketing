@@ -26,6 +26,7 @@ import { LocalizationProvider } from '@mui/x-date-pickers';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 
 import { useTechnicians } from '@/app/hooks/useTechnicians';
+import { storageApiClient } from '@/core/api/storage/StorageApiClient';
 
 interface TicketData {
   machine?: string;
@@ -93,6 +94,10 @@ const AddTicketDialog: React.FC<AddTicketDialogProps> = ({ open, onClose, readOn
   const [commentText, setCommentText] = useState('');
   const [localEvents, setLocalEvents] = useState<TicketEvent[]>(initialData?.events || []);
   const [commentImages, setCommentImages] = useState<File[]>([]);
+  
+  // Save loading state
+  const [isSaving, setIsSaving] = useState(false);
+  const [isSendingComment, setIsSendingComment] = useState(false);
 
   // Detect if user is on mobile device
   const isMobile = useMemo(() => {
@@ -160,31 +165,62 @@ const AddTicketDialog: React.FC<AddTicketDialogProps> = ({ open, onClose, readOn
      ticketType === 'betrieb' ? machine.trim().length > 0 && equipmentNummer.trim().length > 0 : false);
   const formValid = readOnly && allowResponsibleEdit ? true : formValidBase;
 
-  const handleSave = () => {
-    // TODO: integrate API once backend is ready
-    console.log('Create ticket', {
-      created_at: createdAt.toISOString(),
-      created_by: creatorEmail,
-      machine,
-      description,
-      priority,
-      images: previewItems.length,
-      responsible,
-    });
-    if (onSave) onSave({ 
-      description, 
-      priority, 
-      machine: ticketType === 'verwaltung' ? 'Verwaltung' : machine, 
-      status: initialData?.status, 
-      type: ticketType,
-      category,
-      responsible, 
-      plannedCompletion: plannedDate ? plannedDate.toISOString() : null,
-      images: previewItems, // Pass combined existing and new images
-      raumnummer: ticketType === 'verwaltung' ? raumnummer : undefined,
-      equipmentNummer: ticketType === 'betrieb' ? equipmentNummer : undefined
-    });
-    onClose();
+  const handleSave = async () => {
+    setIsSaving(true);
+    try {
+      // Upload new images to storage and get URLs
+      const uploadedImageUrls: string[] = [];
+      
+      // Keep existing images (already URLs)
+      uploadedImageUrls.push(...existingImages);
+      
+      // Upload new files to storage
+      for (const file of selectedFiles) {
+        try {
+          // Generate unique filename: tickets/uuid.extension
+          const fileExtension = file.name.split('.').pop() || 'jpg';
+          const uniqueId = crypto.randomUUID();
+          const filePath = `tickets/${uniqueId}.${fileExtension}`;
+          
+          // Upload to storage
+          const uploadResponse = await storageApiClient.uploadFile(file, filePath);
+          uploadedImageUrls.push(uploadResponse.url);
+        } catch (error) {
+          console.error('Failed to upload image:', error);
+          // Continue with other images even if one fails
+        }
+      }
+
+      console.log('Create ticket', {
+        created_at: createdAt.toISOString(),
+        created_by: creatorEmail,
+        machine,
+        description,
+        priority,
+        images: uploadedImageUrls.length,
+        responsible,
+      });
+      
+      if (onSave) await onSave({ 
+        description, 
+        priority, 
+        machine: ticketType === 'verwaltung' ? 'Verwaltung' : machine, 
+        status: initialData?.status, 
+        type: ticketType,
+        category,
+        responsible, 
+        plannedCompletion: plannedDate ? plannedDate.toISOString() : null,
+        images: uploadedImageUrls, // Pass uploaded image URLs
+        raumnummer: ticketType === 'verwaltung' ? raumnummer : undefined,
+        equipmentNummer: ticketType === 'betrieb' ? equipmentNummer : undefined
+      });
+      onClose();
+    } catch (error) {
+      console.error('Failed to save ticket:', error);
+      // You could show an error message to the user here
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleCopyUrl = async () => {
@@ -225,43 +261,52 @@ const AddTicketDialog: React.FC<AddTicketDialogProps> = ({ open, onClose, readOn
   const handleSendComment = async () => {
     if ((!commentText.trim() && commentImages.length === 0) || !ticketId) return;
     
-    const currentUser = getCurrentUser();
-    // For development/demo purposes, use a more meaningful fallback
-    const userDisplayName = currentUser?.email || 'Demo User';
-    
-    // Convert images to base64 URLs for storage
-    const imageUrls: string[] = [];
-    for (const file of commentImages) {
-      try {
-        const base64 = await new Promise<string>((resolve, reject) => {
-          const reader = new FileReader();
-          reader.onload = () => resolve(reader.result as string);
-          reader.onerror = reject;
-          reader.readAsDataURL(file);
-        });
-        imageUrls.push(base64);
-      } catch (error) {
-        console.error('Failed to convert image to base64:', error);
+    setIsSendingComment(true);
+    try {
+      const currentUser = getCurrentUser();
+      // For development/demo purposes, use a more meaningful fallback
+      const userDisplayName = currentUser?.email || 'Demo User';
+      
+      // Upload images to storage and get URLs
+      const imageUrls: string[] = [];
+      for (const file of commentImages) {
+        try {
+          // Generate unique filename: tickets/uuid.extension
+          const fileExtension = file.name.split('.').pop() || 'jpg';
+          const uniqueId = crypto.randomUUID();
+          const filePath = `tickets/${uniqueId}.${fileExtension}`;
+          
+          // Upload to storage
+          const uploadResponse = await storageApiClient.uploadFile(file, filePath);
+          imageUrls.push(uploadResponse.url);
+        } catch (error) {
+          console.error('Failed to upload image:', error);
+          // Continue with other images even if one fails
+        }
       }
-    }
-    
-    const newEvent: TicketEvent = {
-      timestamp: new Date().toISOString(),
-      type: 'comment',
-      details: `${userDisplayName}: ${commentText.trim()}`,
-      images: imageUrls.length > 0 ? imageUrls : undefined
-    };
+      
+      const newEvent: TicketEvent = {
+        timestamp: new Date().toISOString(),
+        type: 'comment',
+        details: `${userDisplayName}: ${commentText.trim()}`,
+        images: imageUrls.length > 0 ? imageUrls : undefined
+      };
 
-    // Update local state for immediate UI update
-    const updatedEvents = [...localEvents, newEvent];
-    setLocalEvents(updatedEvents);
-    
-    // Update the ticket in the backend
-    updateTicket(ticketId, { events: updatedEvents }, getCurrentUser() || undefined);
-    
-    // Clear the comment text and images
-    setCommentText('');
-    setCommentImages([]);
+      // Update local state for immediate UI update
+      const updatedEvents = [...localEvents, newEvent];
+      setLocalEvents(updatedEvents);
+      
+      // Update the ticket in the backend
+      await updateTicket(ticketId, { events: updatedEvents }, getCurrentUser() || undefined);
+      
+      // Clear the comment text and images
+      setCommentText('');
+      setCommentImages([]);
+    } catch (error) {
+      console.error('Failed to send comment:', error);
+    } finally {
+      setIsSendingComment(false);
+    }
   };
 
   const handleStartWork = () => {
@@ -894,10 +939,10 @@ const AddTicketDialog: React.FC<AddTicketDialogProps> = ({ open, onClose, readOn
                         </IconButton>
                         <IconButton
                           onClick={handleSendComment}
-                          disabled={!commentText.trim() && commentImages.length === 0}
+                          disabled={(!commentText.trim() && commentImages.length === 0) || isSendingComment}
                           color="primary"
                           size="small"
-                          title="Nachricht senden"
+                          title={isSendingComment ? "Senden..." : "Nachricht senden"}
                         >
                           <Send />
                         </IconButton>
@@ -943,7 +988,13 @@ const AddTicketDialog: React.FC<AddTicketDialogProps> = ({ open, onClose, readOn
         <Box sx={{ display: 'flex', gap: 1 }}>
           <Button onClick={onClose} color="inherit">{readOnly ? 'Schließen' : 'Abbrechen'}</Button>
           {(!readOnly || allowResponsibleEdit) && (
-            <Button onClick={handleSave} variant="contained" disabled={!formValid}>Speichern</Button>
+            <Button 
+              onClick={handleSave} 
+              variant="contained" 
+              disabled={!formValid || isSaving}
+            >
+              {isSaving ? 'Speichern...' : 'Speichern'}
+            </Button>
           )}
         </Box>
       </DialogActions>
