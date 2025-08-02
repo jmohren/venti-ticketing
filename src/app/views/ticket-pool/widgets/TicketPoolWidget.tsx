@@ -1,5 +1,5 @@
 import React from 'react';
-import { Box } from '@mui/material';
+import { Box, Typography } from '@mui/material';
 import { format } from 'date-fns';
 import AddTicketDialog from '@/app/dialogs/AddTicketDialog';
 import { useTickets, Ticket } from '@/app/hooks/useTickets';
@@ -36,7 +36,7 @@ const TicketCard: React.FC<{ ticket: Ticket; onClick: () => void; draggable?: bo
 };
 
 const TicketPoolWidget: React.FC = () => {
-  const { tickets, updateTicket, getTicketById, reorderTickets, archiveTickets } = useTickets();
+  const { tickets, loading, error, updateTicket, getTicketById, reorderTickets, archiveTickets } = useTickets();
   const { selectedTicket, isDialogOpen, openTicket, closeTicket } = useTicketUrlState();
   const { getCurrentUser } = useAuth();
 
@@ -54,7 +54,7 @@ const TicketPoolWidget: React.FC = () => {
     return null;
   };
 
-  const handleDrop = (lane: 'backlog' | 'progress' | 'done', e: React.DragEvent) => {
+  const handleDrop = async (lane: 'backlog' | 'progress' | 'done', e: React.DragEvent) => {
     e.preventDefault();
     const idString = e.dataTransfer.getData('text/plain');
     if (!idString) return;
@@ -69,33 +69,38 @@ const TicketPoolWidget: React.FC = () => {
       if(cards.length){
         const lastCardRect = cards[cards.length-1].getBoundingClientRect();
         if(e.clientY > lastCardRect.bottom){
-          reorderTickets(id);
+          await reorderTickets(id);
         }
       }
       return;
     }
 
-    const newStatus = lane;
-    // Create updated copy for immediate UI feedback
-    const original = tickets.find(t => t.id === id);
-    if (!original) return;
+    try {
+      const newStatus = lane;
+      // Create updated copy for immediate UI feedback
+      const original = tickets.find(t => t.id === id);
+      if (!original) return;
 
-    const updatedTicket = { ...original, status: newStatus } as Ticket;
-    const partial: Partial<Ticket> = { status: newStatus };
-    if (lane === 'done') {
-      partial.completedAt = new Date().toISOString();
-    } else if (ticketLoc.lane === 'done') {
-      // Moving out of done → reset completion timestamp
-      partial.completedAt = null;
+      const updatedTicket = { ...original, status: newStatus } as Ticket;
+      const partial: Partial<Ticket> = { status: newStatus };
+      if (lane === 'done') {
+        partial.completedAt = new Date().toISOString();
+      } else if (ticketLoc.lane === 'done') {
+        // Moving out of done → reset completion timestamp
+        partial.completedAt = null;
+      }
+      
+      await updateTicket(id, partial, getCurrentUser() || undefined);
+
+      // Retrieve the freshly updated ticket (including new audit event) for the dialog
+      const refreshed = getTicketById(id) ?? updatedTicket;
+      openTicket(refreshed.id);
+    } catch (error) {
+      console.error('Failed to update ticket:', error);
     }
-    updateTicket(id, partial, getCurrentUser() || undefined);
-
-    // Retrieve the freshly updated ticket (including new audit event) for the dialog
-    const refreshed = getTicketById(id) ?? updatedTicket;
-    openTicket(refreshed.id);
   };
 
-  const handleCardDrop = (targetId: number, e: React.DragEvent) => {
+  const handleCardDrop = async (targetId: number, e: React.DragEvent) => {
     e.preventDefault();
     const dragIdString = e.dataTransfer.getData('text/plain');
     if (!dragIdString) return;
@@ -103,13 +108,38 @@ const TicketPoolWidget: React.FC = () => {
     if (!dragId || dragId === targetId) return;
     const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
     const placeAfter = e.clientY > rect.top + rect.height / 2;
-    reorderTickets(dragId, targetId, placeAfter);
+    try {
+      await reorderTickets(dragId, targetId, placeAfter);
+    } catch (error) {
+      console.error('Failed to reorder tickets:', error);
+    }
   };
 
-  const handleArchiveTicket = (ticketId: number) => {
-    archiveTickets([ticketId]);
-    closeTicket(); // Close the dialog after archiving
+  const handleArchiveTicket = async (ticketId: number) => {
+    try {
+      await archiveTickets([ticketId]);
+      closeTicket(); // Close the dialog after archiving
+    } catch (error) {
+      console.error('Failed to archive ticket:', error);
+    }
   };
+
+  // Loading and error states
+  if (loading) {
+    return (
+      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
+        <Typography>Tickets werden geladen...</Typography>
+      </Box>
+    );
+  }
+
+  if (error) {
+    return (
+      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
+        <Typography color="error">Fehler beim Laden der Tickets: {error}</Typography>
+      </Box>
+    );
+  }
 
   return (
     <Box sx={{ display: 'flex', gap: 1, height: '100%' }}>

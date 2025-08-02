@@ -59,7 +59,7 @@ const AddTicketWidget: React.FC = () => {
     setIsScanning(false);
   };
 
-  const handleSaveTicket = (data: {
+  const handleSaveTicket = async (data: {
     machine?: string;
     description?: string;
     priority?: 'rot' | 'gelb' | 'gruen';
@@ -72,32 +72,33 @@ const AddTicketWidget: React.FC = () => {
     raumnummer?: string;
     equipmentNummer?: string;
   }) => {
-    // Generate a unique ID for the new ticket
-    const newId = Date.now();
-    
-    // Create the new ticket with all required fields
-    const newTicket: Ticket = {
-      id: newId,
-      machine: data.machine || '',
-      description: data.description || '',
-      priority: data.priority || 'gruen',
-      status: 'backlog', // New tickets always start as backlog
-      type: data.type || 'betrieb', // Default to betrieb
-      category: data.category || 'mechanisch', // Default to mechanisch
-      responsible: '', // New tickets are unassigned initially
-      completedAt: null,
-      plannedCompletion: null, // No planned completion during creation
-      images: data.images || [], // Save any uploaded images
-      raumnummer: data.raumnummer,
-      equipmentNummer: data.equipmentNummer,
-      events: [] // Events will be added by addTicket
-    };
+    try {
+      // Create the new ticket with all required fields (no ID needed)
+      const newTicket = {
+        machine: data.machine || '',
+        description: data.description || '',
+        priority: data.priority || 'gruen' as const,
+        status: 'backlog' as const, // New tickets always start as backlog
+        type: data.type || 'betrieb' as const, // Default to betrieb
+        category: data.category || 'mechanisch' as const, // Default to mechanisch
+        responsible: '', // New tickets are unassigned initially
+        completedAt: null,
+        plannedCompletion: null, // No planned completion during creation
+        images: data.images || [], // Save any uploaded images
+        raumnummer: data.raumnummer,
+        equipmentNummer: data.equipmentNummer,
+        events: [] // Events will be added by addTicket
+      };
 
-    // Add the ticket to the provider state
-    addTicket(newTicket, getCurrentUser() || undefined);
-    
-    // Close the dialog (URL state will be cleared)
-    closeCreateTicket();
+      // Add the ticket to the provider state (now async)
+      await addTicket(newTicket, getCurrentUser() || undefined);
+      
+      // Close the dialog (URL state will be cleared)
+      closeCreateTicket();
+    } catch (error) {
+      console.error('Failed to save ticket:', error);
+      // You could show an error message to the user here
+    }
   };
 
   return (

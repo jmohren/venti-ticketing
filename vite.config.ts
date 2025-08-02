@@ -13,7 +13,7 @@ export default defineConfig({
   server: {
     proxy: {
       '/auth': {
-        target: process.env.VITE_PROXY_TARGET || 'https://venti-reverse-proxy-prod.calmdune-db5c9992.germanywestcentral.azurecontainerapps.io',
+        target: process.env.VITE_PROXY_TARGET,
         changeOrigin: true,
         secure: true,
         cookieDomainRewrite: {
@@ -59,7 +59,7 @@ export default defineConfig({
         }
       },
       '/admin': {
-        target: process.env.VITE_PROXY_TARGET || 'https://venti-reverse-proxy-prod.calmdune-db5c9992.germanywestcentral.azurecontainerapps.io',
+        target: process.env.VITE_PROXY_TARGET,
         changeOrigin: true,
         secure: true,
         cookieDomainRewrite: {
@@ -83,7 +83,7 @@ export default defineConfig({
         }
       },
       '/rest': {
-        target: process.env.VITE_PROXY_TARGET || 'https://venti-reverse-proxy-prod.calmdune-db5c9992.germanywestcentral.azurecontainerapps.io',
+        target: process.env.VITE_PROXY_TARGET,
         changeOrigin: true,
         secure: true,
         cookieDomainRewrite: {
@@ -100,7 +100,7 @@ export default defineConfig({
         }
       },
       '/storage': {
-        target: process.env.VITE_PROXY_TARGET || 'https://venti-reverse-proxy-prod.calmdune-db5c9992.germanywestcentral.azurecontainerapps.io',
+        target: process.env.VITE_PROXY_TARGET,
         changeOrigin: true,
         secure: true,
         cookieDomainRewrite: {
