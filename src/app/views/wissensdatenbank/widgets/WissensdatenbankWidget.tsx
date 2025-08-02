@@ -4,7 +4,6 @@ import { useTickets, Ticket } from '@/app/hooks/useTickets';
 import { useTicketUrlState } from '@/app/hooks/useTicketUrlState';
 import Table, { TableColumn } from '@/core/ui/Table';
 import AddTicketDialog from '@/app/dialogs/AddTicketDialog';
-import { useAuth } from '@/core/hooks/useAuth';
 
 const priorityColor = {
   rot: '#d32f2f',
@@ -55,7 +54,6 @@ const categoryColor = {
 const WissensdatenbankWidget: React.FC = () => {
   const { tickets, updateTicket } = useTickets();
   const { selectedTicket, isDialogOpen, openTicket, closeTicket } = useTicketUrlState();
-  const { getCurrentUser } = useAuth();
 
   // Show only archived tickets for the knowledge database
   const archivedTickets = tickets.filter(ticket => ticket.status === 'archived');
