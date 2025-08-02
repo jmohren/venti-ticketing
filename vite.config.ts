@@ -1,9 +1,27 @@
-import { defineConfig } from 'vite'
+import { defineConfig, loadEnv } from 'vite'
 import react from '@vitejs/plugin-react'
 import path from 'path'
 
 // https://vitejs.dev/config/
-export default defineConfig({
+export default defineConfig(({ mode }) => {
+  // Load env file based on `mode` in the current working directory.
+  // Set the third parameter to '' to load all env regardless of the `VITE_` prefix.
+  const env = loadEnv(mode, process.cwd(), '')
+  
+  // CRITICAL: Ensure required env vars are present - NO SILENT FAILURES!
+  if (!env.VITE_PROXY_TARGET) {
+    console.error('💥 FATAL ERROR: VITE_PROXY_TARGET environment variable is not set!');
+    console.error('💥 Set it in your .env.local file: VITE_PROXY_TARGET=https://venti.api.get-morpheus-ai.com');
+    console.error('💥 Or export it: export VITE_PROXY_TARGET=https://venti.api.get-morpheus-ai.com');
+    process.exit(1);
+  }
+
+  // Debug: Proxy configuration
+  console.log('🔧 [VITE CONFIG] Setting up proxy for paths: /auth, /admin, /rest, /storage');
+  console.log('🔧 [VITE CONFIG] VITE_PROXY_TARGET:', env.VITE_PROXY_TARGET);
+  console.log('🔧 [VITE CONFIG] All requests to these paths will be forwarded to:', env.VITE_PROXY_TARGET);
+
+  return {
   plugins: [react()],
   resolve: {
     alias: {
@@ -30,7 +48,7 @@ export default defineConfig({
   server: {
     proxy: {
       '/auth': {
-        target: process.env.VITE_PROXY_TARGET,
+        target: env.VITE_PROXY_TARGET,
         changeOrigin: true,
         secure: true,
         cookieDomainRewrite: {
@@ -40,43 +58,49 @@ export default defineConfig({
           '*': '/'
         },
         configure: (proxy, _options) => {
-          // Removed verbose AUTH proxy request logging
-
-          proxy.on('proxyRes', (proxyRes, _req, _res) => {
-            // Ensure cookies are set for localhost
+          console.log('🔧 [AUTH PROXY] Target:', env.VITE_PROXY_TARGET);
+          
+          proxy.on('proxyReq', (proxyReq, req, _res) => {
+            console.log('🔄 [AUTH] Request:', req.method, req.url);
+            // Log cookies being sent
+            if (req.headers.cookie) {
+              console.log('🍪 [AUTH] Cookies sent:', req.headers.cookie);
+            }
+          });
+          
+          proxy.on('proxyRes', (proxyRes, req, _res) => {
+            console.log('📡 [AUTH] Response:', proxyRes.statusCode, req.url);
+            // Log cookies being received
+            if (proxyRes.headers['set-cookie']) {
+              console.log('🍪 [AUTH] Cookies received:', proxyRes.headers['set-cookie']);
+            }
+            
+            // Handle cookies for localhost
             if (proxyRes.headers['set-cookie']) {
               const cookies = proxyRes.headers['set-cookie'].map(cookie => {
-                // Force all cookies to be set for localhost domain
                 let modifiedCookie = cookie;
-                
-                // Remove any existing domain settings
                 modifiedCookie = modifiedCookie.replace(/domain=[^;]+;?\s*/gi, '');
-                
-                // Set domain to localhost
                 modifiedCookie = modifiedCookie + '; Domain=localhost';
-                
-                // Ensure path is set to root
                 if (!modifiedCookie.includes('Path=')) {
                   modifiedCookie = modifiedCookie + '; Path=/';
                 }
-                
-                // For development, remove Secure flag if present
                 if (process.env.NODE_ENV === 'development') {
                   modifiedCookie = modifiedCookie.replace(/;\s*Secure/gi, '');
                 }
-                
                 return modifiedCookie;
               });
-              
               proxyRes.headers['set-cookie'] = cookies;
+              console.log('🍪 [AUTH] Modified cookies:', cookies);
             }
           });
-
-          // Removed AUTH-specific error logging to reduce log noise
+          
+          proxy.on('error', (err, req, _res) => {
+            console.error('❌ [AUTH] Proxy error:', err.message, 'for:', req?.url || 'unknown');
+          });
         }
       },
       '/admin': {
-        target: process.env.VITE_PROXY_TARGET,
+        target: env.VITE_PROXY_TARGET,
         changeOrigin: true,
         secure: true,
         cookieDomainRewrite: {
@@ -86,21 +110,17 @@ export default defineConfig({
           '*': '/'
         },
         configure: (proxy, _options) => {
-          proxy.on('proxyReq', (_proxyReq, req, _res) => {
+          console.log('🔧 [ADMIN PROXY] Target:', env.VITE_PROXY_TARGET);
+          proxy.on('proxyReq', (proxyReq, req, _res) => {
             console.log('🔄 [ADMIN] Request:', req.method, req.url);
           });
-
-          proxy.on('proxyRes', (proxyRes, req, _res) => {
-            console.log('📡 [ADMIN] Response:', proxyRes.statusCode, req.url);
-          });
-
           proxy.on('error', (err, req, _res) => {
-            console.error('❌ [ADMIN] Proxy error:', err.message, req.url);
+            console.error('❌ [ADMIN] Proxy error:', err.message, 'for:', req?.url || 'unknown');
           });
         }
       },
       '/rest': {
-        target: process.env.VITE_PROXY_TARGET,
+        target: env.VITE_PROXY_TARGET,
         changeOrigin: true,
         secure: true,
         cookieDomainRewrite: {
@@ -110,14 +130,49 @@ export default defineConfig({
           '*': '/'
         },
         configure: (proxy, _options) => {
-          // Only log errors for REST proxy
+          console.log('🔧 [REST PROXY] Target:', env.VITE_PROXY_TARGET);
+          
+          proxy.on('proxyReq', (proxyReq, req, _res) => {
+            console.log('🔄 [REST] Request:', req.method, req.url);
+            // Log cookies being sent
+            if (req.headers.cookie) {
+              console.log('🍪 [REST] Cookies sent:', req.headers.cookie);
+            }
+          });
+          
+          proxy.on('proxyRes', (proxyRes, req, _res) => {
+            console.log('📡 [REST] Response:', proxyRes.statusCode, req.url);
+            // Log cookies being received
+            if (proxyRes.headers['set-cookie']) {
+              console.log('🍪 [REST] Cookies received:', proxyRes.headers['set-cookie']);
+            }
+            
+            // Handle cookies for localhost
+            if (proxyRes.headers['set-cookie']) {
+              const cookies = proxyRes.headers['set-cookie'].map(cookie => {
+                let modifiedCookie = cookie;
+                modifiedCookie = modifiedCookie.replace(/domain=[^;]+;?\s*/gi, '');
+                modifiedCookie = modifiedCookie + '; Domain=localhost';
+                if (!modifiedCookie.includes('Path=')) {
+                  modifiedCookie = modifiedCookie + '; Path=/';
+                }
+                if (process.env.NODE_ENV === 'development') {
+                  modifiedCookie = modifiedCookie.replace(/;\s*Secure/gi, '');
+                }
+                return modifiedCookie;
+              });
+              proxyRes.headers['set-cookie'] = cookies;
+              console.log('🍪 [REST] Modified cookies:', cookies);
+            }
+          });
+          
           proxy.on('error', (err, req, _res) => {
-            console.error('❌ [REST] Proxy error:', err.message, req.url);
+            console.error('❌ [REST] Proxy error:', err.message, 'for:', req?.url || 'unknown');
           });
         }
       },
       '/storage': {
-        target: process.env.VITE_PROXY_TARGET,
+        target: env.VITE_PROXY_TARGET,
         changeOrigin: true,
         secure: true,
         cookieDomainRewrite: {
@@ -127,19 +182,16 @@ export default defineConfig({
           '*': '/'
         },
         configure: (proxy, _options) => {
-          proxy.on('proxyReq', (_proxyReq, req, _res) => {
+          console.log('🔧 [STORAGE PROXY] Target:', env.VITE_PROXY_TARGET);
+          proxy.on('proxyReq', (proxyReq, req, _res) => {
             console.log('🔄 [STORAGE] Request:', req.method, req.url);
           });
-          
-          proxy.on('proxyRes', (proxyRes, req, _res) => {
-            console.log('📡 [STORAGE] Response:', proxyRes.statusCode, req.url);
-          });
-          
           proxy.on('error', (err, req, _res) => {
-            console.error('❌ [STORAGE] Proxy error:', err.message, req.url);
+            console.error('❌ [STORAGE] Proxy error:', err.message, 'for:', req?.url || 'unknown');
           });
         }
       }
     }
+  }
   }
 })

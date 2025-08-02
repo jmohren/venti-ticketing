@@ -20,8 +20,10 @@ export const getAppConfig = (): AppConfig => {
       appName: import.meta.env.VITE_APP_NAME,
     },
     api: {
-      authBaseUrl: import.meta.env.VITE_BACKEND_URL,
-      baseUrl: import.meta.env.VITE_BACKEND_URL,
+      // In development, use localhost so proxy can intercept requests
+      // In production, use the actual backend URL
+      authBaseUrl: isDevelopment ? 'http://localhost:5173' : import.meta.env.VITE_BACKEND_URL,
+      baseUrl: isDevelopment ? 'http://localhost:5173' : import.meta.env.VITE_BACKEND_URL,
       app: import.meta.env.VITE_APP_NAME,
     },
     environment: isDevelopment ? 'development' : 'production'
