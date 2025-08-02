@@ -45,7 +45,7 @@ interface TicketContextValue {
   tickets: Ticket[];
   loading: boolean;
   error: string | null;
-  addTicket: (ticket: Omit<Ticket, 'id' | 'created_at' | 'updated_at' | 'createdByUserId' | 'createdByName'>, currentUser?: { email?: string }) => Promise<void>;
+  addTicket: (ticket: Omit<Ticket, 'id' | 'created_at' | 'updated_at' | 'createdByUserId' | 'createdByName'>) => Promise<void>;
   updateTicket: (id: number, partial: Partial<Ticket>, currentUser?: { email?: string }) => Promise<void>;
   getTicketById: (id: number) => Ticket | undefined;
   reorderTickets: (draggedId: number, targetId?: number, placeAfter?: boolean) => Promise<void>;
@@ -92,7 +92,7 @@ export const TicketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     loadTickets();
   }, [loadTickets]);
 
-  const addTicket = useCallback(async (ticket: Omit<Ticket, 'id' | 'created_at' | 'updated_at' | 'createdByUserId' | 'createdByName'>, currentUser?: { email?: string }) => {
+  const addTicket = useCallback(async (ticket: Omit<Ticket, 'id' | 'created_at' | 'updated_at' | 'createdByUserId' | 'createdByName'>) => {
     try {
       setError(null);
     const now = new Date().toISOString();

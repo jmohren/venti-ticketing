@@ -2,7 +2,6 @@ import React from 'react';
 import { Box, Typography, List, ListItem, ListItemText, Chip } from '@mui/material';
 import { format } from 'date-fns';
 import { useTickets } from '@/app/hooks/useTickets';
-import { useAuth } from '@/core/hooks/useAuth';
 import { useTicketUrlState } from '@/app/hooks/useTicketUrlState';
 import AddTicketDialog from '@/app/dialogs/AddTicketDialog';
 
@@ -27,7 +26,6 @@ const statusLabel = {
 
 const CreatedTicketsWidget: React.FC = () => {
   const { getMyTickets } = useTickets();
-  const { getCurrentUser } = useAuth();
   const { selectedTicket, isDialogOpen, openTicket, closeTicket } = useTicketUrlState();
 
   // Get tickets created by current user and sort by creation date (newest first)
