@@ -19,7 +19,7 @@ import {
 import { format } from 'date-fns';
 import { useAuth } from '@/core/hooks/useAuth';
 import { IconButton } from '@mui/material';
-import { CloudUpload, Delete, ZoomIn, Clear, ExpandMore, ContentCopy, Archive, Send, AttachFile, Close, CameraAlt, Image, PlayArrow, Pause } from '@mui/icons-material';
+import { CloudUpload, Delete, ZoomIn, Clear, ExpandMore, ContentCopy, Archive, Send, Close, CameraAlt, Image, PlayArrow, Pause } from '@mui/icons-material';
 import { TicketEvent, useTickets } from '@/app/hooks/useTickets';
 import { DatePicker } from '@mui/x-date-pickers';
 import { LocalizationProvider } from '@mui/x-date-pickers';
@@ -543,7 +543,6 @@ const AddTicketDialog: React.FC<AddTicketDialogProps> = ({ open, onClose, readOn
               <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
                 {previewItems.map((src, idx) => {
                   const isExisting = idx < existingImages.length;
-                  const isNewFile = idx >= existingImages.length;
                   
                   return (
                     <Box key={idx} sx={{ position: 'relative' }}>
