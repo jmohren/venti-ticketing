@@ -184,7 +184,9 @@ const AddTicketDialog: React.FC<AddTicketDialogProps> = ({ open, onClose, readOn
           
           // Upload to storage
           const uploadResponse = await storageApiClient.uploadFile(file, filePath);
-          uploadedImageUrls.push(uploadResponse.url);
+          // Use authenticated API URL instead of direct blob URL
+          const authenticatedUrl = storageApiClient.getFileUrl(filePath);
+          uploadedImageUrls.push(authenticatedUrl);
         } catch (error) {
           console.error('Failed to upload image:', error);
           // Continue with other images even if one fails
@@ -276,9 +278,11 @@ const AddTicketDialog: React.FC<AddTicketDialogProps> = ({ open, onClose, readOn
           const uniqueId = crypto.randomUUID();
           const filePath = `tickets/${uniqueId}.${fileExtension}`;
           
-          // Upload to storage
-          const uploadResponse = await storageApiClient.uploadFile(file, filePath);
-          imageUrls.push(uploadResponse.url);
+                  // Upload to storage
+        const uploadResponse = await storageApiClient.uploadFile(file, filePath);
+        // Use authenticated API URL instead of direct blob URL
+        const authenticatedUrl = storageApiClient.getFileUrl(filePath);
+        imageUrls.push(authenticatedUrl);
         } catch (error) {
           console.error('Failed to upload image:', error);
           // Continue with other images even if one fails
