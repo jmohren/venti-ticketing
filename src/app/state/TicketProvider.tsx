@@ -22,8 +22,8 @@ export interface Ticket {
   type?: TicketType;
   category?: TicketCategory;
   responsible?: string;
-  completed_at?: string | null;
-  planned_completion?: string | null;
+  completedAt?: string | null;
+  plannedCompletion?: string | null;
   /** Attached images (URLs or base64 data) */
   images?: string[];
   /** Audit trail of important events */
@@ -31,7 +31,7 @@ export interface Ticket {
   // Verwaltung specific fields
   raumnummer?: string;
   // Betrieb specific fields
-  equipment_nummer?: string;
+  equipmentNummer?: string;
   // Database fields
   created_at?: string;
   updated_at?: string;

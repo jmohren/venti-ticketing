@@ -36,12 +36,12 @@ interface TicketData {
   category?: 'elektrisch' | 'mechanisch';
   responsible?: string;
   events?: TicketEvent[];
-  planned_completion?: string | null;
+  plannedCompletion?: string | null;
   images?: string[];
   // Verwaltung specific fields
   raumnummer?: string;
   // Betrieb specific fields
-  equipment_nummer?: string;
+  equipmentNummer?: string;
 }
 
 interface AddTicketDialogProps {
@@ -74,11 +74,11 @@ const AddTicketDialog: React.FC<AddTicketDialogProps> = ({ open, onClose, readOn
 
   const [machine, setMachine] = useState(initialData?.machine || '');
   const [responsible, setResponsible] = useState(initialData?.responsible || '');
-  const [plannedDate, setPlannedDate] = useState<Date | null>(initialData?.planned_completion ? new Date(initialData.planned_completion) : null);
+  const [plannedDate, setPlannedDate] = useState<Date | null>(initialData?.plannedCompletion ? new Date(initialData.plannedCompletion) : null);
   const [ticketType, setTicketType] = useState<'verwaltung' | 'betrieb'>(initialData?.type || 'betrieb');
   const [category, setCategory] = useState<'elektrisch' | 'mechanisch'>(initialData?.category || 'mechanisch');
   const [raumnummer, setRaumnummer] = useState(initialData?.raumnummer || '');
-  const [equipmentNummer, setEquipmentNummer] = useState(initialData?.equipment_nummer || '');
+  const [equipmentNummer, setEquipmentNummer] = useState(initialData?.equipmentNummer || '');
 
   // Image upload state (allow up to 3 images total)
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
@@ -123,11 +123,11 @@ const AddTicketDialog: React.FC<AddTicketDialogProps> = ({ open, onClose, readOn
 
       setMachine(initialData?.machine || '');
       setResponsible(initialData?.responsible || '');
-      setPlannedDate(initialData?.planned_completion ? new Date(initialData.planned_completion) : null);
+      setPlannedDate(initialData?.plannedCompletion ? new Date(initialData.plannedCompletion) : null);
       setTicketType(initialData?.type || 'betrieb');
       setCategory(initialData?.category || 'mechanisch');
       setRaumnummer(initialData?.raumnummer || '');
-      setEquipmentNummer(initialData?.equipment_nummer || '');
+      setEquipmentNummer(initialData?.equipmentNummer || '');
       setSelectedFiles([]);
       setExistingImages(initialData?.images || []);
       setPreviewOpen(false);
@@ -179,10 +179,10 @@ const AddTicketDialog: React.FC<AddTicketDialogProps> = ({ open, onClose, readOn
       type: ticketType,
       category,
       responsible, 
-      planned_completion: plannedDate ? plannedDate.toISOString() : null,
+      plannedCompletion: plannedDate ? plannedDate.toISOString() : null,
       images: previewItems, // Pass combined existing and new images
       raumnummer: ticketType === 'verwaltung' ? raumnummer : undefined,
-      equipment_nummer: ticketType === 'betrieb' ? equipmentNummer : undefined
+      equipmentNummer: ticketType === 'betrieb' ? equipmentNummer : undefined
     });
     onClose();
   };
