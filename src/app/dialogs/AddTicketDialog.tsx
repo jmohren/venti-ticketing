@@ -243,7 +243,7 @@ const AddTicketDialog: React.FC<AddTicketDialogProps> = ({ open, onClose, readOn
           const filePath = `tickets/${uniqueId}.${fileExtension}`;
           
           // Upload compressed image to storage
-          const uploadResponse = await storageApiClient.uploadFile(compressedFile, filePath);
+          await storageApiClient.uploadFile(compressedFile, filePath);
           // Use authenticated API URL instead of direct blob URL
           const authenticatedUrl = storageApiClient.getFileUrl(filePath);
           uploadedImageUrls.push(authenticatedUrl);
@@ -325,7 +325,6 @@ const AddTicketDialog: React.FC<AddTicketDialogProps> = ({ open, onClose, readOn
     
     setIsSendingComment(true);
     try {
-      const currentUser = getCurrentUser();
       // For development/demo purposes, use a more meaningful fallback
       const userDisplayName = getUserDisplayName();
       
@@ -347,7 +346,7 @@ const AddTicketDialog: React.FC<AddTicketDialogProps> = ({ open, onClose, readOn
           const filePath = `tickets/${uniqueId}.${fileExtension}`;
           
           // Upload compressed image to storage
-          const uploadResponse = await storageApiClient.uploadFile(compressedFile, filePath);
+          await storageApiClient.uploadFile(compressedFile, filePath);
           // Use authenticated API URL instead of direct blob URL
           const authenticatedUrl = storageApiClient.getFileUrl(filePath);
           imageUrls.push(authenticatedUrl);
@@ -384,7 +383,6 @@ const AddTicketDialog: React.FC<AddTicketDialogProps> = ({ open, onClose, readOn
   const handleStartWork = () => {
     if (!ticketId) return;
     
-    const currentUser = getCurrentUser();
     const userDisplayName = getUserDisplayName();
     
     const newEvent: TicketEvent = {
@@ -404,7 +402,6 @@ const AddTicketDialog: React.FC<AddTicketDialogProps> = ({ open, onClose, readOn
   const handlePauseWork = () => {
     if (!ticketId) return;
     
-    const currentUser = getCurrentUser();
     const userDisplayName = getUserDisplayName();
     
     const newEvent: TicketEvent = {
@@ -506,7 +503,7 @@ const AddTicketDialog: React.FC<AddTicketDialogProps> = ({ open, onClose, readOn
               <Autocomplete
                 options={equipmentOptions.map(option => option.label)}
                 value={equipmentNummer}
-                onChange={(event, newValue) => handleEquipmentSelect(newValue)}
+                onChange={(_, newValue) => handleEquipmentSelect(newValue)}
                 onInputChange={(event, newInputValue) => {
                   // Allow free typing while maintaining auto-complete
                   if (event?.type === 'change') {
@@ -529,7 +526,7 @@ const AddTicketDialog: React.FC<AddTicketDialogProps> = ({ open, onClose, readOn
               <Autocomplete
                 options={machineOptions.map(option => option.label)}
                 value={machine}
-                onChange={(event, newValue) => handleMachineSelect(newValue)}
+                onChange={(_, newValue) => handleMachineSelect(newValue)}
                 onInputChange={(event, newInputValue) => {
                   // Allow free typing while maintaining auto-complete
                   if (event?.type === 'change') {
