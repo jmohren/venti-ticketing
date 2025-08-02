@@ -4,7 +4,6 @@ import {
   ToggleButton,
   ToggleButtonGroup,
   Typography,
-  Paper,
   IconButton,
   Card,
   CardContent,
@@ -92,7 +91,7 @@ const TicketCard = styled(Card)<{ borderColor?: string }>(({ theme, borderColor 
   },
 }));
 
-const TicketCardContent = styled(CardContent)(({ theme }) => ({
+const TicketCardContent = styled(CardContent)(() => ({
   padding: '4px 8px !important',
   '&:last-child': {
     paddingBottom: '4px !important',
@@ -112,7 +111,7 @@ const MaintenanceCard = styled(Card)(({ theme }) => ({
   },
 }));
 
-const MaintenanceCardContent = styled(CardContent)(({ theme }) => ({
+const MaintenanceCardContent = styled(CardContent)(() => ({
   padding: '4px 8px !important',
   '&:last-child': {
     paddingBottom: '4px !important',
@@ -277,7 +276,6 @@ const CalendarWidget: React.FC<CalendarWidgetProps> = ({ selectedMachine }) => {
         {/* Day headers */}
         <CalendarHeader sx={{ display: 'flex' }}>
           {days.map((day) => {
-            const isMonday = day.getDay() === 1;
             const dayName = format(day, 'EEE', { locale: de });
             const dayNumber = format(day, 'd');
             

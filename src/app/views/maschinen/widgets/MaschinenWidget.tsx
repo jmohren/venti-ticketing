@@ -27,7 +27,7 @@ const MachineCard = styled(Paper)(({ theme }) => ({
   boxShadow: theme.shadows[2],
 }));
 
-const MachineHeader = styled(Box)(({ theme }) => ({
+const MachineHeader = styled(Box)(() => ({
   display: 'flex',
   justifyContent: 'space-between',
   alignItems: 'flex-start',
@@ -127,7 +127,6 @@ const MaschinenWidget: React.FC = () => {
       >
         {machines.map((machine) => {
           const ticketData = machineTicketData[machine.name] || { rot: { count: 0 }, gelb: { count: 0 }, gruen: { count: 0 } };
-          const totalTickets = ticketData.rot.count + ticketData.gelb.count + ticketData.gruen.count;
 
           return (
             <MachineCard 
