@@ -60,7 +60,7 @@ export default defineConfig(({ mode }) => {
         configure: (proxy, _options) => {
           console.log('🔧 [AUTH PROXY] Target:', env.VITE_PROXY_TARGET);
           
-          proxy.on('proxyReq', (proxyReq, req, _res) => {
+          proxy.on('proxyReq', (_proxyReq, req, _res) => {
             console.log('🔄 [AUTH] Request:', req.method, req.url);
             // Log cookies being sent
             if (req.headers.cookie) {
@@ -111,7 +111,7 @@ export default defineConfig(({ mode }) => {
         },
         configure: (proxy, _options) => {
           console.log('🔧 [ADMIN PROXY] Target:', env.VITE_PROXY_TARGET);
-          proxy.on('proxyReq', (proxyReq, req, _res) => {
+          proxy.on('proxyReq', (_proxyReq, req, _res) => {
             console.log('🔄 [ADMIN] Request:', req.method, req.url);
           });
           proxy.on('error', (err, req, _res) => {
@@ -132,7 +132,7 @@ export default defineConfig(({ mode }) => {
         configure: (proxy, _options) => {
           console.log('🔧 [REST PROXY] Target:', env.VITE_PROXY_TARGET);
           
-          proxy.on('proxyReq', (proxyReq, req, _res) => {
+          proxy.on('proxyReq', (_proxyReq, req, _res) => {
             console.log('🔄 [REST] Request:', req.method, req.url);
             // Log cookies being sent
             if (req.headers.cookie) {
@@ -183,7 +183,7 @@ export default defineConfig(({ mode }) => {
         },
         configure: (proxy, _options) => {
           console.log('🔧 [STORAGE PROXY] Target:', env.VITE_PROXY_TARGET);
-          proxy.on('proxyReq', (proxyReq, req, _res) => {
+          proxy.on('proxyReq', (_proxyReq, req, _res) => {
             console.log('🔄 [STORAGE] Request:', req.method, req.url);
           });
           proxy.on('error', (err, req, _res) => {
