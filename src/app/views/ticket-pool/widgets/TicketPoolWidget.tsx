@@ -76,25 +76,25 @@ const TicketPoolWidget: React.FC = () => {
     }
 
     try {
-      const newStatus = lane;
-      // Create updated copy for immediate UI feedback
-      const original = tickets.find(t => t.id === id);
-      if (!original) return;
+    const newStatus = lane;
+    // Create updated copy for immediate UI feedback
+    const original = tickets.find(t => t.id === id);
+    if (!original) return;
 
-      const updatedTicket = { ...original, status: newStatus } as Ticket;
-      const partial: Partial<Ticket> = { status: newStatus };
-      if (lane === 'done') {
-        partial.completedAt = new Date().toISOString();
-      } else if (ticketLoc.lane === 'done') {
-        // Moving out of done → reset completion timestamp
-        partial.completedAt = null;
-      }
+    const updatedTicket = { ...original, status: newStatus } as Ticket;
+    const partial: Partial<Ticket> = { status: newStatus };
+    if (lane === 'done') {
+      partial.completedAt = new Date().toISOString();
+    } else if (ticketLoc.lane === 'done') {
+      // Moving out of done → reset completion timestamp
+      partial.completedAt = null;
+    }
       
       await updateTicket(id, partial, getCurrentUser() || undefined);
 
-      // Retrieve the freshly updated ticket (including new audit event) for the dialog
-      const refreshed = getTicketById(id) ?? updatedTicket;
-      openTicket(refreshed.id);
+    // Retrieve the freshly updated ticket (including new audit event) for the dialog
+    const refreshed = getTicketById(id) ?? updatedTicket;
+    openTicket(refreshed.id);
     } catch (error) {
       console.error('Failed to update ticket:', error);
     }

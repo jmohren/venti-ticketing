@@ -22,8 +22,8 @@ export interface Ticket {
   type?: TicketType;
   category?: TicketCategory;
   responsible?: string;
-  completedAt?: string | null;
-  plannedCompletion?: string | null;
+  completed_at?: string | null;
+  planned_completion?: string | null;
   /** Attached images (URLs or base64 data) */
   images?: string[];
   /** Audit trail of important events */
@@ -31,7 +31,7 @@ export interface Ticket {
   // Verwaltung specific fields
   raumnummer?: string;
   // Betrieb specific fields
-  equipmentNummer?: string;
+  equipment_nummer?: string;
   // Database fields
   created_at?: string;
   updated_at?: string;
@@ -81,17 +81,17 @@ export const TicketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const addTicket = useCallback(async (ticket: Omit<Ticket, 'id' | 'created_at' | 'updated_at'>, currentUser?: { email?: string }) => {
     try {
       setError(null);
-      const now = new Date().toISOString();
+    const now = new Date().toISOString();
       const userEmail = currentUser?.email || 'Demo User';
       
       const ticketWithEvents = {
-        ...ticket,
+      ...ticket,
         events: ticket.events ?? [{ 
           timestamp: now, 
           type: 'create' as const,
           details: `${userEmail}: Ticket erstellt`
         }],
-      };
+    };
 
       const newTicket = await restApiClient.create<Ticket>('tickets', ticketWithEvents);
       setTickets(prev => [newTicket, ...prev]);
@@ -105,7 +105,7 @@ export const TicketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const updateTicket = useCallback(async (id: number, partial: Partial<Ticket>, currentUser?: { email?: string }) => {
     try {
       setError(null);
-      const now = new Date().toISOString();
+    const now = new Date().toISOString();
       const existingTicket = tickets.find(t => t.id === id);
       if (!existingTicket) {
         throw new Error(`Ticket with id ${id} not found`);
@@ -119,7 +119,7 @@ export const TicketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         events = [...(existingTicket.events ?? [])];
         const userEmail = currentUser?.email || 'Demo User';
 
-        // Detect status change
+      // Detect status change
         if (partial.status && partial.status !== existingTicket.status) {
           const statusLabels = { backlog: 'Backlog', progress: 'In Bearbeitung', done: 'Erledigt', archived: 'Archiviert' };
           const statusLabel = statusLabels[partial.status] || partial.status;
@@ -128,22 +128,22 @@ export const TicketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
             type: 'status_update', 
             details: `${userEmail}: Status geändert zu "${statusLabel}"` 
           });
-        }
+      }
 
-        // Detect assignment change
+      // Detect assignment change
         if (partial.responsible !== undefined && partial.responsible !== existingTicket.responsible) {
-          const newResp = partial.responsible || 'Niemand';
+        const newResp = partial.responsible || 'Niemand';
           events.push({ 
             timestamp: now, 
             type: 'assign', 
             details: `${userEmail}: Zugewiesen an ${newResp}` 
           });
-        }
+      }
       }
 
       const updateData = { ...partial, events };
       const updatedTicket = await restApiClient.update<Ticket>('tickets', id, updateData);
-      
+
       setTickets(prev => prev.map(t => t.id === id ? updatedTicket : t));
     } catch (err) {
       console.error('Failed to update ticket:', err);

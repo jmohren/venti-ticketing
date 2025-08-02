@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
-import {
-  Box,
-  TextField,
+import { 
+  Box, 
+  TextField, 
   InputAdornment,
-  List,
-  ListItem,
+  List, 
+  ListItem, 
   ListItemButton,
   ListItemText,
   Typography,
@@ -69,7 +69,7 @@ const MachinesRoomsWidget: React.FC<Props> = ({ onSelect, selectedId }) => {
 
   // Filter machines based on search
   const filteredMachines = machines.filter(machine => 
-    machine.name.toLowerCase().includes(search.toLowerCase()) ||
+      machine.name.toLowerCase().includes(search.toLowerCase()) ||
     machine.machineNumber.toLowerCase().includes(search.toLowerCase())
   );
 
@@ -124,11 +124,11 @@ const MachinesRoomsWidget: React.FC<Props> = ({ onSelect, selectedId }) => {
 
         {/* Search */}
         <Box sx={{ p: 2, borderBottom: 1, borderColor: 'divider' }}>
-          <TextField
+        <TextField 
             fullWidth
-            size="small"
+          size="small" 
             placeholder="Maschinen durchsuchen..."
-            value={search}
+          value={search} 
             onChange={(e) => setSearch(e.target.value)}
             InputProps={{
               startAdornment: (
@@ -138,7 +138,7 @@ const MachinesRoomsWidget: React.FC<Props> = ({ onSelect, selectedId }) => {
               ),
             }}
           />
-        </Box>
+      </Box>
 
         {/* Machine List */}
         {filteredMachines.length === 0 ? (
@@ -171,7 +171,7 @@ const MachinesRoomsWidget: React.FC<Props> = ({ onSelect, selectedId }) => {
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
                               <Typography variant="body2" fontWeight={isSelected ? 'bold' : 'normal'}>
                                 {machine.name}
-                              </Typography>
+              </Typography>
                               <Chip
                                 label={machine.machineNumber}
                                 size="small"
@@ -189,7 +189,7 @@ const MachinesRoomsWidget: React.FC<Props> = ({ onSelect, selectedId }) => {
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                               <Chip
                                 label={`${taskCount} Wartungsaufgaben`}
-                                size="small"
+                size="small"
                                 variant="outlined"
                                 sx={{ 
                                   fontSize: '0.7rem',
@@ -203,32 +203,32 @@ const MachinesRoomsWidget: React.FC<Props> = ({ onSelect, selectedId }) => {
                         />
                       </Box>
                       <Box sx={{ display: 'flex', gap: 0.5 }}>
-                        <IconButton
-                          size="small"
-                          onClick={(e) => {
-                            e.stopPropagation();
+              <IconButton
+                size="small"
+                onClick={(e) => {
+                  e.stopPropagation();
                             handleEditMachine(machine);
-                          }}
-                        >
-                          <EditIcon fontSize="small" />
-                        </IconButton>
-                        <IconButton
-                          size="small"
-                          color="error"
-                          onClick={(e) => {
-                            e.stopPropagation();
+                }}
+              >
+                <EditIcon fontSize="small" />
+              </IconButton>
+              <IconButton
+                size="small"
+                color="error"
+                        onClick={(e) => {
+                          e.stopPropagation();
                             handleDeleteMachine(machine.id);
-                          }}
-                        >
-                          <DeleteIcon fontSize="small" />
-                        </IconButton>
+                        }}
+                      >
+                        <DeleteIcon fontSize="small" />
+                      </IconButton>
                       </Box>
-                    </MachineItem>
+                  </MachineItem>
                   </StyledListItemButton>
-                </ListItem>
+                  </ListItem>
               );
             })}
-          </List>
+              </List>
         )}
       </Paper>
 

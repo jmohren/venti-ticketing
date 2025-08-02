@@ -32,7 +32,7 @@ const MachineContext = createContext<MachineContextValue | undefined>(undefined)
 
 // Mock data with flat machine structure
 let mockMachines: Machine[] = [
-  { 
+  {
     id: 'm1', 
     name: 'Presse 1',
     machineNumber: 'M-001',
@@ -53,9 +53,9 @@ let mockMachines: Machine[] = [
         interval: 1,
         daysOfWeek: [1],
       }
-    ] 
+    ]
   },
-  { 
+  {
     id: 'm2', 
     name: 'Fräse A',
     machineNumber: 'M-002',

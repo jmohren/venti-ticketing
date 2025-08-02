@@ -201,13 +201,13 @@ const TaskDialog: React.FC<TaskDialogProps> = ({ open, onClose, onSave, initial 
           />
 
           {/* Recurrence Type */}
-          <FormControl size="small" fullWidth>
+        <FormControl size="small" fullWidth>
             <InputLabel>Wiederholung</InputLabel>
             <Select value={recurrence} label="Wiederholung" onChange={e => setRecurrence(e.target.value as Task['recurrence'])}>
-              <MenuItem value="daily">Täglich</MenuItem>
-              <MenuItem value="weekly">Wöchentlich</MenuItem>
+            <MenuItem value="daily">Täglich</MenuItem>
+            <MenuItem value="weekly">Wöchentlich</MenuItem>
               <MenuItem value="monthly">Monatlich</MenuItem>
-              <MenuItem value="yearly">Jährlich</MenuItem>
+            <MenuItem value="yearly">Jährlich</MenuItem>
             </Select>
           </FormControl>
 
@@ -273,8 +273,8 @@ const TaskDialog: React.FC<TaskDialogProps> = ({ open, onClose, onSave, initial 
                     {new Date(2024, i, 1).toLocaleDateString('de-DE', { month: 'long' })}
                   </MenuItem>
                 ))}
-              </Select>
-            </FormControl>
+          </Select>
+        </FormControl>
           )}
 
           {/* End Date */}
@@ -296,9 +296,9 @@ const TaskDialog: React.FC<TaskDialogProps> = ({ open, onClose, onSave, initial 
               slotProps={{ textField: { size: 'small', fullWidth: true } }}
             />
           )}
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={onClose}>Abbrechen</Button>
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={onClose}>Abbrechen</Button>
           <Button 
             variant="contained" 
             onClick={handleSave} 
@@ -306,8 +306,8 @@ const TaskDialog: React.FC<TaskDialogProps> = ({ open, onClose, onSave, initial 
           >
             Speichern
           </Button>
-        </DialogActions>
-      </Dialog>
+      </DialogActions>
+    </Dialog>
     </LocalizationProvider>
   );
 };
