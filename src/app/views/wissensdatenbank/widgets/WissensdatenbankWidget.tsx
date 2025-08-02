@@ -237,7 +237,7 @@ const WissensdatenbankWidget: React.FC = () => {
             responsible: upd.responsible || '', 
             plannedCompletion: upd.plannedCompletion ?? selectedTicket.plannedCompletion,
             category: upd.category ?? selectedTicket.category
-          }, getCurrentUser() || undefined)}
+          })}
           allowResponsibleEdit
           allowPlanEdit
         />

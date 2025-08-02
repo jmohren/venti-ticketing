@@ -368,7 +368,7 @@ const AddTicketDialog: React.FC<AddTicketDialogProps> = ({ open, onClose, readOn
       setLocalEvents(updatedEvents);
       
       // Update the ticket in the backend
-      await updateTicket(ticketId, { events: updatedEvents }, getCurrentUser() || undefined);
+      await updateTicket(ticketId, { events: updatedEvents });
       
       // Clear the comment text and images
       setCommentText('');
@@ -396,7 +396,7 @@ const AddTicketDialog: React.FC<AddTicketDialogProps> = ({ open, onClose, readOn
     setLocalEvents(updatedEvents);
     
     // Update the ticket in the backend
-    updateTicket(ticketId, { events: updatedEvents }, getCurrentUser() || undefined);
+    updateTicket(ticketId, { events: updatedEvents });
   };
 
   const handlePauseWork = () => {
@@ -415,7 +415,7 @@ const AddTicketDialog: React.FC<AddTicketDialogProps> = ({ open, onClose, readOn
     setLocalEvents(updatedEvents);
     
     // Update the ticket in the backend
-    updateTicket(ticketId, { events: updatedEvents }, getCurrentUser() || undefined);
+    updateTicket(ticketId, { events: updatedEvents });
   };
 
   return (
