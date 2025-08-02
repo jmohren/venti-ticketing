@@ -13,7 +13,7 @@ import { QrCodeScanner } from '@mui/icons-material';
 import AddTicketDialog from '@/app/dialogs/AddTicketDialog';
 import { useMachines } from '@/app/hooks/useMachines';
 import { useTicketCreationUrlState } from '@/app/hooks/useTicketUrlState';
-import { useTickets, Ticket } from '@/app/hooks/useTickets';
+import { useTickets } from '@/app/hooks/useTickets';
 import { useAuth } from '@/core/hooks/useAuth';
 
 const AddTicketWidget: React.FC = () => {
@@ -219,7 +219,10 @@ const AddTicketWidget: React.FC = () => {
       <AddTicketDialog 
         open={isCreateDialogOpen} 
         onClose={closeCreateTicket} 
-        initialData={initialTicketData}
+        initialData={initialTicketData ? {
+          ...('machine' in initialTicketData && { machine: initialTicketData.machine }),
+          ...('location' in initialTicketData && { raumnummer: initialTicketData.location })
+        } : undefined}
         onSave={handleSaveTicket}
       />
     </Box>

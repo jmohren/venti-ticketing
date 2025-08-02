@@ -10,6 +10,23 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src')
     }
   },
+  build: {
+    // Optimize for Azure Static Web Apps file limits
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          // Bundle all vendor dependencies into a single chunk
+          vendor: ['react', 'react-dom', '@mui/material', '@mui/x-date-pickers'],
+          // Bundle UI components together
+          ui: ['@mui/icons-material', 'date-fns', 'dayjs'],
+        },
+      },
+    },
+    // Increase chunk size warning limit
+    chunkSizeWarningLimit: 1000,
+    // Minimize the number of CSS files
+    cssCodeSplit: false,
+  },
   server: {
     proxy: {
       '/auth': {
