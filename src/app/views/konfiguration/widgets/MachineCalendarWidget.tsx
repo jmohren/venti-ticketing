@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { Box, Typography, List, ListItem, ListItemText, Badge } from '@mui/material';
-import { Machine, useMachines } from '@/app/hooks/useMachines';
+import { Machine } from '@/app/hooks/useMachines';
 import { useTickets } from '@/app/hooks/useTickets';
 import { DateCalendar, PickersDay, LocalizationProvider, PickersDayProps } from '@mui/x-date-pickers';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';

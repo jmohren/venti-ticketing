@@ -81,7 +81,6 @@ export function generateTaskOccurrences(
         // within the week to see if it matches our target days
         if (task.daysOfWeek && task.daysOfWeek.length > 0) {
           // Find next matching day in the current week
-          let nextDay = addDays(currentDate, 1);
           let foundInCurrentWeek = false;
           
           // Check remaining days in current week

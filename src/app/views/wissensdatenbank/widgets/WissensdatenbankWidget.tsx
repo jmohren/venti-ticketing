@@ -204,7 +204,7 @@ const WissensdatenbankWidget: React.FC = () => {
         enableRowAddition={false}
         enableRowEditing={true}
         onEditRow={handleRowDoubleClick}
-        getRowStyle={(rowData: Record<string, any>) => ({
+        getRowStyle={(_rowData: Record<string, any>) => ({
           cursor: 'pointer',
           '&:hover': {
             backgroundColor: 'rgba(0, 0, 0, 0.04) !important',

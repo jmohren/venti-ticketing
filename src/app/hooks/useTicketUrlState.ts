@@ -45,21 +45,19 @@ export const useTicketCreationUrlState = () => {
   const [roomParam] = useStringParam('room');
   const [machineParam] = useStringParam('machine');
   const { updateParams } = useUrlBatchUpdate();
-  const { rooms } = useMachines();
+  const { machines } = useMachines();
 
   // Check if create ticket dialog should be open (URL is source of truth)
   const isCreateDialogOpen = createTicket === 'true';
 
-  // Find room and machine from URL parameters
-  const selectedRoom = roomParam ? rooms?.find(r => r.name === roomParam) : null;
-  const selectedMachine = selectedRoom && machineParam 
-    ? selectedRoom.machines.find(m => m.name === machineParam) 
-    : null;
+  // Find machine from URL parameters (machines are flat, not grouped by rooms)
+  const selectedMachine = machineParam ? machines.find(m => m.name === machineParam) : null;
+  const selectedRoom = null; // Room concept doesn't exist in current data structure
 
-  // Get initial data for the ticket dialog (only when both room and machine are available)
-  const initialTicketData = (selectedRoom && selectedMachine) ? {
-    location: selectedRoom.name,
-    machine: selectedMachine.name
+  // Get initial data for the ticket dialog
+  const initialTicketData = selectedMachine ? {
+    machine: selectedMachine.name,
+    ...(roomParam && { location: roomParam })
   } : (roomParam ? { location: roomParam } : undefined);
 
   // Open create ticket dialog with optional room/machine pre-selection
