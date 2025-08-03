@@ -30,6 +30,7 @@ import { useTechnicians } from '@/app/hooks/useTechnicians';
 import { useMachines } from '@/app/hooks/useMachines';
 import { storageApiClient } from '@/core/api/storage/StorageApiClient';
 import { compressImage } from '@/app/utils/imageCompression';
+import { useTicketCreationUrlState } from '@/app/hooks/useTicketUrlState';
 
 interface TicketData {
   machine?: string;
@@ -73,6 +74,12 @@ const AddTicketDialog: React.FC<AddTicketDialogProps> = ({ open, onClose, readOn
   const { updateTicket } = useTickets();
   const { getTechnicianNames } = useTechnicians();
   const { machines } = useMachines();
+  
+  // URL state management for new ticket creation (single source of truth)
+  const { getFormData, updateType, updateMachine, updateEquipment, updateRoom } = useTicketCreationUrlState();
+  
+  // Determine if this is a new ticket
+  const isNewTicket = !initialData && !ticketId;
 
   // Get user display name from enhanced profile
   const getUserDisplayName = () => {
@@ -100,29 +107,72 @@ const AddTicketDialog: React.FC<AddTicketDialogProps> = ({ open, onClose, readOn
 
   // Handle machine selection - auto-fill equipment number
   const handleMachineSelect = (selectedMachine: string | null) => {
-    setMachine(selectedMachine || '');
-    if (selectedMachine) {
-      const machineData = machines.find(m => m.name === selectedMachine);
-      if (machineData) {
-        setEquipmentNummer(machineData.machineNumber);
+    const machineValue = selectedMachine || '';
+    
+    if (isNewTicket) {
+      // For new tickets, update URL (single source of truth)
+      updateMachine(machineValue);
+    } else {
+      // For existing tickets, use local state
+      setMachine(machineValue);
+      if (selectedMachine) {
+        const machineData = machines.find(m => m.name === selectedMachine);
+        if (machineData) {
+          setEquipmentNummer(machineData.machineNumber);
+        }
       }
     }
   };
 
   // Handle equipment number selection - auto-fill machine
   const handleEquipmentSelect = (selectedEquipment: string | null) => {
-    setEquipmentNummer(selectedEquipment || '');
-    if (selectedEquipment) {
-      const machineData = machines.find(m => m.machineNumber === selectedEquipment);
-      if (machineData) {
-        setMachine(machineData.name);
+    const equipmentValue = selectedEquipment || '';
+    
+    if (isNewTicket) {
+      // For new tickets, update URL (single source of truth)
+      updateEquipment(equipmentValue);
+    } else {
+      // For existing tickets, use local state
+      setEquipmentNummer(equipmentValue);
+      if (selectedEquipment) {
+        const machineData = machines.find(m => m.machineNumber === selectedEquipment);
+        if (machineData) {
+          setMachine(machineData.name);
+        }
       }
+    }
+  };
+  
+  // Handle ticket type change
+  const handleTicketTypeChange = (newType: 'verwaltung' | 'betrieb') => {
+    if (isNewTicket) {
+      // For new tickets, update URL (single source of truth)
+      updateType(newType);
+    } else {
+      // For existing tickets, use local state
+      setTicketType(newType);
+      // Reset fields when changing type
+      setMachine('');
+      setRaumnummer('');
+      setEquipmentNummer('');
+    }
+  };
+  
+  // Handle room number change
+  const handleRaumnummerChange = (value: string) => {
+    if (isNewTicket) {
+      // For new tickets, update URL (single source of truth)
+      updateRoom(value);
+    } else {
+      // For existing tickets, use local state
+      setRaumnummer(value);
     }
   };
 
   const [description, setDescription] = useState(initialData?.description || '');
   const [priority, setPriority] = useState<'rot' | 'gelb' | 'gruen'>(initialData?.priority || 'gruen');
 
+  // For new tickets, use URL state; for existing tickets, use local state
   const [machine, setMachine] = useState(initialData?.machine || '');
   const [responsible, setResponsible] = useState(initialData?.responsible || '');
   const [plannedDate, setPlannedDate] = useState<Date | null>(initialData?.plannedCompletion ? new Date(initialData.plannedCompletion) : null);
@@ -130,6 +180,23 @@ const AddTicketDialog: React.FC<AddTicketDialogProps> = ({ open, onClose, readOn
   const [category, setCategory] = useState<'elektrisch' | 'mechanisch'>(initialData?.category || 'mechanisch');
   const [raumnummer, setRaumnummer] = useState(initialData?.raumnummer || '');
   const [equipmentNummer, setEquipmentNummer] = useState(initialData?.equipmentNummer || '');
+  
+  // Get current values (URL for new tickets, state for existing)
+  const getCurrentValues = () => {
+    if (isNewTicket) {
+      // For new tickets, always use URL data (even if empty)
+      const urlData = getFormData();
+      return {
+        ticketType: urlData.type,
+        machine: urlData.machine,
+        equipmentNummer: urlData.equipmentNummer,
+        raumnummer: urlData.raumnummer
+      };
+    }
+    return { ticketType, machine, equipmentNummer, raumnummer };
+  };
+  
+  const currentValues = getCurrentValues();
 
   // Image upload state (allow up to 3 images total)
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
@@ -210,8 +277,8 @@ const AddTicketDialog: React.FC<AddTicketDialogProps> = ({ open, onClose, readOn
 
 
   const formValidBase = description.trim().length > 0 && 
-    (ticketType === 'verwaltung' ? raumnummer.trim().length > 0 : 
-     ticketType === 'betrieb' ? machine.trim().length > 0 && equipmentNummer.trim().length > 0 : false);
+    (currentValues.ticketType === 'verwaltung' ? (currentValues.raumnummer || '').trim().length > 0 : 
+     currentValues.ticketType === 'betrieb' ? (currentValues.machine || '').trim().length > 0 && (currentValues.equipmentNummer || '').trim().length > 0 : false);
   const formValid = readOnly && allowResponsibleEdit ? true : formValidBase;
 
   const handleSave = async () => {
@@ -263,15 +330,15 @@ const AddTicketDialog: React.FC<AddTicketDialogProps> = ({ open, onClose, readOn
       if (onSave) await onSave({ 
       description, 
       priority, 
-        machine: ticketType === 'verwaltung' ? 'Verwaltung' : machine, 
+        machine: currentValues.ticketType === 'verwaltung' ? 'Verwaltung' : currentValues.machine, 
       status: initialData?.status, 
-        type: ticketType,
+        type: currentValues.ticketType,
         category,
       responsible, 
       plannedCompletion: plannedDate ? plannedDate.toISOString() : null,
         images: uploadedImageUrls, // Pass uploaded image URLs
-        raumnummer: ticketType === 'verwaltung' ? raumnummer : undefined,
-        equipmentNummer: ticketType === 'betrieb' ? equipmentNummer : undefined
+        raumnummer: currentValues.ticketType === 'verwaltung' ? currentValues.raumnummer : undefined,
+        equipmentNummer: currentValues.ticketType === 'betrieb' ? currentValues.equipmentNummer : undefined
     });
     onClose();
     } catch (error) {
@@ -455,14 +522,8 @@ const AddTicketDialog: React.FC<AddTicketDialogProps> = ({ open, onClose, readOn
               <InputLabel>Ticket Typ</InputLabel>
               <Select
                 label="Ticket Typ"
-                value={ticketType}
-                onChange={(e) => {
-                                  setTicketType(e.target.value as 'verwaltung' | 'betrieb');
-                // Reset fields when changing type
-                  setMachine('');
-                setRaumnummer('');
-                setEquipmentNummer('');
-                }}
+                value={currentValues.ticketType}
+                onChange={(e) => handleTicketTypeChange(e.target.value as 'verwaltung' | 'betrieb')}
               >
                 <MenuItem value="betrieb">Betrieb</MenuItem>
                 <MenuItem value="verwaltung">Verwaltung</MenuItem>
@@ -483,12 +544,12 @@ const AddTicketDialog: React.FC<AddTicketDialogProps> = ({ open, onClose, readOn
           </Box>
 
           {/* Conditional fields based on ticket type */}
-          {ticketType === 'verwaltung' ? (
+          {currentValues.ticketType === 'verwaltung' ? (
             // Verwaltung fields
             <TextField
               label="Raumnummer"
-              value={raumnummer}
-              onChange={(e) => setRaumnummer(e.target.value)}
+              value={currentValues.raumnummer}
+              onChange={(e) => handleRaumnummerChange(e.target.value)}
               size="small"
               fullWidth
               disabled={readOnly}
@@ -499,12 +560,12 @@ const AddTicketDialog: React.FC<AddTicketDialogProps> = ({ open, onClose, readOn
             <Box sx={{ display: 'flex', gap: 2 }}>
               <Autocomplete
                 options={equipmentOptions.map(option => option.label)}
-                value={equipmentNummer}
+                value={currentValues.equipmentNummer}
                 onChange={(_, newValue) => handleEquipmentSelect(newValue)}
                 onInputChange={(event, newInputValue) => {
                   // Allow free typing while maintaining auto-complete
                   if (event?.type === 'change') {
-                    setEquipmentNummer(newInputValue);
+                    handleEquipmentSelect(newInputValue);
                   }
                 }}
                 freeSolo
@@ -522,12 +583,12 @@ const AddTicketDialog: React.FC<AddTicketDialogProps> = ({ open, onClose, readOn
               
               <Autocomplete
                 options={machineOptions.map(option => option.label)}
-                value={machine}
+                value={currentValues.machine}
                 onChange={(_, newValue) => handleMachineSelect(newValue)}
                 onInputChange={(event, newInputValue) => {
                   // Allow free typing while maintaining auto-complete
                   if (event?.type === 'change') {
-                    setMachine(newInputValue);
+                    handleMachineSelect(newInputValue);
                   }
                 }}
                 freeSolo

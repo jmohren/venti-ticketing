@@ -25,7 +25,6 @@ const AddTicketWidget: React.FC = () => {
   const { getCurrentUser } = useAuth();
   const { 
     isCreateDialogOpen, 
-    initialTicketData, 
     openCreateTicket, 
     closeCreateTicket 
   } = useTicketCreationUrlState();
@@ -49,7 +48,7 @@ const AddTicketWidget: React.FC = () => {
         setQrScanOpen(false);
         
         // Open the create ticket dialog with pre-selected machine
-        openCreateTicket(undefined, selectedMachine.name);
+        openCreateTicket({ machine: selectedMachine.name });
       }
     }, 2000); // 2 second scanning simulation
   };
@@ -91,7 +90,7 @@ const AddTicketWidget: React.FC = () => {
       };
 
       // Add the ticket to the provider state (now async)
-      await addTicket(newTicket, getCurrentUser() || undefined);
+      await addTicket(newTicket);
       
       // Close the dialog (URL state will be cleared)
       closeCreateTicket();
@@ -219,10 +218,7 @@ const AddTicketWidget: React.FC = () => {
       <AddTicketDialog 
         open={isCreateDialogOpen} 
         onClose={closeCreateTicket} 
-        initialData={initialTicketData ? {
-          ...('machine' in initialTicketData && { machine: initialTicketData.machine }),
-          ...('location' in initialTicketData && { raumnummer: initialTicketData.location })
-        } : undefined}
+        initialData={undefined}
         onSave={handleSaveTicket}
       />
     </Box>

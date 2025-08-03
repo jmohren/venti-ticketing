@@ -87,7 +87,7 @@ const CreatedTicketsWidget: React.FC = () => {
                 primary={
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
                     <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
-                      {ticket.machine}
+                      {ticket.type === 'verwaltung' && ticket.raumnummer ? ticket.raumnummer : ticket.machine}
                     </Typography>
                     <Chip
                       label={priorityLabel[ticket.priority]}

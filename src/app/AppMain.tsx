@@ -12,6 +12,7 @@ const AddTicketView = React.lazy(() => import('@/app/views/add-ticket/AddTicketV
 const MaschinenView = React.lazy(() => import('@/app/views/maschinen/MaschinenView'));
 const TicketPoolView = React.lazy(() => import('@/app/views/ticket-pool/TicketPoolView'));
 const InstandhaltungView = React.lazy(() => import('@/app/views/instandhaltung/InstandhaltungView'));
+const LohnscheineView = React.lazy(() => import('@/app/views/lohnscheine/LohnscheineView'));
 const WissensdatenbankView = React.lazy(() => import('@/app/views/wissensdatenbank/WissensdatenbankView'));
 const CalendarView = React.lazy(() => import('@/app/views/calendar/CalendarView'));
 
@@ -20,6 +21,7 @@ const BASE_VIEWS = [
   { value: 'add-ticket', label: 'Ticket anlegen', component: AddTicketView },
   { value: 'maschinen', label: 'Maschinen', component: MaschinenView },
   { value: 'ticket-pool', label: 'Ticket Pool', component: TicketPoolView },
+  { value: 'lohnscheine', label: 'Lohnscheine', component: LohnscheineView },
   { value: 'instandhaltung', label: 'Instandhaltung', component: InstandhaltungView },
   { value: 'wissensdatenbank', label: 'Wissensdatenbank', component: WissensdatenbankView },
   { value: 'calendar', label: 'Kalender', component: CalendarView },

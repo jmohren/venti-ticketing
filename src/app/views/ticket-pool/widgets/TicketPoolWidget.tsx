@@ -18,9 +18,14 @@ const TicketCard: React.FC<{ ticket: Ticket; onClick: () => void; draggable?: bo
   const createdEvent = ticket.events.find((ev) => ev.type === 'create');
   const createdAt = createdEvent ? format(new Date(createdEvent.timestamp), 'dd.MM.yyyy') : '';
 
+  // Show room number for Verwaltung tickets, otherwise show machine name
+  const displayTitle = ticket.type === 'verwaltung' && ticket.raumnummer 
+    ? ticket.raumnummer 
+    : ticket.machine;
+
   return (
     <SummaryCard
-      title={ticket.machine}
+      title={displayTitle}
       description={ticket.description}
       borderColor={priorityColor[ticket.priority]}
       bottomLeft={ticket.responsible?.trim() ? ticket.responsible : 'Unassigned'}
@@ -90,7 +95,7 @@ const TicketPoolWidget: React.FC = () => {
       partial.completedAt = null;
     }
       
-      await updateTicket(id, partial, getCurrentUser() || undefined);
+      await updateTicket(id, partial);
 
     // Retrieve the freshly updated ticket (including new audit event) for the dialog
     const refreshed = getTicketById(id) ?? updatedTicket;
@@ -198,7 +203,7 @@ const TicketPoolWidget: React.FC = () => {
             responsible: upd.responsible || '', 
             plannedCompletion: upd.plannedCompletion ?? selectedTicket.plannedCompletion,
             category: upd.category ?? selectedTicket.category
-          }, getCurrentUser() || undefined)}
+          })}
           allowResponsibleEdit
           allowPlanEdit
           allowWorkTracking

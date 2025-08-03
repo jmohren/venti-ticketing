@@ -1,28 +1,36 @@
 import React, { useMemo } from 'react';
 import { useTickets } from '@/app/hooks/useTickets';
+import { useTechnicians } from '@/app/hooks/useTechnicians';
 import { Box, Typography, useTheme, Chip } from '@mui/material';
 import BarChart, { BarChartSeries } from '@/core/ui/BarChart';
 
 const TechnicianLoadWidget: React.FC = () => {
   const { tickets } = useTickets();
+  const { technicians, getTechnicianDisplayName } = useTechnicians();
   const theme = useTheme();
 
   const chartData = useMemo(() => {
+    // Initialize data for all official technicians
     const technicianData: Record<string, { backlog: number; progress: number }> = {};
     
-    // Aggregate ticket data by technician
+    // Start with all official technicians (with 0 tickets initially)
+    technicians.forEach(technician => {
+      const displayName = getTechnicianDisplayName(technician);
+      technicianData[displayName] = { backlog: 0, progress: 0 };
+    });
+    
+    // Aggregate actual ticket data by technician
     tickets.forEach(t => {
       if (!t.responsible) return;
       if (!['backlog', 'progress'].includes(t.status)) return;
       
-      if (!technicianData[t.responsible]) {
-        technicianData[t.responsible] = { backlog: 0, progress: 0 };
+      // Only count tickets assigned to official technicians
+      if (technicianData[t.responsible]) {
+        technicianData[t.responsible][t.status as 'backlog' | 'progress'] += 1;
       }
-      
-      technicianData[t.responsible][t.status as 'backlog' | 'progress'] += 1;
     });
 
-    // Convert to array and sort by total load (backlog + progress)
+    // Convert to array and sort by total load (backlog + progress), then by name
     const sortedTechnicians = Object.entries(technicianData)
       .map(([tech, counts]) => ({
         name: tech,
@@ -30,7 +38,14 @@ const TechnicianLoadWidget: React.FC = () => {
         progress: counts.progress,
         total: counts.backlog + counts.progress
       }))
-      .sort((a, b) => b.total - a.total);
+      .sort((a, b) => {
+        // First sort by total load (descending)
+        if (b.total !== a.total) {
+          return b.total - a.total;
+        }
+        // Then sort by name (ascending) for consistent ordering when loads are equal
+        return a.name.localeCompare(b.name);
+      });
 
     // Transform to BarChart format
     const series: BarChartSeries[] = [
@@ -53,13 +68,13 @@ const TechnicianLoadWidget: React.FC = () => {
     ];
 
     return series;
-  }, [tickets, theme]);
+  }, [tickets, technicians, getTechnicianDisplayName, theme]);
 
-  if (chartData[0]?.data.length === 0) {
+  if (technicians.length === 0) {
     return (
       <Box sx={{ p: 2, textAlign: 'center' }}>
         <Typography variant="body2" color="text.secondary">
-          Keine offenen Tickets
+          Keine Service Techniker konfiguriert
         </Typography>
       </Box>
     );

@@ -1,136 +1,128 @@
-import React, { createContext, useContext, useState, useCallback, useMemo } from 'react';
+import React, { createContext, useContext, useState, useCallback, useMemo, useEffect } from 'react';
+import { restApiClient } from '@/core/api/rest/RestApiClient';
 
 export interface Technician {
-  id: string;
-  name: string;
-  email?: string;
-  department?: string;
-  isActive: boolean;
+  id: number;
+  userId: string;
+  firstName: string | null;
+  lastName: string | null;
+  email: string;
+  created_at?: string;
+  updated_at?: string;
 }
 
 interface TechnicianContextValue {
   technicians: Technician[];
-  addTechnician: (technician: Technician) => void;
-  updateTechnician: (id: string, partial: Partial<Technician>) => void;
-  deleteTechnician: (id: string) => void;
-  getTechnicianById: (id: string) => Technician | undefined;
+  loading: boolean;
+  error: string | null;
+  addTechnician: (technician: Omit<Technician, 'id' | 'created_at' | 'updated_at'>) => Promise<void>;
+  updateTechnician: (id: number, partial: Partial<Technician>) => Promise<void>;
+  deleteTechnician: (id: number) => Promise<void>;
+  getTechnicianById: (id: number) => Technician | undefined;
   getTechnicianByName: (name: string) => Technician | undefined;
   getActiveTechnicians: () => Technician[];
   getTechnicianNames: () => string[];
+  getTechnicianDisplayName: (technician: Technician) => string;
+  refreshTechnicians: () => Promise<void>;
 }
 
 const TechnicianContext = createContext<TechnicianContextValue | undefined>(undefined);
 
-// Mock data for technicians
-let mockTechnicians: Technician[] = [
-  {
-    id: 't1',
-    name: 'Johannes Mohren',
-    email: 'johannes.mohren@company.com',
-    department: 'Maintenance',
-    isActive: true,
-  },
-  {
-    id: 't2',
-    name: 'Max Mustermann',
-    email: 'max.mustermann@company.com',
-    department: 'Maintenance',
-    isActive: true,
-  },
-  {
-    id: 't3',
-    name: 'Julia Schneider',
-    email: 'julia.schneider@company.com',
-    department: 'Maintenance',
-    isActive: true,
-  },
-  {
-    id: 't4',
-    name: 'Ali Öztürk',
-    email: 'ali.oeztuerk@company.com',
-    department: 'Maintenance',
-    isActive: true,
-  },
-  {
-    id: 't5',
-    name: 'Sarah Weber',
-    email: 'sarah.weber@company.com',
-    department: 'Maintenance',
-    isActive: true,
-  },
-  {
-    id: 't6',
-    name: 'Michael Schmidt',
-    email: 'michael.schmidt@company.com',
-    department: 'Maintenance',
-    isActive: true,
-  },
-  {
-    id: 't7',
-    name: 'Anna Müller',
-    email: 'anna.mueller@company.com',
-    department: 'Maintenance',
-    isActive: true,
-  },
-  {
-    id: 't8',
-    name: 'Thomas Becker',
-    email: 'thomas.becker@company.com',
-    department: 'Maintenance',
-    isActive: true,
-  },
-  {
-    id: 't9',
-    name: 'Lisa Fischer',
-    email: 'lisa.fischer@company.com',
-    department: 'Maintenance',
-    isActive: true,
-  },
-  {
-    id: 't10',
-    name: 'David Wagner',
-    email: 'david.wagner@company.com',
-    department: 'Maintenance',
-    isActive: true,
-  },
-];
-
 export const TechnicianProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [technicians, setTechnicians] = useState<Technician[]>(() => [...mockTechnicians]);
+  const [technicians, setTechnicians] = useState<Technician[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const addTechnician = useCallback((technician: Technician) => {
-    mockTechnicians = [...mockTechnicians, technician];
-    setTechnicians([...mockTechnicians]);
+  // Load technicians from API
+  const loadTechnicians = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const data = await restApiClient.get<Technician>('technicians', {
+        order: ['created_at.desc']
+      });
+      setTechnicians(data);
+    } catch (err) {
+      console.error('Failed to load technicians:', err);
+      setError('Failed to load technicians');
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
-  const updateTechnician = useCallback((id: string, partial: Partial<Technician>) => {
-    mockTechnicians = mockTechnicians.map(t => t.id === id ? { ...t, ...partial } : t);
-    setTechnicians([...mockTechnicians]);
+  // Initial load
+  useEffect(() => {
+    loadTechnicians();
+  }, [loadTechnicians]);
+
+  const addTechnician = useCallback(async (technician: Omit<Technician, 'id' | 'created_at' | 'updated_at'>) => {
+    try {
+      setError(null);
+      const newTechnician = await restApiClient.create<Technician>('technicians', technician);
+      setTechnicians(prev => [newTechnician, ...prev]);
+    } catch (err) {
+      console.error('Failed to add technician:', err);
+      setError('Failed to add technician');
+      throw err;
+    }
   }, []);
 
-  const deleteTechnician = useCallback((id: string) => {
-    mockTechnicians = mockTechnicians.filter(t => t.id !== id);
-    setTechnicians([...mockTechnicians]);
+  const updateTechnician = useCallback(async (id: number, partial: Partial<Technician>) => {
+    try {
+      setError(null);
+      const updatedTechnician = await restApiClient.update<Technician>('technicians', id, partial);
+      setTechnicians(prev => prev.map(t => t.id === id ? updatedTechnician : t));
+    } catch (err) {
+      console.error('Failed to update technician:', err);
+      setError('Failed to update technician');
+      throw err;
+    }
   }, []);
 
-  const getTechnicianById = useCallback((id: string) => {
-    return mockTechnicians.find(t => t.id === id);
+  const deleteTechnician = useCallback(async (id: number) => {
+    try {
+      setError(null);
+      await restApiClient.deleteById('technicians', id);
+      setTechnicians(prev => prev.filter(t => t.id !== id));
+    } catch (err) {
+      console.error('Failed to delete technician:', err);
+      setError('Failed to delete technician');
+      throw err;
+    }
   }, []);
+
+  const getTechnicianById = useCallback((id: number) => {
+    return technicians.find(t => t.id === id);
+  }, [technicians]);
 
   const getTechnicianByName = useCallback((name: string) => {
-    return mockTechnicians.find(t => t.name === name);
-  }, []);
+    return technicians.find(t => getTechnicianDisplayName(t) === name);
+  }, [technicians]);
 
   const getActiveTechnicians = useCallback(() => {
-    return mockTechnicians.filter(t => t.isActive);
+    // All technicians in the database are considered active
+    return technicians;
+  }, [technicians]);
+
+  const getTechnicianDisplayName = useCallback((technician: Technician) => {
+    if (technician.firstName && technician.lastName) {
+      return `${technician.firstName} ${technician.lastName}`;
+    }
+    return technician.email;
   }, []);
 
   const getTechnicianNames = useCallback(() => {
-    return mockTechnicians.filter(t => t.isActive).map(t => t.name);
-  }, []);
+    return technicians.map(t => getTechnicianDisplayName(t));
+  }, [technicians, getTechnicianDisplayName]);
+
+  const refreshTechnicians = useCallback(async () => {
+    await loadTechnicians();
+  }, [loadTechnicians]);
 
   const value = useMemo(() => ({
     technicians,
+    loading,
+    error,
     addTechnician,
     updateTechnician,
     deleteTechnician,
@@ -138,7 +130,9 @@ export const TechnicianProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     getTechnicianByName,
     getActiveTechnicians,
     getTechnicianNames,
-  }), [technicians, addTechnician, updateTechnician, deleteTechnician, getTechnicianById, getTechnicianByName, getActiveTechnicians, getTechnicianNames]);
+    getTechnicianDisplayName,
+    refreshTechnicians,
+  }), [technicians, loading, error, addTechnician, updateTechnician, deleteTechnician, getTechnicianById, getTechnicianByName, getActiveTechnicians, getTechnicianNames, getTechnicianDisplayName, refreshTechnicians]);
 
   return <TechnicianContext.Provider value={value}>{children}</TechnicianContext.Provider>;
 };

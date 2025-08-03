@@ -14,9 +14,14 @@ const TicketCard: React.FC<{ t: Ticket; onClick: () => void; draggable?: boolean
   const createdEvent = t.events.find(ev => ev.type === 'create');
   const createdAt = createdEvent ? format(new Date(createdEvent.timestamp), 'dd.MM.yyyy') : '';
 
+  // Show room number for Verwaltung tickets, otherwise show machine name
+  const displayTitle = t.type === 'verwaltung' && t.raumnummer 
+    ? t.raumnummer 
+    : t.machine;
+
   return (
     <SummaryCard
-      title={t.machine}
+      title={displayTitle}
       description={t.description}
       borderColor={priorityColor[t.priority]}
       bottomLeft={t.responsible?.trim() ? t.responsible : 'Unassigned'}
@@ -63,7 +68,7 @@ const InstandhaltungWidget: React.FC<Props> = ({ currentUser }) => {
     } else if (t.status === 'done') {
       partial.completedAt = null;
     }
-    updateTicket(id, partial, getCurrentUser() || undefined);
+    updateTicket(id, partial);
   };
 
   const handleCardDrop = (targetId:number,e:React.DragEvent)=>{
