@@ -18,7 +18,6 @@ import {
   Autocomplete,
 } from '@mui/material';
 import { format } from 'date-fns';
-import { useAuth } from '@/core/hooks/useAuth';
 import { useUser } from '@/core/state/UserProvider';
 import { IconButton } from '@mui/material';
 import { CloudUpload, Delete, ZoomIn, Clear, ExpandMore, ContentCopy, Archive, Send, Close, CameraAlt, Image, PlayArrow, Pause } from '@mui/icons-material';
@@ -70,7 +69,6 @@ interface AddTicketDialogProps {
  * a short description and priority so that we can wire up the workflow.
  */
 const AddTicketDialog: React.FC<AddTicketDialogProps> = ({ open, onClose, readOnly = false, initialData, showStatus = false, onSave, allowResponsibleEdit = false, allowPlanEdit = false, ticketId, showArchiveButton = false, onArchive, allowWorkTracking = false }) => {
-  const { getCurrentUser } = useAuth();
   const { user, profile } = useUser();
   const { updateTicket } = useTickets();
   const { getTechnicianNames } = useTechnicians();
