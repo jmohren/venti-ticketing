@@ -9,17 +9,19 @@ export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '')
   
   // CRITICAL: Ensure required env vars are present - NO SILENT FAILURES!
-  if (!env.VITE_PROXY_TARGET) {
+  if (mode === 'development' && !env.VITE_PROXY_TARGET) {
     console.error('💥 FATAL ERROR: VITE_PROXY_TARGET environment variable is not set!');
     console.error('💥 Set it in your .env.local file: VITE_PROXY_TARGET=https://venti.api.get-morpheus-ai.com');
     console.error('💥 Or export it: export VITE_PROXY_TARGET=https://venti.api.get-morpheus-ai.com');
     process.exit(1);
   }
 
-  // Debug: Proxy configuration
-  console.log('🔧 [VITE CONFIG] Setting up proxy for paths: /auth, /admin, /rest, /storage, /users');
-  console.log('🔧 [VITE CONFIG] VITE_PROXY_TARGET:', env.VITE_PROXY_TARGET);
-  console.log('🔧 [VITE CONFIG] All requests to these paths will be forwarded to:', env.VITE_PROXY_TARGET);
+  // Debug: Proxy configuration (only in development)
+  if (mode === 'development') {
+    console.log('🔧 [VITE CONFIG] Setting up proxy for paths: /auth, /admin, /rest, /storage, /users');
+    console.log('🔧 [VITE CONFIG] VITE_PROXY_TARGET:', env.VITE_PROXY_TARGET);
+    console.log('🔧 [VITE CONFIG] All requests to these paths will be forwarded to:', env.VITE_PROXY_TARGET);
+  }
 
   return {
   plugins: [react()],
