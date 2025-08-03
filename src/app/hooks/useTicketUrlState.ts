@@ -41,9 +41,9 @@ export const useTicketUrlState = () => {
  */
 export const useTicketCreationUrlState = () => {
   const [createTicket] = useStringParam('create-ticket');
-  const [typeParam, setTypeParam] = useStringParam('type');
-  const [equipmentParam, setEquipmentParam] = useStringParam('equipment');
-  const [roomParam, setRoomParam] = useStringParam('room');
+  const [typeParam] = useStringParam('type');
+  const [equipmentParam] = useStringParam('equipment');
+  const [roomParam] = useStringParam('room');
   const { updateParams } = useUrlBatchUpdate();
   const { machines } = useMachines();
 

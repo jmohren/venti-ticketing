@@ -18,10 +18,6 @@ import {
   TableHead,
   TableRow,
   Chip,
-  Select,
-  MenuItem,
-  FormControl,
-  InputLabel
 } from '@mui/material';
 import { Delete, Add } from '@mui/icons-material';
 import { useTechnicians } from '@/app/hooks/useTechnicians';
@@ -69,7 +65,6 @@ const TechnicianManagementWidget: React.FC = () => {
     addTechnician, 
     deleteTechnician,
     getTechnicianDisplayName,
-    refreshTechnicians
   } = useTechnicians();
   
   // Use tickets for performance analysis
