@@ -14,7 +14,6 @@ import AddTicketDialog from '@/app/dialogs/AddTicketDialog';
 import { useMachines } from '@/app/hooks/useMachines';
 import { useTicketCreationUrlState } from '@/app/hooks/useTicketUrlState';
 import { useTickets } from '@/app/hooks/useTickets';
-import { useAuth } from '@/core/hooks/useAuth';
 
 const AddTicketWidget: React.FC = () => {
   const [qrScanOpen, setQrScanOpen] = useState(false);

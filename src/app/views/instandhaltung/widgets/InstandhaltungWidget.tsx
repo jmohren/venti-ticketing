@@ -6,7 +6,6 @@ import { useTickets, Ticket } from '@/app/hooks/useTickets';
 import AddTicketDialog from '@/app/dialogs/AddTicketDialog';
 import SummaryCard from '@/core/ui/SummaryCard';
 import { useTicketUrlState } from '@/app/hooks/useTicketUrlState';
-import { useAuth } from '@/core/hooks/useAuth';
 
 const priorityColor = { rot: '#d32f2f', gelb: '#f9a825', gruen: '#2e7d32' } as const;
 

@@ -6,7 +6,6 @@ import { useTickets, Ticket } from '@/app/hooks/useTickets';
 import SummaryCard from '@/core/ui/SummaryCard';
 import KanbanLane from '@/core/ui/KanbanLane';
 import { useTicketUrlState } from '@/app/hooks/useTicketUrlState';
-import { useAuth } from '@/core/hooks/useAuth';
 
 const priorityColor = {
   rot: '#d32f2f',
