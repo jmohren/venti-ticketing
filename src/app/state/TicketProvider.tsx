@@ -242,10 +242,10 @@ export const TicketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     return tickets.filter(ticket => ticket.createdByUserId === userId);
   }, [tickets]);
 
-  // Helper to get tickets created by current user
+  // Helper to get tickets created by current user (excluding archived)
   const getMyTickets = useCallback(() => {
     if (!user?.userId) return [];
-    return getTicketsByCreator(user.userId);
+    return getTicketsByCreator(user.userId).filter(ticket => ticket.status !== 'archived');
   }, [user?.userId, getTicketsByCreator]);
 
   const value = useMemo(() => ({

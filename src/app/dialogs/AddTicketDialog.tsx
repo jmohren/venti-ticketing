@@ -158,18 +158,17 @@ const AddTicketDialog: React.FC<AddTicketDialogProps> = ({ open, onClose, readOn
 
   // Check if work is currently in progress
   const isWorkInProgress = useMemo(() => {
-    const currentUser = getCurrentUser();
-    const userEmail = currentUser?.email || user?.email || 'Demo User';
+    const userDisplayName = getUserDisplayName();
     
     // Find the most recent work event for the current user
     const workEvents = localEvents.filter(event => 
       (event.type === 'work_started' || event.type === 'work_paused') &&
-      event.details?.startsWith(userEmail)
+      event.details?.startsWith(userDisplayName)
     ).sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
     
     const lastWorkEvent = workEvents[0];
     return lastWorkEvent?.type === 'work_started';
-  }, [localEvents, getCurrentUser]);
+  }, [localEvents, profile, user]);
 
   // Reset form when dialog opens
   useEffect(() => {
