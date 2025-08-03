@@ -41,7 +41,6 @@ interface Props { currentUser: string }
 const InstandhaltungWidget: React.FC<Props> = ({ currentUser }) => {
   const { tickets, updateTicket, reorderTickets } = useTickets();
   const { selectedTicket, isDialogOpen, openTicket, closeTicket } = useTicketUrlState();
-  const { getCurrentUser } = useAuth();
 
   const handleDrop = (lane: 'backlog'|'progress'|'done', e: React.DragEvent) => {
     e.preventDefault();

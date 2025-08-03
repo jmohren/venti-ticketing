@@ -22,7 +22,6 @@ const AddTicketWidget: React.FC = () => {
 
   const { machines } = useMachines();
   const { addTicket } = useTickets();
-  const { getCurrentUser } = useAuth();
   const { 
     isCreateDialogOpen, 
     openCreateTicket, 

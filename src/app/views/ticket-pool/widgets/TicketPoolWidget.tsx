@@ -43,7 +43,6 @@ const TicketCard: React.FC<{ ticket: Ticket; onClick: () => void; draggable?: bo
 const TicketPoolWidget: React.FC = () => {
   const { tickets, loading, error, updateTicket, getTicketById, reorderTickets, archiveTickets } = useTickets();
   const { selectedTicket, isDialogOpen, openTicket, closeTicket } = useTicketUrlState();
-  const { getCurrentUser } = useAuth();
 
   const backlog = tickets.filter(t => t.status === 'backlog');
   const inProgress = tickets.filter(t => t.status === 'progress');
