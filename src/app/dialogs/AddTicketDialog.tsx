@@ -16,7 +16,6 @@ import {
   AccordionDetails,
   Typography,
   Autocomplete,
-  useMediaQuery,
 } from '@mui/material';
 import { format } from 'date-fns';
 import { useUser } from '@/core/state/UserProvider';
