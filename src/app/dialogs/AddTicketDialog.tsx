@@ -16,6 +16,7 @@ import {
   AccordionDetails,
   Typography,
   Autocomplete,
+  useMediaQuery,
 } from '@mui/material';
 import { format } from 'date-fns';
 import { useUser } from '@/core/state/UserProvider';
@@ -490,19 +491,48 @@ const AddTicketDialog: React.FC<AddTicketDialogProps> = ({ open, onClose, readOn
         if (reason === 'backdropClick' || reason === 'escapeKeyDown') return;
         onClose();
       }}
-      maxWidth="sm" 
-      fullWidth
+      maxWidth={isMobile ? false : "sm"} 
+      fullWidth={!isMobile}
+      fullScreen={isMobile}
     >
-      <DialogTitle>Neues Ticket erstellen</DialogTitle>
-      <DialogContent>
+      <DialogTitle sx={{ 
+        display: 'flex', 
+        justifyContent: 'space-between', 
+        alignItems: 'center',
+        ...(isMobile && { 
+          position: 'sticky',
+          top: 0,
+          zIndex: 1,
+          backgroundColor: 'background.paper',
+          borderBottom: '1px solid',
+          borderColor: 'divider'
+        })
+      }}>
+        Neues Ticket erstellen
+        {isMobile && (
+          <IconButton onClick={onClose} size="small">
+            <Close />
+          </IconButton>
+        )}
+      </DialogTitle>
+      <DialogContent sx={{
+        ...(isMobile && { 
+          padding: '16px 16px 0 16px',
+          flex: 1
+        })
+      }}>
         {/* Read-only meta information */}
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
           {/* Row: Erstellungsinfo */}
-          <Box sx={{ display: 'flex', gap: 2 }}>
+          <Box sx={{ 
+            display: 'flex', 
+            gap: 2,
+            ...(isMobile && { flexDirection: 'column', gap: 1.5 })
+          }}>
             <TextField
               label="Erstellt am"
               value={format(createdAt, 'dd.MM.yyyy HH:mm')}
-              size="small"
+              size={isMobile ? "medium" : "small"}
               InputProps={{ readOnly: true }}
               sx={{ flex: 1 }}
             />
@@ -510,20 +540,25 @@ const AddTicketDialog: React.FC<AddTicketDialogProps> = ({ open, onClose, readOn
             <TextField
               label="Erstellt von"
               value={creatorName}
-              size="small"
+              size={isMobile ? "medium" : "small"}
               InputProps={{ readOnly: true }}
               sx={{ flex: 1 }}
             />
           </Box>
 
           {/* Ticket Type Selection */}
-          <Box sx={{ display: 'flex', gap: 2 }}>
+          <Box sx={{ 
+            display: 'flex', 
+            gap: 2,
+            ...(isMobile && { flexDirection: 'column', gap: 1.5 })
+          }}>
             <FormControl fullWidth disabled={readOnly}>
               <InputLabel>Ticket Typ</InputLabel>
               <Select
                 label="Ticket Typ"
                 value={currentValues.ticketType}
                 onChange={(e) => handleTicketTypeChange(e.target.value as 'verwaltung' | 'betrieb')}
+                size={isMobile ? "medium" : "small"}
               >
                 <MenuItem value="betrieb">Betrieb</MenuItem>
                 <MenuItem value="verwaltung">Verwaltung</MenuItem>
@@ -536,6 +571,7 @@ const AddTicketDialog: React.FC<AddTicketDialogProps> = ({ open, onClose, readOn
                 label="Kategorie"
                 value={category}
                 onChange={(e) => setCategory(e.target.value as 'elektrisch' | 'mechanisch')}
+                size={isMobile ? "medium" : "small"}
               >
                 <MenuItem value="mechanisch">Mechanisch</MenuItem>
                 <MenuItem value="elektrisch">Elektrisch</MenuItem>
@@ -1108,43 +1144,77 @@ const AddTicketDialog: React.FC<AddTicketDialogProps> = ({ open, onClose, readOn
           )}
         </Box>
       </DialogContent>
-      <DialogActions sx={{ justifyContent: 'space-between' }}>
-        {/* Left side - Copy URL button (only show for existing tickets) */}
-        <Box>
+      <DialogActions sx={{ 
+        justifyContent: 'space-between',
+        ...(isMobile && { 
+          flexDirection: 'column',
+          gap: 2,
+          padding: '16px',
+          position: 'sticky',
+          bottom: 0,
+          backgroundColor: 'background.paper',
+          borderTop: '1px solid',
+          borderColor: 'divider'
+        })
+      }}>
+        {/* Copy URL and Archive buttons */}
+        <Box sx={{ 
+          display: 'flex', 
+          gap: 1,
+          ...(isMobile && { 
+            width: '100%',
+            justifyContent: 'center'
+          })
+        }}>
           {ticketId && (
             <Button 
               onClick={handleCopyUrl} 
               startIcon={<ContentCopy />}
-              size="small"
+              size={isMobile ? "medium" : "small"}
               variant="outlined"
+              sx={isMobile ? { flex: 1 } : {}}
             >
               {copyButtonText}
             </Button>
           )}
-        </Box>
-
-        {/* Left side - Archive button (if applicable) */}
-        <Box sx={{ display: 'flex', gap: 1 }}>
           {showArchiveButton && onArchive && (
             <Button 
               onClick={onArchive} 
               color="warning" 
               variant="outlined"
               startIcon={<Archive />}
+              size={isMobile ? "medium" : "small"}
+              sx={isMobile ? { flex: 1 } : {}}
             >
               Archivieren
             </Button>
           )}
         </Box>
 
-        {/* Right side - Action buttons */}
-        <Box sx={{ display: 'flex', gap: 1 }}>
-          <Button onClick={onClose} color="inherit">{readOnly ? 'Schließen' : 'Abbrechen'}</Button>
+        {/* Action buttons */}
+        <Box sx={{ 
+          display: 'flex', 
+          gap: 1,
+          ...(isMobile && { 
+            width: '100%',
+            flexDirection: 'row'
+          })
+        }}>
+          <Button 
+            onClick={onClose} 
+            color="inherit"
+            size={isMobile ? "large" : "medium"}
+            sx={isMobile ? { flex: 1 } : {}}
+          >
+            {readOnly ? 'Schließen' : 'Abbrechen'}
+          </Button>
           {(!readOnly || allowResponsibleEdit) && (
             <Button 
               onClick={handleSave} 
               variant="contained" 
               disabled={!formValid || isSaving}
+              size={isMobile ? "large" : "medium"}
+              sx={isMobile ? { flex: 1 } : {}}
             >
               {isSaving ? 'Speichern...' : 'Speichern'}
             </Button>
