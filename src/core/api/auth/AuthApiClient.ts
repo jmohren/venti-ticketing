@@ -362,8 +362,8 @@ export class CookieAuthApiClient implements AuthApiClient {
         } catch (parseError) {
           console.error('❌ Session validation failed - missing required roles');
         }
-        // For 403, we should logout the user as they don't have permission for this app
-        await this.logout();
+        // Don't logout automatically during session check - let the app handle this
+        // User still has valid authentication, just not the right roles for this app
         return false;
       }
       
