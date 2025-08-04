@@ -35,7 +35,7 @@ const WIDGET_STYLES = {
     position: 'relative',
     ...mixins.cleanMargins,
     ...widgetStyles.responsiveText,
-    ...widgetStyles.mobileResponsiveSizing,
+    ...widgetStyles.responsiveSizing,
   },
   header: {
     backgroundColor: '#286982',
@@ -70,17 +70,21 @@ const WIDGET_STYLES = {
   },
   contentScrollable: {
     flex: 1,
-    overflow: 'auto',
+    overflow: 'auto', // Allow scrolling when content exceeds bounds
     minHeight: 0,
     minWidth: 0,
+    maxHeight: '100%', // Ensure content area doesn't exceed widget height
+    maxWidth: '100%',  // Ensure content area doesn't exceed widget width
     padding: SPACING.standard,
     ...mixins.smoothScrolling,
   },
   contentNoPadding: {
     flex: 1,
-    overflow: 'auto',
+    overflow: 'auto', // Allow scrolling when content exceeds bounds
     minHeight: 0,
     minWidth: 0,
+    maxHeight: '100%', // Ensure content area doesn't exceed widget height
+    maxWidth: '100%',  // Ensure content area doesn't exceed widget width
     padding: 0,
     ...mixins.smoothScrolling,
   },
@@ -89,9 +93,13 @@ const WIDGET_STYLES = {
 // Progressive content styles - device-aware typography
 const getContentStyles = (allowHorizontalScroll: boolean) => ({
   ...mixins.cleanMargins,
+  // Ensure all content respects widget boundaries but allows scrolling
+  wordWrap: 'break-word',
+  overflowWrap: 'break-word',
   '& > *': {
     fontSize: 'inherit',
     lineHeight: 'inherit',
+    maxWidth: '100%', // Ensure no child breaks width
   },
   '& h1': {
     fontSize: '2.5rem',
@@ -190,8 +198,10 @@ const getContentStyles = (allowHorizontalScroll: boolean) => ({
     },
   },
   '& table': {
-    width: allowHorizontalScroll ? 'auto' : '100%',
-    minWidth: allowHorizontalScroll ? 'max-content' : '100%',
+    width: '100%',
+    minWidth: '100%',
+    maxWidth: '100%', // Ensure table doesn't exceed widget width
+    tableLayout: 'fixed', // Force table to respect width constraints
     fontSize: '1rem',
     [responsive.down('sm')]: {
       fontSize: '0.75rem',
@@ -206,29 +216,28 @@ const getContentStyles = (allowHorizontalScroll: boolean) => ({
   '& th, & td': {
     padding: '8px',
     fontSize: 'inherit',
-    ...(allowHorizontalScroll 
-      ? { whiteSpace: 'nowrap', minWidth: 'max-content' }
-      : { wordWrap: 'break-word', maxWidth: '200px' }
-    ),
+    wordWrap: 'break-word',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    maxWidth: allowHorizontalScroll ? 'none' : '200px',
     [responsive.down('sm')]: {
       padding: '4px',
-      ...(!allowHorizontalScroll ? { maxWidth: '100px' } : {}),
+      maxWidth: allowHorizontalScroll ? 'none' : '100px',
     },
     [responsive.between('sm', 'lg')]: {
       padding: '6px',
-      ...(!allowHorizontalScroll ? { maxWidth: '150px' } : {}),
+      maxWidth: allowHorizontalScroll ? 'none' : '150px',
     },
     [responsive.up('xl')]: {
       padding: '10px',
-      ...(!allowHorizontalScroll ? { maxWidth: '300px' } : {}),
+      maxWidth: allowHorizontalScroll ? 'none' : '300px',
     },
   },
   '& > div': {
     marginBottom: '1rem',
-    ...(allowHorizontalScroll ? { 
-      minWidth: 'max-content',
-      overflow: 'visible' 
-    } : {}),
+    maxWidth: '100%', // Ensure divs don't exceed widget width
+    wordWrap: 'break-word',
+    overflowWrap: 'break-word',
     [responsive.down('sm')]: {
       marginBottom: '0.5rem',
     },

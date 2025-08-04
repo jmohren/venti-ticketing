@@ -2,7 +2,8 @@ import React from 'react';
 import { Box } from '@mui/material';
 import { NavigatorBar } from '@/core/components/NavigatorBar';
 import { Widget } from '@/core/components/Widget';
-import { SPACING, mixins, layoutStyles } from '@/core/theme';
+import { SPACING, mixins, layoutStyles } from '@/core/theme'
+
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -46,7 +47,7 @@ const STYLES = {
   },
   contentArea: {
     flex: 1,
-    overflow: 'visible',
+    overflow: 'hidden', // Changed from 'visible' to prevent widget overflow
     display: 'flex',
     flexDirection: 'column',
     minHeight: 0,

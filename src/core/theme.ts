@@ -118,12 +118,13 @@ export const widgetStyles = {
   // Calculate remaining screen height after headers and padding
   getRemainingHeight,
 
-  // Mobile widget sizing with min/max height constraints
-  mobileResponsiveSizing: (() => {
+  // Responsive widget sizing with min/max height constraints for all screen sizes
+  responsiveSizing: (() => {
     const smallHeight = getRemainingHeight('small');
     const standardHeight = getRemainingHeight('standard');
     
     return {
+      // Mobile constraints
       [responsive.down('sm')]: {
         maxHeight: smallHeight.base,
         minHeight: `calc((100vh - 120px - 24px) * 0.2)`,
@@ -138,6 +139,14 @@ export const widgetStyles = {
         '@supports (height: 100dvh)': {
           maxHeight: standardHeight.dynamic,
           minHeight: `calc((100dvh - 128px - 24px) * 0.2)`,
+        },
+      },
+      // Desktop constraints - prevent infinite growth
+      [responsive.up('md')]: {
+        maxHeight: standardHeight.base,
+        minHeight: '200px', // Minimum usable height
+        '@supports (height: 100dvh)': {
+          maxHeight: standardHeight.dynamic,
         },
       },
     };
@@ -194,9 +203,11 @@ export const layoutStyles = {
     ...mixins.mobileStack,
   }),
 
-  // Grid item that responds properly to mobile
+  // Grid item that responds properly to mobile and constrains height
   gridItem: (weight: number = 1) => ({
     flex: `${weight} 1 0%`,
+    minHeight: 0, // Essential for flex children
+    maxHeight: '100%', // Prevent infinite growth
     ...mixins.mobileLayoutReset,
   }),
 };
