@@ -23,6 +23,7 @@ import { Delete, Add } from '@mui/icons-material';
 import { useTechnicians } from '@/app/hooks/useTechnicians';
 import { useTickets } from '@/app/hooks/useTickets';
 import { format, startOfMonth, endOfMonth, isWithinInterval } from 'date-fns';
+import { appConfig } from '@/config/appConfig';
 
 interface User {
   userId: string;
@@ -164,8 +165,8 @@ const TechnicianManagementWidget: React.FC = () => {
       setLoadingUsers(true);
       setUserError(null);
       
-      // Use the users endpoint through proxy
-      const response = await fetch('/users/?limit=100', {
+      // Use the users endpoint with proper backend URL
+      const response = await fetch(`${appConfig.api.baseUrl}/users/?limit=100`, {
         credentials: 'include',
         headers: {
           'accept': 'application/json'
