@@ -111,7 +111,7 @@ const NavigatorBar: React.FC<NavigatorBarProps> = ({
       }}
     >
       <Box sx={{ 
-        padding: (theme) => theme.spacing(2), // Match GridContent padding
+        padding: '12px', // Consistent with responsive system
         display: 'flex', 
         alignItems: 'center', 
         justifyContent: 'space-between',

@@ -187,10 +187,26 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
       }
       console.log('✅ Rendering AppBar with user:', user);
       return (
-        <>
+        <Box sx={{ 
+          // Cross-browser viewport height with progressive enhancement
+          height: '100vh',
+          // Modern browsers: use dynamic viewport when supported
+          '@supports (height: 100dvh)': {
+            height: '100dvh',
+          },
+          display: 'flex', 
+          flexDirection: 'column',
+          overflow: 'hidden'
+        }}>
           <AppBar user={user} onLogout={handleLogout} />
-          {children}
-        </>
+          <Box sx={{ 
+            flex: 1, 
+            overflow: 'hidden',
+            minHeight: 0 
+          }}>
+            {children}
+          </Box>
+        </Box>
       );
       
     case 'unauthenticated':

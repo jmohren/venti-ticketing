@@ -2,6 +2,7 @@ import React from 'react';
 import { Box } from '@mui/material';
 import { NavigatorBar } from '@/core/components/NavigatorBar';
 import { Widget } from '@/core/components/Widget';
+import { SPACING, mixins, layoutStyles } from '@/core/theme';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -27,8 +28,8 @@ interface GridLayoutProps {
   children: React.ReactNode;
 }
 
-// Completely static styles - no dynamic calculations
-const STATIC_STYLES = {
+// Clean, centralized styles using our responsive system
+const STYLES = {
   root: {
     width: '100%',
     height: '100%',
@@ -40,53 +41,32 @@ const STATIC_STYLES = {
     flexShrink: 0,
     minHeight: '64px',
     width: '100%',
-    padding: '12px',
+    ...mixins.consistentSpacing,
     paddingBottom: 0,
   },
   contentArea: {
     flex: 1,
-    padding: '12px',
     overflow: 'visible',
     display: 'flex',
     flexDirection: 'column',
     minHeight: 0,
-    // Add scrolling for phones only (both portrait and landscape)
-    '@media (max-width: 896px)': {
-      overflow: 'auto',
-    },
+    ...mixins.smoothScrolling,
   },
-  rowContainer: {
+  container: (direction: 'row' | 'column', gap: string = SPACING.gap) => ({
     display: 'flex',
-    flexDirection: 'row',
+    flexDirection: direction,
     height: '100%',
-    gap: '12px',
-    minHeight: 0,
-    minWidth: 0,
-    // On phones: stack vertically, one widget per row (both portrait and landscape)
-    '@media (max-width: 896px)': {
-      flexDirection: 'column',
-      height: 'auto',
-      minHeight: 'auto',
-    },
-  },
-  columnContainer: {
-    display: 'flex',
-    flexDirection: 'column',
     width: '100%',
-    gap: '12px',
+    gap,
     minHeight: 0,
     minWidth: 0,
-    // On phones: ensure full width and auto height (both portrait and landscape)
-    '@media (max-width: 896px)': {
-      height: 'auto',
-      minHeight: 'auto',
-    },
-  },
+    ...mixins.mobileStack,
+  }),
 } as const;
 
 /**
  * GridLayout - provides NavigatorBar and content area
- * Completely static, no dynamic calculations
+ * Uses centralized responsive styling system
  */
 const GridLayout: React.FC<GridLayoutProps> = ({ 
   availableViews,
@@ -96,8 +76,8 @@ const GridLayout: React.FC<GridLayoutProps> = ({
   children
 }) => {
   return (
-    <Box sx={STATIC_STYLES.root}>
-      <Box sx={STATIC_STYLES.navContainer}>
+    <Box sx={STYLES.root}>
+      <Box sx={STYLES.navContainer}>
         <NavigatorBar 
           currentView={currentView}
           onViewChange={onViewChange}
@@ -105,7 +85,7 @@ const GridLayout: React.FC<GridLayoutProps> = ({
           useStyledToggle={useStyledToggle}
         />
       </Box>
-      <Box sx={STATIC_STYLES.contentArea}>
+      <Box sx={STYLES.contentArea}>
         {children}
       </Box>
     </Box>
@@ -114,28 +94,11 @@ const GridLayout: React.FC<GridLayoutProps> = ({
 
 /**
  * Layout - main container with explicit direction
- * DEFAULT: direction="row" → children arranged horizontally (for Column children)
- * direction="column" → children arranged vertically (for Row children)
- * RESPONSIVE: On phones, always stacks vertically regardless of direction
+ * Automatically stacks vertically on mobile devices
  */
 const Layout: React.FC<LayoutProps> = ({ children, direction = 'row' }) => {
   return (
-    <Box
-      sx={{
-        display: 'flex',
-        flexDirection: direction,
-        height: '100%',
-        width: '100%',
-        gap: '12px',
-        minHeight: 0,
-        // On phones: always stack vertically and allow auto height (both portrait and landscape)
-        '@media (max-width: 896px)': {
-          flexDirection: 'column',
-          height: 'auto',
-          minHeight: 'auto',
-        },
-      }}
-    >
+    <Box sx={layoutStyles.flexContainer(direction)}>
       {children}
     </Box>
   );
@@ -143,46 +106,28 @@ const Layout: React.FC<LayoutProps> = ({ children, direction = 'row' }) => {
 
 /**
  * Row - horizontal flexbox container
- * Uses weight as flex-grow directly
- * RESPONSIVE: On phones, becomes full-width vertical container
+ * Automatically resets to natural sizing on mobile
  */
 const Row: React.FC<RowProps> = ({ children, weight = 1 }) => {
   return (
-    <Box
-      sx={{
-        ...STATIC_STYLES.rowContainer,
-        flex: `${weight} 1 0%`, // flex-grow: weight, flex-shrink: 1, flex-basis: 0%
-        // On phones: take full width and auto height (both portrait and landscape)
-        '@media (max-width: 896px)': {
-          flex: '0 0 auto',
-          width: '100%',
-        },
-      }}
-    >
-      {children}
+    <Box sx={layoutStyles.gridItem(weight)}>
+      <Box sx={STYLES.container('row')}>
+        {children}
+      </Box>
     </Box>
   );
 };
 
 /**
- * Column - vertical flexbox container
- * Uses weight as flex-grow directly  
- * RESPONSIVE: On phones, becomes full-width with auto height
+ * Column - vertical flexbox container  
+ * Automatically resets to natural sizing on mobile
  */
 const Column: React.FC<ColumnProps> = ({ children, weight = 1 }) => {
   return (
-    <Box
-      sx={{
-        ...STATIC_STYLES.columnContainer,
-        flex: `${weight} 1 0%`, // flex-grow: weight, flex-shrink: 1, flex-basis: 0%
-        // On phones: take full width and auto height (both portrait and landscape)
-        '@media (max-width: 896px)': {
-          flex: '0 0 auto',
-          width: '100%',
-        },
-      }}
-    >
-      {children}
+    <Box sx={layoutStyles.gridItem(weight)}>
+      <Box sx={STYLES.container('column')}>
+        {children}
+      </Box>
     </Box>
   );
 };

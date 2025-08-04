@@ -86,7 +86,7 @@ const AddTicketWidget: React.FC = () => {
   };
 
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, alignItems: 'center', justifyContent: 'center', width: '100%', height: '100%' }}>
+    <Box sx={{ display: 'flex', p: 2, flexDirection: 'column', gap: 2, alignItems: 'center', justifyContent: 'center', width: '100%', height: '100%' }}>
       <Button
         variant="contained"
         color="primary"
