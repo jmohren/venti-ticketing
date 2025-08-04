@@ -11,8 +11,7 @@ import { UserProvider } from '@/core/state/UserProvider.tsx'
 const theme = createTheme({
   palette: {
     primary: {
-      // main: '#286982', // Your custom primary color 
-      main: '#2B67AD', // Your custom primary color 
+      main: '#286982', // Your custom primary color 
     },
   },
 });
