@@ -2,6 +2,7 @@ import React, { Suspense } from 'react';
 import { useLocation } from 'react-router-dom';
 import { GridLayout } from '@/core/components/GridLayout';
 import { useUrlAwareNavigation } from '@/core/hooks/useUrlState';
+import { useIsAdmin } from '@/core/hooks/useIsAdmin';
 import { TicketProvider } from '@/app/state/TicketProvider';
 import { MachineProvider } from '@/app/state/MachineProvider';
 import { TechnicianProvider } from '@/app/state/TechnicianProvider';
@@ -15,6 +16,7 @@ const InstandhaltungView = React.lazy(() => import('@/app/views/instandhaltung/I
 const LohnscheineView = React.lazy(() => import('@/app/views/lohnscheine/LohnscheineView'));
 const WissensdatenbankView = React.lazy(() => import('@/app/views/wissensdatenbank/WissensdatenbankView'));
 const CalendarView = React.lazy(() => import('@/app/views/calendar/CalendarView'));
+const UserManagementView = React.lazy(() => import('@/app/views/user-management/UserManagementView'));
 
 // Single source of truth for all views
 const BASE_VIEWS = [
@@ -62,8 +64,13 @@ const AppMain: React.FC = () => {
   const location = useLocation();
   const { navigateWithParams } = useUrlAwareNavigation();
   
-  // Extract available views for header (no components)
-  const VIEW_REGISTRY = BASE_VIEWS;
+  // Check if user is admin to show user management view
+  const isAdmin = useIsAdmin();
+  
+  // Create view registry based on admin status
+  const VIEW_REGISTRY = isAdmin
+    ? [...BASE_VIEWS, { value: 'user-management', label: 'User Management', component: UserManagementView }]
+    : BASE_VIEWS;
 
   const availableViews = VIEW_REGISTRY.map(({ value, label }) => ({ value, label }));
   
@@ -88,7 +95,7 @@ const AppMain: React.FC = () => {
   }, [location.pathname, navigateWithParams, defaultRoute]);
 
   // Find and render the current view component
-  const currentViewConfig = BASE_VIEWS.find(view => view.value === location.pathname.substring(1));
+  const currentViewConfig = VIEW_REGISTRY.find(view => view.value === location.pathname.substring(1));
   const ViewComponent = currentViewConfig?.component;
 
   return (
