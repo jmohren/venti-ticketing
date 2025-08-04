@@ -23,6 +23,12 @@ export default defineConfig(({ mode }) => {
     console.log('🔧 [VITE CONFIG] All requests to these paths will be forwarded to:', env.VITE_PROXY_TARGET);
   }
 
+  // Helper function to get current host for cookie domain
+  const getCurrentHost = (req: any) => {
+    const host = req.headers.host || 'localhost';
+    return host.split(':')[0]; // Remove port if present
+  };
+
   return {
   plugins: [react()],
   resolve: {
@@ -48,41 +54,58 @@ export default defineConfig(({ mode }) => {
     cssCodeSplit: false,
   },
   server: {
+    host: '0.0.0.0', // Bind to all interfaces
+    port: 5173,
+    cors: {
+      origin: true, // Allow all origins in development
+      credentials: true, // Allow cookies to be sent
+      optionsSuccessStatus: 200
+    },
     proxy: {
       '/auth': {
         target: env.VITE_PROXY_TARGET,
         changeOrigin: true,
         secure: true,
-        cookieDomainRewrite: {
-          '*': 'localhost'
-        },
-        cookiePathRewrite: {
-          '*': '/'
-        },
         configure: (proxy, _options) => {
           console.log('🔧 [AUTH PROXY] Target:', env.VITE_PROXY_TARGET);
           
-          proxy.on('proxyReq', (_proxyReq, req, _res) => {
+          proxy.on('proxyReq', (proxyReq, req, _res) => {
             console.log('🔄 [AUTH] Request:', req.method, req.url);
             // Log cookies being sent
             if (req.headers.cookie) {
               console.log('🍪 [AUTH] Cookies sent:', req.headers.cookie);
             }
+            
+            // Add CORS headers to the proxy request
+            proxyReq.setHeader('Access-Control-Allow-Credentials', 'true');
+            const origin = req.headers.origin || `http://${req.headers.host}`;
+            proxyReq.setHeader('Access-Control-Allow-Origin', origin);
           });
           
-          proxy.on('proxyRes', (proxyRes, req, _res) => {
+          proxy.on('proxyRes', (proxyRes, req, res) => {
             console.log('📡 [AUTH] Response:', proxyRes.statusCode, req.url);
+            
+            // Add CORS headers to response
+            const origin = req.headers.origin || `http://${req.headers.host}`;
+            res.setHeader('Access-Control-Allow-Origin', origin);
+            res.setHeader('Access-Control-Allow-Credentials', 'true');
+            res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+            res.setHeader('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization, Cookie');
+            
             // Log cookies being received
             if (proxyRes.headers['set-cookie']) {
               console.log('🍪 [AUTH] Cookies received:', proxyRes.headers['set-cookie']);
             }
             
-            // Handle cookies for localhost
+            // Handle cookies for current host (localhost or IP)
             if (proxyRes.headers['set-cookie']) {
+              const currentHost = getCurrentHost(req);
               const cookies = proxyRes.headers['set-cookie'].map(cookie => {
                 let modifiedCookie = cookie;
+                // Remove any existing domain
                 modifiedCookie = modifiedCookie.replace(/domain=[^;]+;?\s*/gi, '');
-                modifiedCookie = modifiedCookie + '; Domain=localhost';
+                // Set domain to current host
+                modifiedCookie = modifiedCookie + `; Domain=${currentHost}`;
                 if (!modifiedCookie.includes('Path=')) {
                   modifiedCookie = modifiedCookie + '; Path=/';
                 }
@@ -92,7 +115,7 @@ export default defineConfig(({ mode }) => {
                 return modifiedCookie;
               });
               proxyRes.headers['set-cookie'] = cookies;
-              console.log('🍪 [AUTH] Modified cookies:', cookies);
+              console.log('🍪 [AUTH] Modified cookies for host:', currentHost, cookies);
             }
           });
           
@@ -105,16 +128,18 @@ export default defineConfig(({ mode }) => {
         target: env.VITE_PROXY_TARGET,
         changeOrigin: true,
         secure: true,
-        cookieDomainRewrite: {
-          '*': 'localhost'
-        },
-        cookiePathRewrite: {
-          '*': '/'
-        },
         configure: (proxy, _options) => {
           console.log('🔧 [ADMIN PROXY] Target:', env.VITE_PROXY_TARGET);
-          proxy.on('proxyReq', (_proxyReq, req, _res) => {
+          proxy.on('proxyReq', (proxyReq, req, _res) => {
             console.log('🔄 [ADMIN] Request:', req.method, req.url);
+            const origin = req.headers.origin || `http://${req.headers.host}`;
+            proxyReq.setHeader('Access-Control-Allow-Origin', origin);
+            proxyReq.setHeader('Access-Control-Allow-Credentials', 'true');
+          });
+          proxy.on('proxyRes', (proxyRes, req, res) => {
+            const origin = req.headers.origin || `http://${req.headers.host}`;
+            res.setHeader('Access-Control-Allow-Origin', origin);
+            res.setHeader('Access-Control-Allow-Credentials', 'true');
           });
           proxy.on('error', (err, req, _res) => {
             console.error('❌ [ADMIN] Proxy error:', err.message, 'for:', req?.url || 'unknown');
@@ -125,36 +150,41 @@ export default defineConfig(({ mode }) => {
         target: env.VITE_PROXY_TARGET,
         changeOrigin: true,
         secure: true,
-        cookieDomainRewrite: {
-          '*': 'localhost'
-        },
-        cookiePathRewrite: {
-          '*': '/'
-        },
         configure: (proxy, _options) => {
           console.log('🔧 [REST PROXY] Target:', env.VITE_PROXY_TARGET);
           
-          proxy.on('proxyReq', (_proxyReq, req, _res) => {
+          proxy.on('proxyReq', (proxyReq, req, _res) => {
             console.log('🔄 [REST] Request:', req.method, req.url);
             // Log cookies being sent
             if (req.headers.cookie) {
               console.log('🍪 [REST] Cookies sent:', req.headers.cookie);
             }
+            const origin = req.headers.origin || `http://${req.headers.host}`;
+            proxyReq.setHeader('Access-Control-Allow-Origin', origin);
+            proxyReq.setHeader('Access-Control-Allow-Credentials', 'true');
           });
           
-          proxy.on('proxyRes', (proxyRes, req, _res) => {
+          proxy.on('proxyRes', (proxyRes, req, res) => {
             console.log('📡 [REST] Response:', proxyRes.statusCode, req.url);
+            
+            const origin = req.headers.origin || `http://${req.headers.host}`;
+            res.setHeader('Access-Control-Allow-Origin', origin);
+            res.setHeader('Access-Control-Allow-Credentials', 'true');
+            
             // Log cookies being received
             if (proxyRes.headers['set-cookie']) {
               console.log('🍪 [REST] Cookies received:', proxyRes.headers['set-cookie']);
             }
             
-            // Handle cookies for localhost
+            // Handle cookies for current host (localhost or IP)
             if (proxyRes.headers['set-cookie']) {
+              const currentHost = getCurrentHost(req);
               const cookies = proxyRes.headers['set-cookie'].map(cookie => {
                 let modifiedCookie = cookie;
+                // Remove any existing domain
                 modifiedCookie = modifiedCookie.replace(/domain=[^;]+;?\s*/gi, '');
-                modifiedCookie = modifiedCookie + '; Domain=localhost';
+                // Set domain to current host
+                modifiedCookie = modifiedCookie + `; Domain=${currentHost}`;
                 if (!modifiedCookie.includes('Path=')) {
                   modifiedCookie = modifiedCookie + '; Path=/';
                 }
@@ -164,7 +194,7 @@ export default defineConfig(({ mode }) => {
                 return modifiedCookie;
               });
               proxyRes.headers['set-cookie'] = cookies;
-              console.log('🍪 [REST] Modified cookies:', cookies);
+              console.log('🍪 [REST] Modified cookies for host:', currentHost, cookies);
             }
           });
           
@@ -177,16 +207,18 @@ export default defineConfig(({ mode }) => {
         target: env.VITE_PROXY_TARGET,
         changeOrigin: true,
         secure: true,
-        cookieDomainRewrite: {
-          '*': 'localhost'
-        },
-        cookiePathRewrite: {
-          '*': '/'
-        },
         configure: (proxy, _options) => {
           console.log('🔧 [STORAGE PROXY] Target:', env.VITE_PROXY_TARGET);
-          proxy.on('proxyReq', (_proxyReq, req, _res) => {
+          proxy.on('proxyReq', (proxyReq, req, _res) => {
             console.log('🔄 [STORAGE] Request:', req.method, req.url);
+            const origin = req.headers.origin || `http://${req.headers.host}`;
+            proxyReq.setHeader('Access-Control-Allow-Origin', origin);
+            proxyReq.setHeader('Access-Control-Allow-Credentials', 'true');
+          });
+          proxy.on('proxyRes', (proxyRes, req, res) => {
+            const origin = req.headers.origin || `http://${req.headers.host}`;
+            res.setHeader('Access-Control-Allow-Origin', origin);
+            res.setHeader('Access-Control-Allow-Credentials', 'true');
           });
           proxy.on('error', (err, req, _res) => {
             console.error('❌ [STORAGE] Proxy error:', err.message, 'for:', req?.url || 'unknown');
@@ -197,36 +229,41 @@ export default defineConfig(({ mode }) => {
         target: env.VITE_PROXY_TARGET,
         changeOrigin: true,
         secure: true,
-        cookieDomainRewrite: {
-          '*': 'localhost'
-        },
-        cookiePathRewrite: {
-          '*': '/'
-        },
         configure: (proxy, _options) => {
           console.log('🔧 [USERS PROXY] Target:', env.VITE_PROXY_TARGET);
           
-          proxy.on('proxyReq', (_proxyReq, req, _res) => {
+          proxy.on('proxyReq', (proxyReq, req, _res) => {
             console.log('🔄 [USERS] Request:', req.method, req.url);
             // Log cookies being sent
             if (req.headers.cookie) {
               console.log('🍪 [USERS] Cookies sent:', req.headers.cookie);
             }
+            const origin = req.headers.origin || `http://${req.headers.host}`;
+            proxyReq.setHeader('Access-Control-Allow-Origin', origin);
+            proxyReq.setHeader('Access-Control-Allow-Credentials', 'true');
           });
           
-          proxy.on('proxyRes', (proxyRes, req, _res) => {
+          proxy.on('proxyRes', (proxyRes, req, res) => {
             console.log('📡 [USERS] Response:', proxyRes.statusCode, req.url);
+            
+            const origin = req.headers.origin || `http://${req.headers.host}`;
+            res.setHeader('Access-Control-Allow-Origin', origin);
+            res.setHeader('Access-Control-Allow-Credentials', 'true');
+            
             // Log cookies being received
             if (proxyRes.headers['set-cookie']) {
               console.log('🍪 [USERS] Cookies received:', proxyRes.headers['set-cookie']);
             }
             
-            // Handle cookies for localhost
+            // Handle cookies for current host (localhost or IP)
             if (proxyRes.headers['set-cookie']) {
+              const currentHost = getCurrentHost(req);
               const cookies = proxyRes.headers['set-cookie'].map(cookie => {
                 let modifiedCookie = cookie;
+                // Remove any existing domain
                 modifiedCookie = modifiedCookie.replace(/domain=[^;]+;?\s*/gi, '');
-                modifiedCookie = modifiedCookie + '; Domain=localhost';
+                // Set domain to current host
+                modifiedCookie = modifiedCookie + `; Domain=${currentHost}`;
                 if (!modifiedCookie.includes('Path=')) {
                   modifiedCookie = modifiedCookie + '; Path=/';
                 }
@@ -236,7 +273,7 @@ export default defineConfig(({ mode }) => {
                 return modifiedCookie;
               });
               proxyRes.headers['set-cookie'] = cookies;
-              console.log('🍪 [USERS] Modified cookies:', cookies);
+              console.log('🍪 [USERS] Modified cookies for host:', currentHost, cookies);
             }
           });
           
