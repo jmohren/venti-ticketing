@@ -118,18 +118,52 @@ const NavigatorBar: React.FC<NavigatorBarProps> = ({
         height: '100%',
         minHeight: '64px', // Ensure minimum height
         color: 'text.primary',
+        overflowX: 'auto', // Enable horizontal scrolling
+        overflowY: 'hidden', // Hide vertical overflow
+        minWidth: 0, // Allow flexbox to shrink
+        scrollBehavior: 'smooth', // Smooth scrolling
+        '&::-webkit-scrollbar': {
+          height: '4px',
+        },
+        '&::-webkit-scrollbar-track': {
+          backgroundColor: 'transparent',
+        },
+        '&::-webkit-scrollbar-thumb': {
+          backgroundColor: (theme) => theme.palette.grey[300],
+          borderRadius: '2px',
+          '&:hover': {
+            backgroundColor: (theme) => theme.palette.grey[400],
+          },
+        },
         }}>
           {/* Left side - View Toggle Buttons */}
-          <Box sx={{ display: 'flex', alignItems: 'center' }}>
+          <Box sx={{ 
+            display: 'flex', 
+            alignItems: 'center',
+            flexShrink: 0, // Prevent shrinking
+            minWidth: 'fit-content', // Ensure buttons don't get compressed
+          }}>
             <ToggleButtonGroup
               value={currentView}
               exclusive
               onChange={onViewChange}
               aria-label="View selection"
-              sx={toggleButtonStyles}
+              sx={{
+                ...toggleButtonStyles,
+                flexWrap: 'nowrap', // Prevent wrapping
+                minWidth: 'fit-content', // Ensure proper sizing
+              }}
             >
               {availableViews.map((view) => (
-                <ToggleButton key={view.value} value={view.value} disableRipple={useStyledToggle}>
+                <ToggleButton 
+                  key={view.value} 
+                  value={view.value} 
+                  disableRipple={useStyledToggle}
+                  sx={{
+                    whiteSpace: 'nowrap', // Prevent text wrapping
+                    minWidth: 'fit-content', // Ensure button doesn't shrink too much
+                  }}
+                >
                   {view.label}
                 </ToggleButton>
               ))}
@@ -138,7 +172,13 @@ const NavigatorBar: React.FC<NavigatorBarProps> = ({
 
           {/* Right side - User info and logout */}
           {user && (
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            <Box sx={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: 2,
+              flexShrink: 0, // Prevent shrinking
+              marginLeft: 2, // Add some spacing from the toggle buttons
+            }}>
               <Typography variant="body1" sx={{ color: 'text.secondary' }}>
                 Welcome, {displayName}!
               </Typography>
