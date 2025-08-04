@@ -75,7 +75,8 @@ export class AdminApiClient {
         body: JSON.stringify({ 
           appname: appConfig.auth.appName,
           email, 
-          password 
+          password,
+          roles: [appConfig.auth.appName]
         }),
       },
     );
