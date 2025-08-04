@@ -305,7 +305,7 @@ export class CookieAuthApiClient implements AuthApiClient {
 
   async silentAuthCheck(): Promise<boolean> {
     try {
-      const response = await fetch(`${this.authBaseUrl}/auth/me`, {
+      const response = await fetch(`${this.authBaseUrl}/auth/session?appname=${encodeURIComponent(appConfig.auth.appName)}`, {
         method: 'GET',
         credentials: 'include'
       });
@@ -351,9 +351,24 @@ export class CookieAuthApiClient implements AuthApiClient {
           return false;
         }
       }
+
+      if (response.status === 403) {
+        console.log('🚫 Session validation failed - insufficient roles for this application');
+        try {
+          const errorData = await response.json();
+          if (errorData.error && errorData.error.includes('missing required roles')) {
+            console.error('❌ Role validation failed:', errorData.error);
+          }
+        } catch (parseError) {
+          console.error('❌ Session validation failed - missing required roles');
+        }
+        // For 403, we should logout the user as they don't have permission for this app
+        await this.logout();
+        return false;
+      }
       
       if (response.status === 404) {
-        console.log('⚠️ /auth/me endpoint not found (404) - falling back to refresh method');
+        console.log('⚠️ /auth/session endpoint not found (404) - falling back to refresh method');
         try {
           await this.refreshToken();
           return true;
@@ -367,14 +382,14 @@ export class CookieAuthApiClient implements AuthApiClient {
       return false;
       
     } catch (error) {
-      console.error('❌ Silent auth check error:', error);
+      console.error('❌ Silent authentication check failed:', error);
       
-      console.log('⚠️ Falling back to refresh method due to error');
+      // Try fallback to refresh token
       try {
         await this.refreshToken();
         return true;
       } catch (refreshError) {
-        console.error('❌ Error fallback refresh failed:', refreshError);
+        console.error('❌ Fallback refresh also failed:', refreshError);
         return false;
       }
     }
