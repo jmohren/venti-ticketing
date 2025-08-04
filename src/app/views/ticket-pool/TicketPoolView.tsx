@@ -1,39 +1,38 @@
 import React from 'react';
-import { WidgetContainer } from '@/core/components/WidgetContainer';
+import { Layout, Row, Column, Widget } from '@/core/components/GridLayout';
 import TicketPoolWidget from '@/app/views/ticket-pool/widgets/TicketPoolWidget';
 import TechnicianLoadWidget from '@/app/views/ticket-pool/widgets/TechnicianLoadWidget';
 import MachinesRoomsWidget from '@/app/views/ticket-pool/widgets/MachinesRoomsWidget';
 
-
 const TicketPoolView: React.FC = () => {
   return (
-    <>
-      <WidgetContainer
-        title="Ticket Pool"
-        gridPosition={{ columnStart: 1, columnSpan: 6, rowStart: 2, rowSpan: 12 }}
-        elevation={3}
-        stretchContent
-      >
-        <TicketPoolWidget />
-      </WidgetContainer>
-
-      <WidgetContainer
-        title="Techniker Auslastung"
-        gridPosition={{ columnStart: 7, columnSpan: 6, rowStart: 2, rowSpan: 6 }}
-        elevation={3}
-        stretchContent
-      >
-        <TechnicianLoadWidget />
-      </WidgetContainer>
-
-      <WidgetContainer
-        title="Maschinen"
-        gridPosition={{ columnStart: 7, columnSpan: 6, rowStart: 8, rowSpan: 6 }}
-        stretchContent
-      >
-        <MachinesRoomsWidget />
-      </WidgetContainer>
-    </>
+    <Layout direction="row">
+      {/* Left column - Ticket Pool (takes half the width) */}
+      <Column weight={1}>
+        <Row>
+          <Widget title="Ticket Pool">
+            <TicketPoolWidget />
+          </Widget>
+        </Row>
+      </Column>
+      
+      {/* Right column - Two stacked widgets (takes half the width) */}
+      <Column weight={1}>
+        {/* Top widget - Technician Load */}
+        <Row weight={1}>
+          <Widget title="Techniker Auslastung">
+            <TechnicianLoadWidget />
+          </Widget>
+        </Row>
+        
+        {/* Bottom widget - Machines */}
+        <Row weight={1}>
+          <Widget title="Maschinen">
+            <MachinesRoomsWidget />
+          </Widget>
+        </Row>
+      </Column>
+    </Layout>
   );
 };
 

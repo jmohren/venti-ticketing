@@ -1,17 +1,18 @@
 import React from 'react';
-import { WidgetContainer } from '@/core/components/WidgetContainer';
+import { Layout, Row, Column, Widget } from '@/core/components/GridLayout';
 import WissensdatenbankWidget from '@/app/views/wissensdatenbank/widgets/WissensdatenbankWidget';
 
 const WissensdatenbankView: React.FC = () => {
   return (
-    <WidgetContainer
-      title="Wissensdatenbank - Archivierte Tickets"
-      gridPosition={{ columnStart: 1, columnSpan: 12, rowStart: 2, rowSpan: 12 }}
-      elevation={3}
-      stretchContent
-    >
-      <WissensdatenbankWidget />
-    </WidgetContainer>
+    <Layout direction="row">
+      <Column weight={1}>
+        <Row>
+          <Widget title="Wissensdatenbank - Archivierte Tickets">
+            <WissensdatenbankWidget />
+          </Widget>
+        </Row>
+      </Column>
+    </Layout>
   );
 };
 

@@ -1,28 +1,29 @@
 import React from 'react';
-import { WidgetContainer } from '@/core/components/WidgetContainer';
+import { Layout, Row, Column, Widget } from '@/core/components/GridLayout';
 import AddTicketWidget from '@/app/views/add-ticket/widgets/AddTicketWidget';
 import CreatedTicketsWidget from '@/app/views/add-ticket/widgets/CreatedTicketsWidget';
 
 const AddTicketView: React.FC = () => {
   return (
-    <>
-      <WidgetContainer
-        title="Ticket anlegen"
-        gridPosition={{ columnStart: 1, columnSpan: 6, rowStart: 2, rowSpan: 12 }}
-        elevation={3}
-      >
-        <AddTicketWidget />
-      </WidgetContainer>
-
-      <WidgetContainer
-        title="Meine erstellten Tickets"
-        gridPosition={{ columnStart: 7, columnSpan: 6, rowStart: 2, rowSpan: 12 }}
-        elevation={3}
-        stretchContent
-      >
-        <CreatedTicketsWidget />
-      </WidgetContainer>
-    </>
+    <Layout direction="row">
+      {/* Left column - Ticket creation form */}
+      <Column weight={1}>
+        <Row>
+          <Widget title="Ticket anlegen">
+            <AddTicketWidget />
+          </Widget>
+        </Row>
+      </Column>
+      
+      {/* Right column - Created tickets list */}
+      <Column weight={1}>
+        <Row>
+          <Widget title="Meine erstellten Tickets">
+            <CreatedTicketsWidget />
+          </Widget>
+        </Row>
+      </Column>
+    </Layout>
   );
 };
 

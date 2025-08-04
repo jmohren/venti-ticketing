@@ -1,85 +1,156 @@
-import React, { ReactNode } from 'react';
-import { Box, styled, Grid } from '@mui/material';
+import React from 'react';
+import { Box } from '@mui/material';
 import { NavigatorBar } from '@/core/components/NavigatorBar';
+import { Widget } from '@/core/components/Widget';
 
-// Styled components for the Grid
-const GridContainer = styled(Box)(({ }) => ({
-  width: '100%',
-  height: '100%',
-  display: 'flex',
-  flexDirection: 'column',
-  overflow: 'hidden',
-}));
+interface LayoutProps {
+  children: React.ReactNode;
+  direction?: 'row' | 'column';
+}
 
-const GridContent = styled(Box)(({ theme }) => ({
-  flex: 1,
-  padding: theme.spacing(2), // Increased padding from 0.5 to 2 (16px)
-  overflow: 'hidden',
-}));
+interface RowProps {
+  children: React.ReactNode;
+  weight?: number;
+}
 
-// New grid interface to define grid dimensions
-interface GridDimensions {
-  columns?: number;
-  rows?: number;
-  gap?: string | number;
+interface ColumnProps {
+  children: React.ReactNode;
+  weight?: number;
 }
 
 interface GridLayoutProps {
   title: string;
-  // Header-related props
   availableViews: Array<{ value: string; label: string }>;
   currentView: string;
   onViewChange: (event: React.MouseEvent<HTMLElement>, newView: string | null) => void;
   useStyledToggle?: boolean;
-  children: ReactNode;
-  gridDimensions?: GridDimensions;
+  children: React.ReactNode;
 }
 
+// Completely static styles - no dynamic calculations
+const STATIC_STYLES = {
+  root: {
+    width: '100%',
+    height: '100%',
+    display: 'flex',
+    flexDirection: 'column',
+    overflow: 'hidden',
+  },
+  navContainer: {
+    flexShrink: 0,
+    minHeight: '64px',
+    width: '100%',
+    padding: '12px',
+    paddingBottom: 0,
+  },
+  contentArea: {
+    flex: 1,
+    padding: '12px',
+    overflow: 'visible',
+    display: 'flex',
+    flexDirection: 'column',
+    minHeight: 0,
+  },
+  rowContainer: {
+    display: 'flex',
+    flexDirection: 'row',
+    height: '100%',
+    gap: '12px',
+    minHeight: 0,
+    minWidth: 0,
+  },
+  columnContainer: {
+    display: 'flex',
+    flexDirection: 'column',
+    width: '100%',
+    gap: '12px',
+    minHeight: 0,
+    minWidth: 0,
+  },
+} as const;
+
 /**
- * A reusable Grid layout component that provides consistent styling for all Grids.
- * It includes a header with title and optional subtitle, and a content area for Grid components.
- * 
- * @param title - The Grid title
- * @param children - The Grid content (typically Grid items positioned in the grid)
- * @param gridDimensions - Optional grid dimensions configuration (defaults to 12x12 grid with 12px gap)
+ * GridLayout - provides NavigatorBar and content area
+ * Completely static, no dynamic calculations
  */
 const GridLayout: React.FC<GridLayoutProps> = ({ 
   availableViews,
   currentView,
   onViewChange,
   useStyledToggle = true,
-  children,
-  gridDimensions = { columns: 12, rows: 13, gap: '12px' }
+  children
 }) => {
-  const { columns = 12, rows = 13, gap = '12px' } = gridDimensions;
-  
   return (
-    <GridContainer>      
-      <GridContent>
-        <Box sx={{ position: 'relative', height: '100%' }}>
-          <Grid 
-            container 
-            sx={{ 
-              height: '100%',
-              display: 'grid',
-              gridTemplateColumns: `repeat(${columns}, 1fr)`,
-              gridTemplateRows: `repeat(${rows}, 1fr)`,
-              gap: gap
-            }}
-          >
-            {/* Header Widget */}
-            <NavigatorBar 
-              currentView={currentView}
-              onViewChange={onViewChange}
-              availableViews={availableViews}
-              useStyledToggle={useStyledToggle}
-            />
-            {children}
-          </Grid>
-        </Box>
-      </GridContent>
-    </GridContainer>
+    <Box sx={STATIC_STYLES.root}>
+      <Box sx={STATIC_STYLES.navContainer}>
+        <NavigatorBar 
+          currentView={currentView}
+          onViewChange={onViewChange}
+          availableViews={availableViews}
+          useStyledToggle={useStyledToggle}
+        />
+      </Box>
+      <Box sx={STATIC_STYLES.contentArea}>
+        {children}
+      </Box>
+    </Box>
   );
 };
 
-export { GridLayout }; 
+/**
+ * Layout - main container with explicit direction
+ * DEFAULT: direction="row" → children arranged horizontally (for Column children)
+ * direction="column" → children arranged vertically (for Row children)
+ */
+const Layout: React.FC<LayoutProps> = ({ children, direction = 'row' }) => {
+  return (
+    <Box
+      sx={{
+        display: 'flex',
+        flexDirection: direction,
+        height: '100%',
+        width: '100%',
+        gap: '12px',
+        minHeight: 0,
+      }}
+    >
+      {children}
+    </Box>
+  );
+};
+
+/**
+ * Row - horizontal flexbox container
+ * Uses weight as flex-grow directly
+ */
+const Row: React.FC<RowProps> = ({ children, weight = 1 }) => {
+  return (
+    <Box
+      sx={{
+        ...STATIC_STYLES.rowContainer,
+        flex: `${weight} 1 0%`, // flex-grow: weight, flex-shrink: 1, flex-basis: 0%
+      }}
+    >
+      {children}
+    </Box>
+  );
+};
+
+/**
+ * Column - vertical flexbox container
+ * Uses weight as flex-grow directly
+ */
+const Column: React.FC<ColumnProps> = ({ children, weight = 1 }) => {
+  return (
+    <Box
+      sx={{
+        ...STATIC_STYLES.columnContainer,
+        flex: `${weight} 1 0%`, // flex-grow: weight, flex-shrink: 1, flex-basis: 0%
+      }}
+    >
+      {children}
+    </Box>
+  );
+};
+
+export { GridLayout, Layout, Row, Column, Widget };

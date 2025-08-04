@@ -1,18 +1,32 @@
 import React from 'react';
-import { WidgetContainer } from '@/core/components/WidgetContainer';
+import { Layout, Row, Column, Widget } from '@/core/components/GridLayout';
 import InstandhaltungWidget from '@/app/views/instandhaltung/widgets/InstandhaltungWidget';
 
 const InstandhaltungView: React.FC = () => {
   const name = 'Johannes Mohren';
 
   return (
-    <WidgetContainer
-      title={`Instandhaltung - Tickets für ${name}`}
-      gridPosition={{ columnStart: 1, columnSpan: 6, rowStart: 2, rowSpan: 12 }}
-      stretchContent
-    >
-      <InstandhaltungWidget currentUser={name} />
-    </WidgetContainer>
+    <Layout direction="row">
+      {/* Left column - Instandhaltung widget */}
+      <Column weight={1}>
+        <Row>
+          <Widget title={`Instandhaltung - Tickets für ${name}`}>
+            <InstandhaltungWidget currentUser={name} />
+          </Widget>
+        </Row>
+      </Column>
+      
+      {/* Right column - Empty placeholder */}
+      <Column weight={1}>
+        <Row>
+          <Widget>
+            {/* Empty placeholder content */}
+            <div style={{ padding: '16px', color: '#666' }}>
+            </div>
+          </Widget>
+        </Row>
+      </Column>
+    </Layout>
   );
 };
 

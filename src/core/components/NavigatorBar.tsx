@@ -1,7 +1,6 @@
 import React from 'react';
-import { Box, ToggleButtonGroup, ToggleButton, Typography, IconButton, Menu, MenuItem, Avatar } from '@mui/material';
+import { Box, ToggleButtonGroup, ToggleButton, Typography, IconButton, Menu, MenuItem, Avatar, Paper } from '@mui/material';
 import { LogoutOutlined, PersonOutline } from '@mui/icons-material';
-import { WidgetContainer } from '@/core/components/WidgetContainer';
 import { User } from '@/core/api/auth/AuthApiClient';
 
 interface NavigatorBarProps {
@@ -11,12 +10,6 @@ interface NavigatorBarProps {
   onViewChange?: (event: React.MouseEvent<HTMLElement>, newView: string | null) => void;
   availableViews?: Array<{ value: string; label: string }>;
   useStyledToggle?: boolean;
-  gridPosition?: {
-    columnStart?: number | string;
-    columnSpan?: number;
-    rowStart?: number | string;
-    rowSpan?: number;
-  };
 }
 
 const NavigatorBar: React.FC<NavigatorBarProps> = ({
@@ -26,7 +19,6 @@ const NavigatorBar: React.FC<NavigatorBarProps> = ({
   onViewChange,
   availableViews = [{ value: 'daily-routine', label: 'Daily Routine' }],
   useStyledToggle = true,
-  gridPosition = { columnStart: 1, columnSpan: 12, rowStart: 1, rowSpan: 1 },
 }) => {
   const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
   const open = Boolean(anchorEl);
@@ -60,6 +52,7 @@ const NavigatorBar: React.FC<NavigatorBarProps> = ({
       textTransform: 'none',
       paddingLeft: 0,
       paddingRight: 0,
+      paddingY: '6px',
       marginLeft: 1,
       marginRight: 1,
       marginBottom: 0,
@@ -106,21 +99,25 @@ const NavigatorBar: React.FC<NavigatorBarProps> = ({
   } : {};
 
   return (
-    <WidgetContainer gridPosition={gridPosition}>
-      <Box sx={{ 
-        width: '100%',
+    <Paper 
+      elevation={3}
+      sx={{
         height: '100%',
-        '& > div': {
-          padding: '16px 24px',
-          height: '100%',
-          boxSizing: 'border-box'
-        }
-      }}>
-        <Box sx={{ 
-          p: 2, 
-          display: 'flex', 
-          alignItems: 'center', 
-          justifyContent: 'space-between' 
+        display: 'flex',
+        flexDirection: 'column',
+        overflow: 'hidden',
+        backgroundColor: 'white',
+        minHeight: '64px', // Ensure minimum height similar to AppBar
+      }}
+    >
+      <Box sx={{ 
+        padding: (theme) => theme.spacing(2), // Match GridContent padding
+        display: 'flex', 
+        alignItems: 'center', 
+        justifyContent: 'space-between',
+        height: '100%',
+        minHeight: '64px', // Ensure minimum height
+        color: 'text.primary',
         }}>
           {/* Left side - View Toggle Buttons */}
           <Box sx={{ display: 'flex', alignItems: 'center' }}>
@@ -157,7 +154,7 @@ const NavigatorBar: React.FC<NavigatorBarProps> = ({
                 aria-haspopup="true"
                 aria-expanded={open ? 'true' : undefined}
               >
-                <Avatar sx={{ width: 32, height: 32, bgcolor: 'primary.main' }}>
+              <Avatar sx={{ width: 32, height: 32, bgcolor: 'primary.main', color: 'white' }}>
                   <PersonOutline fontSize="small" />
                 </Avatar>
               </IconButton>
@@ -221,8 +218,7 @@ const NavigatorBar: React.FC<NavigatorBarProps> = ({
             </Box>
           )}
         </Box>
-      </Box>
-    </WidgetContainer>
+    </Paper>
   );
 };
 

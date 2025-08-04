@@ -1,18 +1,18 @@
 import React from 'react';
-import { WidgetContainer } from '@/core/components/WidgetContainer';
+import { Layout, Row, Column, Widget } from '@/core/components/GridLayout';
 import TechnicianManagementWidget from './widgets/TechnicianManagementWidget';
 
 const LohnscheineView: React.FC = () => {
   return (
-    <>
-      <WidgetContainer
-        gridPosition={{ columnStart: 1, columnSpan: 12, rowStart: 2, rowSpan: 12 }}
-        elevation={3}
-        stretchContent
-      >
-        <TechnicianManagementWidget />
-      </WidgetContainer>
-    </>
+    <Layout direction="row">
+      <Column weight={1}>
+        <Row>
+          <Widget>
+            <TechnicianManagementWidget />
+          </Widget>
+        </Row>
+      </Column>
+    </Layout>
   );
 };
 
