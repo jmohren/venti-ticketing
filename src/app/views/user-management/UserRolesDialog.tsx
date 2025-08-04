@@ -50,7 +50,8 @@ const UserRolesDialog: React.FC<Props> = ({ open, onClose, user }) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
-  const hasProjectRoles = roles.includes('morning-routine') && roles.includes('morning_routine');
+  const appRole = import.meta.env.VITE_APP_NAME || 'app-user';
+  const hasProjectRoles = roles.includes(appRole);
   const isAdmin = roles.includes('admin');
 
   const handleToggle = async (type: 'user' | 'admin', value: boolean) => {
@@ -59,13 +60,11 @@ const UserRolesDialog: React.FC<Props> = ({ open, onClose, user }) => {
     try {
       if (type === 'user') {
         if (value) {
-          await assignRole(user.userId, 'morning-routine');
-          await assignRole(user.userId, 'morning_routine');
-          setRoles(prev => [...prev, 'morning-routine', 'morning_routine']);
+          await assignRole(user.userId, appRole);
+          setRoles(prev => [...prev, appRole]);
         } else {
-          await revokeRole(user.userId, 'morning-routine');
-          await revokeRole(user.userId, 'morning_routine');
-          setRoles(prev => prev.filter(r => r !== 'morning-routine' && r !== 'morning_routine'));
+          await revokeRole(user.userId, appRole);
+          setRoles(prev => prev.filter(r => r !== appRole));
         }
       } else {
         if (value) {
