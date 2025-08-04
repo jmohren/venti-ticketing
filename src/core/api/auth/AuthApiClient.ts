@@ -201,15 +201,34 @@ export class CookieAuthApiClient implements AuthApiClient {
 
     this.refreshing = (async () => {
       try {
-        const response = await fetch(`${this.authBaseUrl}/auth/refresh`, {
+        const response = await fetch(`${this.authBaseUrl}/auth/refresh?appname=${encodeURIComponent(appConfig.auth.appName)}`, {
           method: 'POST',
           credentials: 'include'
         });
 
         if (!response.ok) {
-          console.log('❌ Session expired - refresh failed');
-          this.logout();
-          throw new Error('Session expired');
+          // Handle specific 403 role missing error
+          if (response.status === 403) {
+            try {
+              const errorData = await response.json();
+              if (errorData.error && errorData.error.includes('missing required roles')) {
+                console.error('❌ Token refresh failed - role validation:', errorData.error);
+                this.logout();
+                throw new Error(`ACCESS_DENIED: ${errorData.error}`);
+              }
+            } catch (parseError) {
+              if (parseError instanceof Error && parseError.message.startsWith('ACCESS_DENIED:')) {
+                throw parseError; // Re-throw our custom error
+              }
+              console.error('❌ Token refresh failed - missing required roles');
+              this.logout();
+              throw new Error('ACCESS_DENIED: Token refresh failed - missing required roles for this application');
+            }
+          } else {
+            console.log('❌ Session expired - refresh failed');
+            this.logout();
+            throw new Error('Session expired');
+          }
         }
 
         const data: any = await response.json();
@@ -305,7 +324,7 @@ export class CookieAuthApiClient implements AuthApiClient {
 
   async silentAuthCheck(): Promise<boolean> {
     try {
-      const response = await fetch(`${this.authBaseUrl}/auth/session?appname=${encodeURIComponent(appConfig.auth.appName)}`, {
+      const response = await fetch(`${this.authBaseUrl}/auth/me?appname=${encodeURIComponent(appConfig.auth.appName)}`, {
         method: 'GET',
         credentials: 'include'
       });
@@ -368,7 +387,7 @@ export class CookieAuthApiClient implements AuthApiClient {
       }
       
       if (response.status === 404) {
-        console.log('⚠️ /auth/session endpoint not found (404) - falling back to refresh method');
+        console.log('⚠️ /auth/me endpoint not found (404) - falling back to refresh method');
         try {
           await this.refreshToken();
           return true;
