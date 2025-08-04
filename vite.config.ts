@@ -136,7 +136,7 @@ export default defineConfig(({ mode }) => {
             proxyReq.setHeader('Access-Control-Allow-Origin', origin);
             proxyReq.setHeader('Access-Control-Allow-Credentials', 'true');
           });
-          proxy.on('proxyRes', (proxyRes, req, res) => {
+          proxy.on('proxyRes', (_proxyRes, req, res) => {
             const origin = req.headers.origin || `http://${req.headers.host}`;
             res.setHeader('Access-Control-Allow-Origin', origin);
             res.setHeader('Access-Control-Allow-Credentials', 'true');
@@ -215,7 +215,7 @@ export default defineConfig(({ mode }) => {
             proxyReq.setHeader('Access-Control-Allow-Origin', origin);
             proxyReq.setHeader('Access-Control-Allow-Credentials', 'true');
           });
-          proxy.on('proxyRes', (proxyRes, req, res) => {
+          proxy.on('proxyRes', (_proxyRes, req, res) => {
             const origin = req.headers.origin || `http://${req.headers.host}`;
             res.setHeader('Access-Control-Allow-Origin', origin);
             res.setHeader('Access-Control-Allow-Credentials', 'true');
