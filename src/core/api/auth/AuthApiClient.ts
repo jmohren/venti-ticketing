@@ -520,7 +520,10 @@ export class CookieAuthApiClient implements AuthApiClient {
       const response = await fetch(`${this.authBaseUrl}/auth/password-reset/request`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email })
+        body: JSON.stringify({ 
+          appname: appConfig.auth.appName,
+          email 
+        })
       });
 
       if (!response.ok) {

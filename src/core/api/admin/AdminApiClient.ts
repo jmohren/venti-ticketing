@@ -72,7 +72,11 @@ export class AdminApiClient {
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ 
+          appname: appConfig.auth.appName,
+          email, 
+          password 
+        }),
       },
     );
     if (!res.ok) throw await this.extractError(res);
