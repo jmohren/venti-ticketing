@@ -102,8 +102,14 @@ export class CookieAuthApiClient implements AuthApiClient {
             if (errorData.error && errorData.error.includes('missing required roles')) {
               throw new Error(`ACCESS_DENIED: ${errorData.error}`);
             }
-          } catch (jsonError) {
-            // If we can't parse the JSON, fall through to generic error
+            // If it's a 403 but not a role error, still throw a more specific message
+            throw new Error(`ACCESS_DENIED: Access denied - insufficient permissions`);
+          } catch (parseError) {
+            // If we can't parse the JSON, still indicate it's a role/permission issue
+            if (parseError instanceof Error && parseError.message.startsWith('ACCESS_DENIED:')) {
+              throw parseError; // Re-throw our custom error
+            }
+            throw new Error(`ACCESS_DENIED: Access denied - you may be missing required roles for this application`);
           }
         }
         throw new Error('Login failed');
