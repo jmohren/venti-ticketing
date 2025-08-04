@@ -43,6 +43,10 @@ const WIDGET_STYLES = {
       fontSize: '1rem',
       lineHeight: 1.5,
     },
+    // Phone-specific: minimum height of 20% viewport height
+    '@media (max-width: 896px)': {
+      minHeight: '20vh',
+    },
   },
   header: {
     backgroundColor: '#286982', // Direct color instead of theme

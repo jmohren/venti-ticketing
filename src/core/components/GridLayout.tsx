@@ -50,6 +50,10 @@ const STATIC_STYLES = {
     display: 'flex',
     flexDirection: 'column',
     minHeight: 0,
+    // Add scrolling for phones only (both portrait and landscape)
+    '@media (max-width: 896px)': {
+      overflow: 'auto',
+    },
   },
   rowContainer: {
     display: 'flex',
@@ -58,6 +62,12 @@ const STATIC_STYLES = {
     gap: '12px',
     minHeight: 0,
     minWidth: 0,
+    // On phones: stack vertically, one widget per row (both portrait and landscape)
+    '@media (max-width: 896px)': {
+      flexDirection: 'column',
+      height: 'auto',
+      minHeight: 'auto',
+    },
   },
   columnContainer: {
     display: 'flex',
@@ -66,6 +76,11 @@ const STATIC_STYLES = {
     gap: '12px',
     minHeight: 0,
     minWidth: 0,
+    // On phones: ensure full width and auto height (both portrait and landscape)
+    '@media (max-width: 896px)': {
+      height: 'auto',
+      minHeight: 'auto',
+    },
   },
 } as const;
 
@@ -101,6 +116,7 @@ const GridLayout: React.FC<GridLayoutProps> = ({
  * Layout - main container with explicit direction
  * DEFAULT: direction="row" → children arranged horizontally (for Column children)
  * direction="column" → children arranged vertically (for Row children)
+ * RESPONSIVE: On phones, always stacks vertically regardless of direction
  */
 const Layout: React.FC<LayoutProps> = ({ children, direction = 'row' }) => {
   return (
@@ -112,6 +128,12 @@ const Layout: React.FC<LayoutProps> = ({ children, direction = 'row' }) => {
         width: '100%',
         gap: '12px',
         minHeight: 0,
+        // On phones: always stack vertically and allow auto height (both portrait and landscape)
+        '@media (max-width: 896px)': {
+          flexDirection: 'column',
+          height: 'auto',
+          minHeight: 'auto',
+        },
       }}
     >
       {children}
@@ -122,6 +144,7 @@ const Layout: React.FC<LayoutProps> = ({ children, direction = 'row' }) => {
 /**
  * Row - horizontal flexbox container
  * Uses weight as flex-grow directly
+ * RESPONSIVE: On phones, becomes full-width vertical container
  */
 const Row: React.FC<RowProps> = ({ children, weight = 1 }) => {
   return (
@@ -129,6 +152,11 @@ const Row: React.FC<RowProps> = ({ children, weight = 1 }) => {
       sx={{
         ...STATIC_STYLES.rowContainer,
         flex: `${weight} 1 0%`, // flex-grow: weight, flex-shrink: 1, flex-basis: 0%
+        // On phones: take full width and auto height (both portrait and landscape)
+        '@media (max-width: 896px)': {
+          flex: '0 0 auto',
+          width: '100%',
+        },
       }}
     >
       {children}
@@ -138,7 +166,8 @@ const Row: React.FC<RowProps> = ({ children, weight = 1 }) => {
 
 /**
  * Column - vertical flexbox container
- * Uses weight as flex-grow directly
+ * Uses weight as flex-grow directly  
+ * RESPONSIVE: On phones, becomes full-width with auto height
  */
 const Column: React.FC<ColumnProps> = ({ children, weight = 1 }) => {
   return (
@@ -146,6 +175,11 @@ const Column: React.FC<ColumnProps> = ({ children, weight = 1 }) => {
       sx={{
         ...STATIC_STYLES.columnContainer,
         flex: `${weight} 1 0%`, // flex-grow: weight, flex-shrink: 1, flex-basis: 0%
+        // On phones: take full width and auto height (both portrait and landscape)
+        '@media (max-width: 896px)': {
+          flex: '0 0 auto',
+          width: '100%',
+        },
       }}
     >
       {children}
