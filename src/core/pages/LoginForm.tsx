@@ -34,7 +34,14 @@ const LoginForm: React.FC<LoginFormProps> = ({ onLoginSuccess }) => {
       onLoginSuccess(response);
     } catch (err) {
       console.error('❌ Login failed:', err);
-      setError(err instanceof Error ? err.message : 'Login failed');
+      
+      // Handle specific role missing error
+      if (err instanceof Error && err.message.startsWith('ACCESS_DENIED:')) {
+        const roleError = err.message.replace('ACCESS_DENIED: ', '');
+        setError(`Access Denied: ${roleError}`);
+      } else {
+        setError(err instanceof Error ? err.message : 'Login failed');
+      }
     } finally {
       setLoading(false);
     }

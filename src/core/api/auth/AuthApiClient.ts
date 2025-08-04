@@ -87,10 +87,25 @@ export class CookieAuthApiClient implements AuthApiClient {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ email, password })
+        body: JSON.stringify({ 
+          email, 
+          password, 
+          appname: appConfig.auth.appName 
+        })
       });
 
       if (!response.ok) {
+        // Handle specific 403 role missing error
+        if (response.status === 403) {
+          try {
+            const errorData = await response.json();
+            if (errorData.error && errorData.error.includes('missing required roles')) {
+              throw new Error(`ACCESS_DENIED: ${errorData.error}`);
+            }
+          } catch (jsonError) {
+            // If we can't parse the JSON, fall through to generic error
+          }
+        }
         throw new Error('Login failed');
       }
 
