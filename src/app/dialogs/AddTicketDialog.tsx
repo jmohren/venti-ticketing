@@ -47,6 +47,9 @@ interface TicketData {
   raumnummer?: string;
   // Betrieb specific fields
   equipmentNummer?: string;
+  // Metadata fields
+  created_at?: string;
+  createdByName?: string;
 }
 
 interface AddTicketDialogProps {
@@ -76,7 +79,7 @@ const AddTicketDialog: React.FC<AddTicketDialogProps> = ({ open, onClose, readOn
   const { machines } = useMachines();
   
   // URL state management for new ticket creation (single source of truth)
-  const { getFormData, updateType, updateMachine, updateEquipment, updateRoom } = useTicketCreationUrlState();
+  const { getFormData, updateType, updateMachine, updateEquipment, updateMachineOnly, updateEquipmentOnly, updateRoom } = useTicketCreationUrlState();
   
   // Determine if this is a new ticket
   const isNewTicket = !initialData && !ticketId;
@@ -140,6 +143,28 @@ const AddTicketDialog: React.FC<AddTicketDialogProps> = ({ open, onClose, readOn
           setMachine(machineData.name);
         }
       }
+    }
+  };
+
+  // Handle equipment typing input (no cross-updating)
+  const handleEquipmentInput = (equipmentValue: string) => {
+    if (isNewTicket) {
+      // For new tickets, update only equipment in URL
+      updateEquipmentOnly(equipmentValue);
+    } else {
+      // For existing tickets, use local state
+      setEquipmentNummer(equipmentValue);
+    }
+  };
+
+  // Handle machine typing input (no cross-updating)
+  const handleMachineInput = (machineValue: string) => {
+    if (isNewTicket) {
+      // For new tickets, update only machine in URL
+      updateMachineOnly(machineValue);
+    } else {
+      // For existing tickets, use local state
+      setMachine(machineValue);
     }
   };
   
@@ -271,8 +296,20 @@ const AddTicketDialog: React.FC<AddTicketDialogProps> = ({ open, onClose, readOn
   // Get technician names
   const technicianNames = getTechnicianNames();
 
-  const createdAt = useMemo(() => new Date(), []);
-  const creatorName = getUserDisplayName();
+  // Use ticket data for existing tickets, current user/time for new tickets
+  const createdAt = useMemo(() => {
+    if (initialData?.created_at) {
+      return new Date(initialData.created_at);
+    }
+    return new Date();
+  }, [initialData?.created_at]);
+
+  const creatorName = useMemo(() => {
+    if (initialData?.createdByName) {
+      return initialData.createdByName;
+    }
+    return getUserDisplayName();
+  }, [initialData?.createdByName, profile, user]);
 
 
 
@@ -598,9 +635,9 @@ const AddTicketDialog: React.FC<AddTicketDialogProps> = ({ open, onClose, readOn
                 value={currentValues.equipmentNummer}
                 onChange={(_, newValue) => handleEquipmentSelect(newValue)}
                 onInputChange={(event, newInputValue) => {
-                  // Allow free typing while maintaining auto-complete
+                  // Only update equipment field during typing, no cross-updating
                   if (event?.type === 'change') {
-                    handleEquipmentSelect(newInputValue);
+                    handleEquipmentInput(newInputValue);
                   }
                 }}
                 freeSolo
@@ -621,9 +658,9 @@ const AddTicketDialog: React.FC<AddTicketDialogProps> = ({ open, onClose, readOn
                 value={currentValues.machine}
                 onChange={(_, newValue) => handleMachineSelect(newValue)}
                 onInputChange={(event, newInputValue) => {
-                  // Allow free typing while maintaining auto-complete
+                  // Only update machine field during typing, no cross-updating
                   if (event?.type === 'change') {
-                    handleMachineSelect(newInputValue);
+                    handleMachineInput(newInputValue);
                   }
                 }}
                 freeSolo

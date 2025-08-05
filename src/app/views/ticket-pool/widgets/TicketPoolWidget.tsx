@@ -195,6 +195,8 @@ const TicketPoolWidget: React.FC = () => {
             images: selectedTicket.images,
             raumnummer: selectedTicket.raumnummer,
             equipmentNummer: selectedTicket.equipmentNummer,
+            created_at: selectedTicket.created_at,
+            createdByName: selectedTicket.createdByName,
           }}
           showStatus
           onSave={(upd) => updateTicket(selectedTicket.id, { 

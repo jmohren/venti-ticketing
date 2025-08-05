@@ -44,6 +44,7 @@ export const useTicketCreationUrlState = () => {
   const [typeParam] = useStringParam('type');
   const [equipmentParam] = useStringParam('equipment');
   const [roomParam] = useStringParam('room');
+  const [machineParam] = useStringParam('machine');
   const { updateParams } = useUrlBatchUpdate();
   const { machines } = useMachines();
 
@@ -61,8 +62,8 @@ export const useTicketCreationUrlState = () => {
     } else if (roomParam) {
       // Room parameter exists → Verwaltung
       derivedType = 'verwaltung';
-    } else if (equipmentParam) {
-      // Equipment parameter exists → Betrieb
+    } else if (equipmentParam || machineParam) {
+      // Equipment or machine parameter exists → Betrieb
       derivedType = 'betrieb';
     } else {
       // No parameter → Default to Betrieb
@@ -77,11 +78,17 @@ export const useTicketCreationUrlState = () => {
         raumnummer: roomParam || ''
       };
     } else {
-      // Betrieb type
-      const machineData = equipmentParam ? machines.find(m => m.machineNumber === equipmentParam) : null;
+      // Betrieb type - prioritize machine parameter, fall back to deriving from equipment
+      let machineName = machineParam || '';
+      if (!machineName && equipmentParam) {
+        // Try to derive machine name from equipment number
+        const machineData = machines.find(m => m.machineNumber === equipmentParam);
+        machineName = machineData?.name || '';
+      }
+      
       return {
         type: 'betrieb' as const,
-        machine: machineData?.name || '',
+        machine: machineName,
         equipmentNummer: equipmentParam || '',
         raumnummer: ''
       };
@@ -108,21 +115,21 @@ export const useTicketCreationUrlState = () => {
   };
 
   const updateMachine = (machine: string) => {
-    // Find equipment number from machine name and store that in URL
+    // Store machine name in URL parameter for free text support
     // This automatically makes it betrieb type
     const updates: Record<string, string | null> = {
       'type': 'betrieb', // Set type explicitly
       'room': null,      // Clear room (switches to betrieb)
-      'machine': null    // Clear legacy machine param
+      'machine': machine || null // Store the machine name directly
     };
     
+    // If machine exists in our list, also set equipment number
     if (machine) {
       const machineData = machines.find(m => m.name === machine);
       if (machineData) {
         updates.equipment = machineData.machineNumber;
-      } else {
-        updates.equipment = null;
       }
+      // Don't clear equipment if machine not found - allow free text
     } else {
       updates.equipment = null;
     }
@@ -132,11 +139,43 @@ export const useTicketCreationUrlState = () => {
 
   const updateEquipment = (equipment: string) => {
     // Set equipment parameter (automatically makes it betrieb type)
+    const updates: Record<string, string | null> = {
+      'type': 'betrieb',  // Set type explicitly
+      'room': null,       // Clear room (switches to betrieb)
+      'equipment': equipment || null
+    };
+    
+    // If equipment exists in our list, also set machine name
+    if (equipment) {
+      const machineData = machines.find(m => m.machineNumber === equipment);
+      if (machineData) {
+        updates.machine = machineData.name;
+      }
+      // Don't clear machine if equipment not found - allow free text
+    } else {
+      updates.machine = null;
+    }
+    
+    updateParams(updates);
+  };
+
+  // Update only equipment field without affecting machine (for typing)
+  const updateEquipmentOnly = (equipment: string) => {
     updateParams({
       'type': 'betrieb',  // Set type explicitly
       'room': null,       // Clear room (switches to betrieb)
-      'machine': null,    // Clear legacy machine param
       'equipment': equipment || null
+      // Don't update machine parameter
+    });
+  };
+
+  // Update only machine field without affecting equipment (for typing)
+  const updateMachineOnly = (machine: string) => {
+    updateParams({
+      'type': 'betrieb', // Set type explicitly
+      'room': null,      // Clear room (switches to betrieb)
+      'machine': machine || null
+      // Don't update equipment parameter
     });
   };
 
@@ -158,9 +197,7 @@ export const useTicketCreationUrlState = () => {
     raumnummer?: string;
   }) => {
     const updates: Record<string, string | null> = {
-      'create-ticket': 'true',
-      // Always clear machine parameter (we don't use it anymore)
-      'machine': null
+      'create-ticket': 'true'
     };
     
     // Set type and corresponding parameter based on what's provided
@@ -169,29 +206,35 @@ export const useTicketCreationUrlState = () => {
       updates.type = 'verwaltung';
       updates.room = params.raumnummer;
       updates.equipment = null;
+      updates.machine = null;
     } else if (params?.equipmentNummer) {
       // Equipment provided → Betrieb
       updates.type = 'betrieb';
       updates.equipment = params.equipmentNummer;
       updates.room = null;
+      // Try to find matching machine name
+      const machineData = machines.find(m => m.machineNumber === params.equipmentNummer);
+      updates.machine = machineData?.name || null;
     } else if (params?.machine) {
-      // Machine name provided → Convert to equipment → Betrieb
+      // Machine name provided → Store machine name and try to find equipment
+      updates.type = 'betrieb';
+      updates.machine = params.machine;
+      updates.room = null;
+      // Try to find matching equipment number
       const machineData = machines.find(m => m.name === params.machine);
-      if (machineData) {
-        updates.type = 'betrieb';
-        updates.equipment = machineData.machineNumber;
-        updates.room = null;
-      }
+      updates.equipment = machineData?.machineNumber || null;
     } else if (params?.type) {
       // Only type provided → Set type, clear other parameters
       updates.type = params.type;
       updates.equipment = null;
       updates.room = null;
+      updates.machine = null;
     } else {
       // No parameters → Default to betrieb type
       updates.type = 'betrieb';
       updates.equipment = null;
       updates.room = null;
+      updates.machine = null;
     }
     
     updateParams(updates);
@@ -203,7 +246,6 @@ export const useTicketCreationUrlState = () => {
       'create-ticket': null,
       'equipment': null,
       'room': null,
-      // Clear any legacy parameters
       'machine': null,
       'type': null
     });
@@ -215,6 +257,8 @@ export const useTicketCreationUrlState = () => {
     updateType,
     updateMachine,
     updateEquipment,
+    updateMachineOnly,
+    updateEquipmentOnly,
     updateRoom,
     openCreateTicket,
     closeCreateTicket
