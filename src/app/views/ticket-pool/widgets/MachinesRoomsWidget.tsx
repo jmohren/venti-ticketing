@@ -107,10 +107,21 @@ const MachinesRoomsWidget: React.FC<Props> = ({ onSelect, selectedId }) => {
     <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
       {/* Header with search and add button */}
       <Paper sx={{ border: 1, borderColor: 'divider', height: '100%', display: 'flex', flexDirection: 'column' }}>
-        <MachineListHeader>
-          <Typography variant="subtitle2" fontWeight="bold">
-            Maschinen ({filteredMachines.length})
-          </Typography>
+        <MachineListHeader sx={{ gap: 1 }}>
+          <TextField
+            size="small"
+            placeholder="Maschinen durchsuchen..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <SearchIcon color="action" />
+                </InputAdornment>
+              ),
+            }}
+            sx={{ flex: 1, minWidth: 0 }}
+          />
           <Button
             size="small"
             startIcon={<AddIcon />}
@@ -121,24 +132,6 @@ const MachinesRoomsWidget: React.FC<Props> = ({ onSelect, selectedId }) => {
             Hinzufügen
           </Button>
         </MachineListHeader>
-
-        {/* Search */}
-        <Box sx={{ p: 2, borderBottom: 1, borderColor: 'divider' }}>
-        <TextField 
-            fullWidth
-          size="small" 
-            placeholder="Maschinen durchsuchen..."
-          value={search} 
-            onChange={(e) => setSearch(e.target.value)}
-            InputProps={{
-              startAdornment: (
-                <InputAdornment position="start">
-                  <SearchIcon color="action" />
-                </InputAdornment>
-              ),
-            }}
-          />
-      </Box>
 
         {/* Machine List */}
         {filteredMachines.length === 0 ? (
@@ -167,9 +160,11 @@ const MachinesRoomsWidget: React.FC<Props> = ({ onSelect, selectedId }) => {
                     <MachineItem>
                       <Box sx={{ flex: 1 }}>
                         <ListItemText
+                          sx={{ my: 0 }}
+                          disableTypography
                           primary={
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
-                              <Typography variant="body2" fontWeight={isSelected ? 'bold' : 'normal'}>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0 }}>
+                              <Typography variant="body2" fontWeight={isSelected ? 'bold' : 'normal'} sx={{ m: 0 }}>
                                 {machine.name}
               </Typography>
                               <Chip
@@ -178,7 +173,7 @@ const MachinesRoomsWidget: React.FC<Props> = ({ onSelect, selectedId }) => {
                                 variant="outlined"
                                 sx={{ 
                                   fontSize: '0.7rem',
-                                  height: 20,
+                                  height: 15,
                                   color: 'primary.main',
                                   borderColor: 'primary.main',
                                 }}

@@ -367,7 +367,7 @@ const TechnicianManagementWidget: React.FC = () => {
                   {technicianStats.map((stat) => (
                     <TableRow key={stat.id} hover>
                       <TableCell>
-                        <Box>
+                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
                           <Typography variant="body2" fontWeight="medium">
                             {stat.name}
                           </Typography>

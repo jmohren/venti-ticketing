@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Box, Typography, useTheme } from '@mui/material';
 import { styled } from '@mui/material/styles';
 
@@ -35,13 +35,20 @@ const BarContainer = styled(Box)(({ theme }) => ({
   display: 'flex',
   alignItems: 'center',
   gap: theme.spacing(1),
-  marginBottom: theme.spacing(1),
 }));
 
-const BarLabel = styled(Typography)(() => ({
-  minWidth: 120,
+const BarLabel = styled('span')(({ theme }) => ({
+  ...theme.typography.body2,
+  minWidth: 0,
   fontWeight: 500,
   fontSize: '0.875rem',
+  whiteSpace: 'nowrap',
+  overflow: 'hidden',
+  textOverflow: 'ellipsis',
+  flex: '0 0 auto',
+  margin: 0,
+  display: 'inline-flex',
+  alignItems: 'center',
 }));
 
 const BarTrack = styled(Box)(({ theme }) => ({
@@ -94,6 +101,7 @@ const BarChart: React.FC<BarChartProps> = ({
   stacked = false 
 }) => {
   const theme = useTheme();
+  const [labelColumnWidth, setLabelColumnWidth] = useState<number>(0);
   
   // Calculate max value if not provided
   const calculatedMaxValue = maxValue || (() => {
@@ -109,8 +117,41 @@ const BarChart: React.FC<BarChartProps> = ({
     }
   })();
 
-  // Get all unique labels
-  const labels = series.length > 0 ? series[0].data.map(d => d.label) : [];
+  // Get all unique labels (assumes same label order across series)
+  const labels = useMemo(() => (series.length > 0 ? series[0].data.map(d => d.label) : []), [series]);
+
+  // Measure the longest label and set a fixed width for the label column
+  useEffect(() => {
+    if (labels.length === 0) {
+      setLabelColumnWidth(0);
+      return;
+    }
+
+    const rootFontSizePx = typeof window !== 'undefined'
+      ? parseFloat(getComputedStyle(document.documentElement).fontSize || '16')
+      : 16;
+    const body2Rem = 0.875; // matches BarLabel fontSize
+    const fontSizePx = rootFontSizePx * body2Rem;
+    const fontWeight = 500; // matches BarLabel fontWeight
+    const fontFamily = theme.typography.fontFamily || 'Roboto, Helvetica, Arial, sans-serif';
+
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    ctx.font = `${fontWeight} ${Math.round(fontSizePx)}px ${fontFamily}`;
+
+    const maxTextWidth = labels.reduce((max, label) => {
+      const metrics = ctx.measureText(label);
+      return Math.max(max, metrics.width);
+    }, 0);
+
+    // Add horizontal padding + the gap between label and bar
+    const horizontalPaddingPx = 8; // approx left/right padding inside Typography
+    const gapPx = parseFloat(String(theme.spacing(1)).replace('px', '')) || 8;
+    const computedWidth = Math.ceil(maxTextWidth + horizontalPaddingPx + gapPx);
+
+    setLabelColumnWidth(computedWidth);
+  }, [labels, theme]);
 
   // Default colors from MUI palette
   const defaultColors = [
@@ -131,9 +172,9 @@ const BarChart: React.FC<BarChartProps> = ({
             const totalValue = series.reduce((sum, s) => sum + s.data[labelIndex]?.value || 0, 0);
             const percentage = calculatedMaxValue > 0 ? (totalValue / calculatedMaxValue) * 100 : 0;
             
-            return (
-              <BarContainer key={label}>
-                <BarLabel>{label}</BarLabel>
+              return (
+                <BarContainer key={label}>
+                  <BarLabel style={{ width: labelColumnWidth }}>{label}</BarLabel>
                 <BarTrack>
                   <Box sx={{ display: 'flex', height: '100%', width: `${percentage}%` }}>
                     {series.map((s, seriesIndex) => {
@@ -165,9 +206,9 @@ const BarChart: React.FC<BarChartProps> = ({
             const percentage = calculatedMaxValue > 0 ? (dataPoint.value / calculatedMaxValue) * 100 : 0;
             const color = dataPoint.color || firstSeries.color || defaultColors[0];
             
-            return (
-              <BarContainer key={label}>
-                <BarLabel>{label}</BarLabel>
+              return (
+                <BarContainer key={label}>
+                  <BarLabel style={{ width: labelColumnWidth }}>{label}</BarLabel>
                 <BarTrack>
                   <BarSegment width={percentage} color={color}>
                     {dataPoint.value > 0 && percentage > 20 ? dataPoint.value : ''}

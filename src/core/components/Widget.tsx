@@ -168,22 +168,10 @@ const getContentStyles = (allowHorizontalScroll: boolean) => ({
   '& p': {
     fontSize: 'inherit',
     lineHeight: 'inherit',
-    marginBottom: '1rem',
     ...(allowHorizontalScroll 
       ? { whiteSpace: 'nowrap', overflow: 'visible' }
       : { wordWrap: 'break-word', hyphens: 'auto' }
     ),
-    [responsive.down('sm')]: {
-      marginBottom: '0.5rem',
-    },
-  },
-  '& ul, & ol': {
-    paddingLeft: '1.5rem',
-    marginBottom: '1rem',
-    [responsive.down('sm')]: {
-      paddingLeft: '1rem',
-      marginBottom: '0.5rem',
-    },
   },
   '& li': {
     fontSize: 'inherit',
