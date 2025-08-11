@@ -66,7 +66,9 @@ export const MachineProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const addMachine = useCallback(async (machine: Omit<Machine, 'id' | 'created_at' | 'updated_at'>) => {
     try {
       setError(null);
-      const newMachine = await restApiClient.create<Machine>('machines', machine);
+      // Defensively strip server-managed fields in case they are present on the object
+      const { id: _omitId, created_at: _omitCreatedAt, updated_at: _omitUpdatedAt, ...payload } = machine as any;
+      const newMachine = await restApiClient.create<Machine>('machines', payload);
       setMachines(prev => [...prev, newMachine]);
     } catch (err) {
       console.error('Failed to add machine:', err);

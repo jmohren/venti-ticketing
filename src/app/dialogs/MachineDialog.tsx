@@ -71,7 +71,7 @@ const MachineDialog: React.FC<Props> = ({ open, onClose, onSave, initial }) => {
 
           {/* Machine number */}
           <TextField 
-            label="Maschinen Nummer" 
+            label="Equipment Nummer" 
             value={machineNumber} 
             onChange={e => setMachineNumber(e.target.value)} 
             size="small" 
