@@ -7,6 +7,7 @@ import { TicketProvider } from '@/app/state/TicketProvider';
 import { MachineProvider } from '@/app/state/MachineProvider';
 import { TechnicianProvider } from '@/app/state/TechnicianProvider';
 import { Box, CircularProgress, Typography } from '@mui/material';
+import { UsersProvider } from '@/core/state/UsersProvider';
 
 // Lazy load views for better performance
 const AddTicketView = React.lazy(() => import('@/app/views/add-ticket/AddTicketView'));
@@ -32,13 +33,15 @@ const BASE_VIEWS = [
 
 // Provider composition - add new providers here
 const AppProviders = ({ children }: { children: React.ReactNode }) => (
-  <TicketProvider>
-    <MachineProvider>
-      <TechnicianProvider>
-        {children}
-      </TechnicianProvider>
-    </MachineProvider>
-  </TicketProvider>
+  <UsersProvider>
+    <TicketProvider>
+      <MachineProvider>
+        <TechnicianProvider>
+          {children}
+        </TechnicianProvider>
+      </MachineProvider>
+    </TicketProvider>
+  </UsersProvider>
 );
 
 // Loading fallback component

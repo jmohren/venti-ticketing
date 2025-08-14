@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   Box,
   Typography,
@@ -23,22 +23,9 @@ import { Delete, Add } from '@mui/icons-material';
 import { useTechnicians } from '@/app/hooks/useTechnicians';
 import { useTickets } from '@/app/hooks/useTickets';
 import { format, startOfMonth, endOfMonth, isWithinInterval } from 'date-fns';
-import { appConfig } from '@/config/appConfig';
+import { useUsers } from '@/core/hooks/useUsers';
 
-interface User {
-  userId: string;
-  email: string;
-  profile: {
-    firstName: string | null;
-    lastName: string | null;
-    isComplete: boolean;
-  };
-}
-
-interface UsersResponse {
-  users: User[];
-  nextPaginationToken: string | null;
-}
+type User = ReturnType<typeof useUsers>['users'][number];
 
 interface TechnicianStats {
   id: number;
@@ -50,10 +37,8 @@ interface TechnicianStats {
 }
 
 const TechnicianManagementWidget: React.FC = () => {
-  const [users, setUsers] = useState<User[]>([]);
+  const { users, loading: loadingUsers, error: userError } = useUsers();
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
-  const [loadingUsers, setLoadingUsers] = useState(false);
-  const [userError, setUserError] = useState<string | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [monthPickerOpen, setMonthPickerOpen] = useState(false);
   const [selectedMonth, setSelectedMonth] = useState<Date>(new Date());
@@ -159,33 +144,7 @@ const TechnicianManagementWidget: React.FC = () => {
     return remainingMinutes > 0 ? `${hours}h ${remainingMinutes}m` : `${hours}h`;
   };
 
-  // Load registered users from the API
-  const loadUsers = async () => {
-    try {
-      setLoadingUsers(true);
-      setUserError(null);
-      
-      // Use the users endpoint with proper backend URL
-      const response = await fetch(`${appConfig.api.baseUrl}/users/?limit=100`, {
-        credentials: 'include',
-        headers: {
-          'accept': 'application/json'
-        }
-      });
-      
-      if (!response.ok) {
-        throw new Error('Failed to fetch users');
-      }
-      
-      const data: UsersResponse = await response.json();
-      setUsers(data.users);
-    } catch (err) {
-      console.error('Failed to load users:', err);
-      setUserError('Failed to load users');
-    } finally {
-      setLoadingUsers(false);
-    }
-  };
+  // Global users are fetched by the UsersProvider on app start
 
   // Add a new technician
   const handleAddTechnician = async () => {
@@ -258,10 +217,7 @@ const TechnicianManagementWidget: React.FC = () => {
     }
   };
 
-  // Load users on component mount
-  useEffect(() => {
-    loadUsers();
-  }, []);
+  // Users are already available globally, no need to fetch here
 
   // Filter out users who are already technicians
   const availableUsers = users.filter(user => 
