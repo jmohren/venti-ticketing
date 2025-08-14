@@ -10,21 +10,21 @@ const TechnicianLoadWidget: React.FC = () => {
   const theme = useTheme();
 
   const chartData = useMemo(() => {
-    // Initialize data for all official technicians
-    const technicianData: Record<string, { backlog: number; progress: number }> = {};
+    // Initialize data for all official technicians (keyed by userId)
+    const technicianData: Record<string, { backlog: number; progress: number; displayName: string }> = {};
     
     // Start with all official technicians (with 0 tickets initially)
     technicians.forEach(technician => {
       const displayName = getTechnicianDisplayName(technician);
-      technicianData[displayName] = { backlog: 0, progress: 0 };
+      technicianData[technician.userId] = { backlog: 0, progress: 0, displayName };
     });
     
-    // Aggregate actual ticket data by technician
+    // Aggregate actual ticket data by technician userId
     tickets.forEach(t => {
       if (!t.responsible) return;
       if (!['backlog', 'progress'].includes(t.status)) return;
       
-      // Only count tickets assigned to official technicians
+      // Only count tickets assigned to official technicians (by userId)
       if (technicianData[t.responsible]) {
         technicianData[t.responsible][t.status as 'backlog' | 'progress'] += 1;
       }
@@ -32,11 +32,11 @@ const TechnicianLoadWidget: React.FC = () => {
 
     // Convert to array and sort by total load (backlog + progress), then by name
     const sortedTechnicians = Object.entries(technicianData)
-      .map(([tech, counts]) => ({
-        name: tech,
-        backlog: counts.backlog,
-        progress: counts.progress,
-        total: counts.backlog + counts.progress
+      .map(([, data]) => ({
+        name: data.displayName,
+        backlog: data.backlog,
+        progress: data.progress,
+        total: data.backlog + data.progress
       }))
       .sort((a, b) => {
         // First sort by total load (descending)

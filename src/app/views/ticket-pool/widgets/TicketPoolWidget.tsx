@@ -3,6 +3,7 @@ import { Box, Typography } from '@mui/material';
 import { format } from 'date-fns';
 import AddTicketDialog from '@/app/dialogs/AddTicketDialog';
 import { useTickets, Ticket } from '@/app/hooks/useTickets';
+import { useResponsibleDisplay } from '@/app/hooks/useResponsibleDisplay';
 import SummaryCard from '@/core/ui/SummaryCard';
 import KanbanLane from '@/core/ui/KanbanLane';
 import { useTicketUrlState } from '@/app/hooks/useTicketUrlState';
@@ -14,6 +15,7 @@ const priorityColor = {
 } as const;
 
 const TicketCard: React.FC<{ ticket: Ticket; onClick: () => void; draggable?: boolean; onDropCard: (targetId: number, e: React.DragEvent) => void }> = ({ ticket, onClick, draggable, onDropCard }) => {
+  const { getResponsibleDisplayName } = useResponsibleDisplay();
   const createdEvent = ticket.events.find((ev) => ev.type === 'create');
   const createdAt = createdEvent ? format(new Date(createdEvent.timestamp), 'dd.MM.yyyy') : '';
 
@@ -27,7 +29,7 @@ const TicketCard: React.FC<{ ticket: Ticket; onClick: () => void; draggable?: bo
       title={displayTitle}
       description={ticket.description}
       borderColor={priorityColor[ticket.priority]}
-      bottomLeft={ticket.responsible?.trim() ? ticket.responsible : 'Unassigned'}
+      bottomLeft={getResponsibleDisplayName(ticket.responsible)}
       bottomRight={createdAt}
       onClick={onClick}
       draggable={draggable}
@@ -196,7 +198,7 @@ const TicketPoolWidget: React.FC = () => {
             raumnummer: selectedTicket.raumnummer,
             equipmentNummer: selectedTicket.equipmentNummer,
             created_at: selectedTicket.created_at,
-            createdByName: selectedTicket.createdByName,
+            createdByUserId: selectedTicket.createdByUserId,
           }}
           showStatus
           onSave={(upd) => updateTicket(selectedTicket.id, { 

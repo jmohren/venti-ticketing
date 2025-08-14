@@ -29,17 +29,85 @@ interface UsersContextValue {
 
 const UsersContext = createContext<UsersContextValue | undefined>(undefined);
 
+// Cache configuration
+const CACHE_KEY = 'venti_users_cache';
+const CACHE_DURATION = 60 * 60 * 1000; // 1 hour in milliseconds
+
+interface CachedUsersData {
+  users: AppUser[];
+  timestamp: number;
+}
+
 export const UsersProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [users, setUsers] = useState<AppUser[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [lastFetchedAt, setLastFetchedAt] = useState<number | null>(null);
 
-  const fetchUsers = useCallback(async (signal?: AbortSignal) => {
+  // Helper functions for cache management
+  const getCachedUsers = useCallback((): CachedUsersData | null => {
+    try {
+      const cached = localStorage.getItem(CACHE_KEY);
+      if (!cached) return null;
+      
+      const data: CachedUsersData = JSON.parse(cached);
+      const now = Date.now();
+      
+      // Check if cache is still valid (within 1 hour)
+      if (now - data.timestamp > CACHE_DURATION) {
+        localStorage.removeItem(CACHE_KEY);
+        return null;
+      }
+      
+      return data;
+    } catch (error) {
+      console.warn('⚠️ [USERS] Failed to read cache:', error);
+      localStorage.removeItem(CACHE_KEY);
+      return null;
+    }
+  }, []);
+
+  const setCachedUsers = useCallback((users: AppUser[]) => {
+    try {
+      const cacheData: CachedUsersData = {
+        users,
+        timestamp: Date.now()
+      };
+      localStorage.setItem(CACHE_KEY, JSON.stringify(cacheData));
+      console.log('💾 [USERS] Cached users data for 1 hour');
+    } catch (error) {
+      console.warn('⚠️ [USERS] Failed to cache users:', error);
+    }
+  }, []);
+
+  // Initialize with cached data if available
+  useEffect(() => {
+    const cachedData = getCachedUsers();
+    if (cachedData) {
+      console.log('🚀 [USERS] Initializing with cached data from', new Date(cachedData.timestamp).toLocaleString());
+      setUsers(cachedData.users);
+      setLastFetchedAt(cachedData.timestamp);
+    }
+  }, [getCachedUsers]); // Run only once on mount
+
+  const fetchUsers = useCallback(async (signal?: AbortSignal, forceRefresh = false) => {
     try {
       setLoading(true);
       setError(null);
 
+      // Check cache first unless force refresh is requested
+      if (!forceRefresh) {
+        const cachedData = getCachedUsers();
+        if (cachedData) {
+          console.log('📦 [USERS] Using cached data from', new Date(cachedData.timestamp).toLocaleString());
+          setUsers(cachedData.users);
+          setLastFetchedAt(cachedData.timestamp);
+          setLoading(false);
+          return;
+        }
+      }
+
+      console.log('🔄 [USERS] Fetching fresh data from API');
       const res = await authApiClient.apiRequest(`${appConfig.api.baseUrl}/users/?limit=100`, {
         method: 'GET',
         headers: { 'accept': 'application/json' },
@@ -87,15 +155,20 @@ export const UsersProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         }
       }
 
-      setUsers(data.users || []);
-      setLastFetchedAt(Date.now());
+      const usersData = data.users || [];
+      setUsers(usersData);
+      const timestamp = Date.now();
+      setLastFetchedAt(timestamp);
+      
+      // Cache the data for future use
+      setCachedUsers(usersData);
     } catch (err) {
       console.error('❌ [USERS] Fetch failed:', err);
       setError('Failed to load users');
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [getCachedUsers, setCachedUsers]);
 
   useEffect(() => {
     // Kick off initial load on app start; abort on StrictMode test remounts
@@ -109,7 +182,7 @@ export const UsersProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     loading,
     error,
     lastFetchedAt,
-    refresh: () => fetchUsers(),
+    refresh: () => fetchUsers(undefined, true), // Force refresh when manually called
   }), [users, loading, error, lastFetchedAt, fetchUsers]);
 
   return (

@@ -25,5 +25,7 @@ export const useTickets = () => {
     refreshTickets: context.refreshTickets,
     getTicketsByCreator: context.getTicketsByCreator,
     getMyTickets: context.getMyTickets,
+    getCreatorDisplayName: context.getCreatorDisplayName,
+    loadArchivedTickets: context.loadArchivedTickets,
   };
 }; 

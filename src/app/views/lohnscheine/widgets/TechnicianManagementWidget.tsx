@@ -51,6 +51,7 @@ const TechnicianManagementWidget: React.FC = () => {
     addTechnician, 
     deleteTechnician,
     getTechnicianDisplayName,
+    getTechnicianEmail,
   } = useTechnicians();
   
   // Use tickets for performance analysis
@@ -69,10 +70,11 @@ const TechnicianManagementWidget: React.FC = () => {
   const technicianStats = useMemo(() => {
     const stats: TechnicianStats[] = technicians.map(technician => {
       const displayName = getTechnicianDisplayName(technician);
+      const email = getTechnicianEmail(technician);
       
-      // Get tickets assigned to this technician in current month
+      // Get tickets assigned to this technician in current month (by userId)
       const technicianTickets = tickets.filter(ticket => 
-        ticket.responsible === displayName
+        ticket.responsible === technician.userId
       );
 
       // Count assigned tickets in current month (by creation date)
@@ -118,7 +120,7 @@ const TechnicianManagementWidget: React.FC = () => {
       return {
         id: technician.id,
         name: displayName,
-        email: technician.email,
+        email,
         assigned,
         completed,
         totalWorkTimeMinutes
@@ -151,14 +153,8 @@ const TechnicianManagementWidget: React.FC = () => {
     if (!selectedUser) return;
     
     try {
-      const newTechnician = {
-        userId: selectedUser.userId,
-        firstName: selectedUser.profile.firstName,
-        lastName: selectedUser.profile.lastName,
-        email: selectedUser.email
-      };
-      
-      await addTechnician(newTechnician);
+      // Only send userId; names/emails will be derived from global users
+      await addTechnician({ userId: selectedUser.userId });
       setSelectedUser(null);
       setDialogOpen(false);
     } catch (err) {

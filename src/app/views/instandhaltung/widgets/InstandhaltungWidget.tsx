@@ -3,6 +3,7 @@ import { Box } from '@mui/material';
 import { format } from 'date-fns';
 import KanbanLane from '@/core/ui/KanbanLane';
 import { useTickets, Ticket } from '@/app/hooks/useTickets';
+import { useResponsibleDisplay } from '@/app/hooks/useResponsibleDisplay';
 import AddTicketDialog from '@/app/dialogs/AddTicketDialog';
 import SummaryCard from '@/core/ui/SummaryCard';
 import { useTicketUrlState } from '@/app/hooks/useTicketUrlState';
@@ -10,6 +11,7 @@ import { useTicketUrlState } from '@/app/hooks/useTicketUrlState';
 const priorityColor = { rot: '#d32f2f', gelb: '#f9a825', gruen: '#2e7d32' } as const;
 
 const TicketCard: React.FC<{ t: Ticket; onClick: () => void; draggable?: boolean; onDropCard: (targetId:number,e:React.DragEvent)=>void }> = ({ t, onClick, draggable, onDropCard }) => {
+  const { getResponsibleDisplayName } = useResponsibleDisplay();
   const createdEvent = t.events.find(ev => ev.type === 'create');
   const createdAt = createdEvent ? format(new Date(createdEvent.timestamp), 'dd.MM.yyyy') : '';
 
@@ -23,7 +25,7 @@ const TicketCard: React.FC<{ t: Ticket; onClick: () => void; draggable?: boolean
       title={displayTitle}
       description={t.description}
       borderColor={priorityColor[t.priority]}
-      bottomLeft={t.responsible?.trim() ? t.responsible : 'Unassigned'}
+      bottomLeft={getResponsibleDisplayName(t.responsible)}
       bottomRight={createdAt}
       onClick={onClick}
       draggable={draggable}
@@ -35,9 +37,9 @@ const TicketCard: React.FC<{ t: Ticket; onClick: () => void; draggable?: boolean
   );
 };
 
-interface Props { currentUser: string }
+interface Props { currentUserId: string }
 
-const InstandhaltungWidget: React.FC<Props> = ({ currentUser }) => {
+const InstandhaltungWidget: React.FC<Props> = ({ currentUserId }) => {
   const { tickets, updateTicket, reorderTickets } = useTickets();
   const { selectedTicket, isDialogOpen, openTicket, closeTicket } = useTicketUrlState();
 
@@ -79,7 +81,7 @@ const InstandhaltungWidget: React.FC<Props> = ({ currentUser }) => {
     reorderTickets(dragId,targetId,after);
   };
 
-  const filtered = tickets.filter(t=> t.responsible===currentUser);
+  const filtered = tickets.filter(t=> t.responsible===currentUserId);
   const backlog = filtered.filter(t=>t.status==='backlog');
   const progress = filtered.filter(t=>t.status==='progress');
   const todayDone = filtered.filter(t=> t.status==='done' && t.completedAt && new Date(t.completedAt).toDateString()===new Date().toDateString());
@@ -119,7 +121,7 @@ const InstandhaltungWidget: React.FC<Props> = ({ currentUser }) => {
             raumnummer: selectedTicket.raumnummer,
             equipmentNummer: selectedTicket.equipmentNummer,
             created_at: selectedTicket.created_at,
-            createdByName: selectedTicket.createdByName,
+            createdByUserId: selectedTicket.createdByUserId,
           }}
         />
       )}

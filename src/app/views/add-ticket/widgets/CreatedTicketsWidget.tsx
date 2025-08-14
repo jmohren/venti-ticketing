@@ -2,6 +2,7 @@ import React from 'react';
 import { Box, Typography, List, ListItem, ListItemText, Chip } from '@mui/material';
 import { format } from 'date-fns';
 import { useTickets } from '@/app/hooks/useTickets';
+import { useResponsibleDisplay } from '@/app/hooks/useResponsibleDisplay';
 import { useTicketUrlState } from '@/app/hooks/useTicketUrlState';
 import AddTicketDialog from '@/app/dialogs/AddTicketDialog';
 
@@ -26,6 +27,7 @@ const statusLabel = {
 
 const CreatedTicketsWidget: React.FC = () => {
   const { getMyTickets } = useTickets();
+  const { getResponsibleDisplayName } = useResponsibleDisplay();
   const { selectedTicket, isDialogOpen, openTicket, closeTicket } = useTicketUrlState();
 
   // Get tickets created by current user and sort by creation date (newest first)
@@ -117,7 +119,7 @@ const CreatedTicketsWidget: React.FC = () => {
                     </Typography>
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                        {ticket.responsible?.trim() ? ticket.responsible : 'Unassigned'}
+                        {getResponsibleDisplayName(ticket.responsible)}
                       </Typography>
                       <Typography variant="caption" sx={{ color: 'text.secondary' }}>
                         {createdAt}
@@ -153,7 +155,7 @@ const CreatedTicketsWidget: React.FC = () => {
             raumnummer: selectedTicket.raumnummer,
             equipmentNummer: selectedTicket.equipmentNummer,
             created_at: selectedTicket.created_at,
-            createdByName: selectedTicket.createdByName,
+            createdByUserId: selectedTicket.createdByUserId,
           }}
         />
       )}

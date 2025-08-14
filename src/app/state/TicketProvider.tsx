@@ -1,6 +1,8 @@
 import React, { createContext, useContext, useState, useCallback, useMemo, useEffect } from 'react';
 import { restApiClient } from '@/core/api/rest/RestApiClient';
 import { useUser } from '@/core/state/UserProvider';
+import { useResponsibleDisplay } from '@/app/hooks/useResponsibleDisplay';
+import { useUsersContext } from '@/core/state/UsersProvider';
 
 export type TicketPriority = 'rot' | 'gelb' | 'gruen';
 export type TicketStatus = 'backlog' | 'progress' | 'done' | 'archived';
@@ -53,12 +55,16 @@ interface TicketContextValue {
   refreshTickets: () => Promise<void>;
   getTicketsByCreator: (userId: string) => Ticket[];
   getMyTickets: () => Ticket[];
+  getCreatorDisplayName: (createdByUserId?: string) => string;
+  loadArchivedTickets: (options?: { page?: number; limit?: number; search?: string; }) => Promise<Ticket[]>;
 }
 
 const TicketContext = createContext<TicketContextValue | undefined>(undefined);
 
 export const TicketProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user, profile } = useUser();
+  const { users } = useUsersContext();
+  const { getResponsibleDisplayName } = useResponsibleDisplay();
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -70,12 +76,39 @@ export const TicketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     return 'Demo User';
   };
 
-  // Load tickets from API
+  // Get creator display name from userId (for display purposes)
+  const getCreatorDisplayName = useCallback((createdByUserId?: string) => {
+    if (!createdByUserId?.trim()) return '-';
+    
+    // Check if it looks like a UUID (userId format)
+    const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(createdByUserId);
+    
+    if (isUUID) {
+      // It's a userId, try to find the user
+      const creator = users.find(u => u.userId === createdByUserId);
+      if (creator) {
+        const fn = creator.profile?.firstName || '';
+        const ln = creator.profile?.lastName || '';
+        const full = [fn, ln].filter(Boolean).join(' ');
+        return full || creator.email;
+      }
+      
+      // User ID not found in database
+      console.warn(`⚠️ [TICKETS] User ID not found in user database: ${createdByUserId}`);
+      return '-';
+    }
+    
+    // Legacy data: it's already a display name, return as-is
+    return createdByUserId;
+  }, [users]);
+
+  // Load tickets from API (excluding archived tickets for global views)
   const loadTickets = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
       const data = await restApiClient.get<Ticket>('tickets', {
+        status: 'neq.archived', // Exclude archived tickets from global state
         order: ['created_at.desc']
       });
       setTickets(data);
@@ -101,9 +134,8 @@ export const TicketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       
       const ticketWithEvents = {
       ...ticket,
-        // Store user tracking information
+        // Store user tracking information (only userId, no createdByName)
         createdByUserId: currentUserId || undefined,
-        createdByName: userDisplayName,
         events: ticket.events ?? [{ 
           timestamp: now, 
           type: 'create' as const,
@@ -150,11 +182,11 @@ export const TicketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
       // Detect assignment change
         if (partial.responsible !== undefined && partial.responsible !== existingTicket.responsible) {
-        const newResp = partial.responsible || 'Niemand';
+        const newRespDisplayName = partial.responsible ? getResponsibleDisplayName(partial.responsible) : 'Niemand';
           events.push({ 
             timestamp: now, 
             type: 'assign', 
-            details: `${userDisplayName}: Zugewiesen an ${newResp}` 
+            details: `${userDisplayName}: Zugewiesen an ${newRespDisplayName}` 
           });
       }
       }
@@ -237,15 +269,49 @@ export const TicketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     await loadTickets();
   }, [loadTickets]);
 
+  // Load archived tickets specifically for Wissensdatenbank view with pagination and search
+  const loadArchivedTickets = useCallback(async (options?: {
+    page?: number;
+    limit?: number;
+    search?: string;
+  }) => {
+    try {
+      const params: Record<string, any> = {
+        status: 'eq.archived', // Only archived tickets
+        order: ['created_at.desc']
+      };
+
+      // Add pagination
+      if (options?.page !== undefined && options?.limit !== undefined) {
+        const offset = options.page * options.limit;
+        params.offset = offset;
+        params.limit = options.limit;
+      }
+
+      // Add search across multiple fields
+      if (options?.search && options.search.trim()) {
+        const searchTerm = options.search.trim();
+        // Search in description, machine, and raumnummer fields
+        params.or = `(description.ilike.*${searchTerm}*,machine.ilike.*${searchTerm}*,raumnummer.ilike.*${searchTerm}*)`;
+      }
+
+      const data = await restApiClient.get<Ticket>('tickets', params);
+      return data;
+    } catch (err) {
+      console.error('Failed to load archived tickets:', err);
+      throw err;
+    }
+  }, []);
+
   // Helper to get tickets created by a specific user
   const getTicketsByCreator = useCallback((userId: string) => {
     return tickets.filter(ticket => ticket.createdByUserId === userId);
   }, [tickets]);
 
-  // Helper to get tickets created by current user (excluding archived)
+  // Helper to get tickets created by current user (archived already excluded from global state)
   const getMyTickets = useCallback(() => {
     if (!user?.userId) return [];
-    return getTicketsByCreator(user.userId).filter(ticket => ticket.status !== 'archived');
+    return getTicketsByCreator(user.userId);
   }, [user?.userId, getTicketsByCreator]);
 
   const value = useMemo(() => ({
@@ -260,7 +326,9 @@ export const TicketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     refreshTickets,
     getTicketsByCreator,
     getMyTickets,
-  }), [tickets, loading, error, addTicket, updateTicket, getTicketById, reorderTickets, archiveTickets, refreshTickets, getTicketsByCreator, getMyTickets]);
+    getCreatorDisplayName,
+    loadArchivedTickets,
+  }), [tickets, loading, error, addTicket, updateTicket, getTicketById, reorderTickets, archiveTickets, refreshTickets, getTicketsByCreator, getMyTickets, getCreatorDisplayName, loadArchivedTickets]);
 
   return <TicketContext.Provider value={value}>{children}</TicketContext.Provider>;
 };

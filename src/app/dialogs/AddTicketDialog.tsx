@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -49,7 +49,7 @@ interface TicketData {
   equipmentNummer?: string;
   // Metadata fields
   created_at?: string;
-  createdByName?: string;
+  createdByUserId?: string;
 }
 
 interface AddTicketDialogProps {
@@ -74,9 +74,16 @@ interface AddTicketDialogProps {
  */
 const AddTicketDialog: React.FC<AddTicketDialogProps> = ({ open, onClose, readOnly = false, initialData, showStatus = false, onSave, allowResponsibleEdit = false, allowPlanEdit = false, ticketId, showArchiveButton = false, onArchive, allowWorkTracking = false }) => {
   const { user, profile } = useUser();
-  const { updateTicket } = useTickets();
-  const { getTechnicianNames } = useTechnicians();
+  const { updateTicket, getCreatorDisplayName } = useTickets();
+  const { technicians, getTechnicianDisplayName } = useTechnicians();
   const { machines } = useMachines();
+
+  // Helper to get userId from display name (for legacy compatibility)
+  // Must be defined before useState calls that use it
+  const getUserIdFromDisplayName = useCallback((displayName: string) => {
+    const tech = technicians.find(t => getTechnicianDisplayName(t) === displayName);
+    return tech ? tech.userId : displayName;
+  }, [technicians, getTechnicianDisplayName]);
   
   // URL state management for new ticket creation (single source of truth)
   const { getFormData, updateType, updateMachine, updateEquipment, updateMachineOnly, updateEquipmentOnly, updateRoom } = useTicketCreationUrlState();
@@ -199,7 +206,16 @@ const AddTicketDialog: React.FC<AddTicketDialogProps> = ({ open, onClose, readOn
 
   // For new tickets, use URL state; for existing tickets, use local state
   const [machine, setMachine] = useState(initialData?.machine || '');
-  const [responsible, setResponsible] = useState(initialData?.responsible || '');
+  // Initialize responsible with userId if it's a userId, otherwise try to convert from display name
+  const [responsible, setResponsible] = useState(() => {
+    if (!initialData?.responsible) return '';
+    // If it looks like a userId (UUID format), use it directly
+    if (initialData.responsible.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
+      return initialData.responsible;
+    }
+    // Otherwise, try to convert from display name to userId (legacy compatibility)
+    return getUserIdFromDisplayName(initialData.responsible);
+  });
   const [plannedDate, setPlannedDate] = useState<Date | null>(initialData?.plannedCompletion ? new Date(initialData.plannedCompletion) : null);
   const [ticketType, setTicketType] = useState<'verwaltung' | 'betrieb'>(initialData?.type || 'betrieb');
   const [category, setCategory] = useState<'elektrisch' | 'mechanisch'>(initialData?.category || 'mechanisch');
@@ -268,7 +284,14 @@ const AddTicketDialog: React.FC<AddTicketDialogProps> = ({ open, onClose, readOn
       setPriority(initialData?.priority || 'gruen');
 
       setMachine(initialData?.machine || '');
-      setResponsible(initialData?.responsible || '');
+      // Reset responsible with proper userId handling
+      if (!initialData?.responsible) {
+        setResponsible('');
+      } else if (initialData.responsible.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
+        setResponsible(initialData.responsible);
+      } else {
+        setResponsible(getUserIdFromDisplayName(initialData.responsible));
+      }
       setPlannedDate(initialData?.plannedCompletion ? new Date(initialData.plannedCompletion) : null);
       setTicketType(initialData?.type || 'betrieb');
       setCategory(initialData?.category || 'mechanisch');
@@ -293,8 +316,23 @@ const AddTicketDialog: React.FC<AddTicketDialogProps> = ({ open, onClose, readOn
 
 
 
-  // Get technician names
-  const technicianNames = getTechnicianNames();
+  // Create options for dropdown (no longer need technicianNames)
+  
+  // Create technician options with userId as value and display name as label
+  const technicianOptions = useMemo(() => {
+    return technicians.map(tech => ({
+      userId: tech.userId,
+      displayName: getTechnicianDisplayName(tech)
+    }));
+  }, [technicians, getTechnicianDisplayName]);
+
+  // Helper to get display name from userId (for showing current selection)
+  const getDisplayNameFromUserId = useCallback((userId: string) => {
+    const tech = technicians.find(t => t.userId === userId);
+    return tech ? getTechnicianDisplayName(tech) : userId;
+  }, [technicians, getTechnicianDisplayName]);
+
+
 
   // Use ticket data for existing tickets, current user/time for new tickets
   const createdAt = useMemo(() => {
@@ -305,11 +343,11 @@ const AddTicketDialog: React.FC<AddTicketDialogProps> = ({ open, onClose, readOn
   }, [initialData?.created_at]);
 
   const creatorName = useMemo(() => {
-    if (initialData?.createdByName) {
-      return initialData.createdByName;
+    if (initialData?.createdByUserId) {
+      return getCreatorDisplayName(initialData.createdByUserId);
     }
     return getUserDisplayName();
-  }, [initialData?.createdByName, profile, user]);
+  }, [initialData?.createdByUserId, getCreatorDisplayName, profile, user]);
 
 
 
@@ -720,10 +758,17 @@ const AddTicketDialog: React.FC<AddTicketDialogProps> = ({ open, onClose, readOn
                 label="Verantwortlich"
                 value={responsible}
                 onChange={(e) => setResponsible(e.target.value as string)}
+                displayEmpty
+                renderValue={(selected) => {
+                  if (!selected) return <em>Niemand</em>;
+                  return getDisplayNameFromUserId(selected);
+                }}
               >
                 <MenuItem value=""><em>Niemand</em></MenuItem>
-                {technicianNames.map(emp => (
-                  <MenuItem key={emp} value={emp}>{emp}</MenuItem>
+                {technicianOptions.map(option => (
+                  <MenuItem key={option.userId} value={option.userId}>
+                    {option.displayName}
+                  </MenuItem>
                 ))}
               </Select>
             </FormControl>

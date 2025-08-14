@@ -1,12 +1,10 @@
 import React, { createContext, useContext, useState, useCallback, useMemo, useEffect } from 'react';
 import { restApiClient } from '@/core/api/rest/RestApiClient';
+import { useUsersContext } from '@/core/state/UsersProvider';
 
 export interface Technician {
   id: number;
   userId: string;
-  firstName: string | null;
-  lastName: string | null;
-  email: string;
   created_at?: string;
   updated_at?: string;
 }
@@ -15,7 +13,7 @@ interface TechnicianContextValue {
   technicians: Technician[];
   loading: boolean;
   error: string | null;
-  addTechnician: (technician: Omit<Technician, 'id' | 'created_at' | 'updated_at'>) => Promise<void>;
+  addTechnician: (technician: { userId: string }) => Promise<void>;
   updateTechnician: (id: number, partial: Partial<Technician>) => Promise<void>;
   deleteTechnician: (id: number) => Promise<void>;
   getTechnicianById: (id: number) => Technician | undefined;
@@ -23,12 +21,14 @@ interface TechnicianContextValue {
   getActiveTechnicians: () => Technician[];
   getTechnicianNames: () => string[];
   getTechnicianDisplayName: (technician: Technician) => string;
+  getTechnicianEmail: (technician: Technician) => string;
   refreshTechnicians: () => Promise<void>;
 }
 
 const TechnicianContext = createContext<TechnicianContextValue | undefined>(undefined);
 
 export const TechnicianProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { users } = useUsersContext();
   const [technicians, setTechnicians] = useState<Technician[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -38,10 +38,19 @@ export const TechnicianProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     try {
       setLoading(true);
       setError(null);
-      const data = await restApiClient.get<Technician>('technicians', {
+      const rawData = await restApiClient.get<any>('technicians', {
         order: ['created_at.desc']
       });
-      setTechnicians(data);
+      
+      // Filter out legacy firstName, lastName, email fields from API response
+      const cleanData: Technician[] = rawData.map((tech: any) => ({
+        id: tech.id,
+        userId: tech.userId,
+        created_at: tech.created_at,
+        updated_at: tech.updated_at
+      }));
+      
+      setTechnicians(cleanData);
     } catch (err) {
       console.error('Failed to load technicians:', err);
       setError('Failed to load technicians');
@@ -55,11 +64,22 @@ export const TechnicianProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     loadTechnicians();
   }, [loadTechnicians]);
 
-  const addTechnician = useCallback(async (technician: Omit<Technician, 'id' | 'created_at' | 'updated_at'>) => {
+  const addTechnician = useCallback(async (technician: { userId: string }) => {
     try {
       setError(null);
-      const newTechnician = await restApiClient.create<Technician>('technicians', technician);
-      setTechnicians(prev => [newTechnician, ...prev]);
+      // Only send userId to backend; legacy name/email fields will be removed
+      const payload = { userId: technician.userId };
+      const rawResponse = await restApiClient.create<any>('technicians', payload);
+      
+      // Filter out legacy fields from response before adding to state
+      const cleanTechnician: Technician = {
+        id: rawResponse.id,
+        userId: rawResponse.userId,
+        created_at: rawResponse.created_at,
+        updated_at: rawResponse.updated_at
+      };
+      
+      setTechnicians(prev => [cleanTechnician, ...prev]);
     } catch (err) {
       console.error('Failed to add technician:', err);
       setError('Failed to add technician');
@@ -70,8 +90,17 @@ export const TechnicianProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   const updateTechnician = useCallback(async (id: number, partial: Partial<Technician>) => {
     try {
       setError(null);
-      const updatedTechnician = await restApiClient.update<Technician>('technicians', id, partial);
-      setTechnicians(prev => prev.map(t => t.id === id ? updatedTechnician : t));
+      const rawResponse = await restApiClient.update<any>('technicians', id, partial);
+      
+      // Filter out legacy fields from response before updating state
+      const cleanTechnician: Technician = {
+        id: rawResponse.id,
+        userId: rawResponse.userId,
+        created_at: rawResponse.created_at,
+        updated_at: rawResponse.updated_at
+      };
+      
+      setTechnicians(prev => prev.map(t => t.id === id ? cleanTechnician : t));
     } catch (err) {
       console.error('Failed to update technician:', err);
       setError('Failed to update technician');
@@ -105,11 +134,26 @@ export const TechnicianProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   }, [technicians]);
 
   const getTechnicianDisplayName = useCallback((technician: Technician) => {
-    if (technician.firstName && technician.lastName) {
-      return `${technician.firstName} ${technician.lastName}`;
+    // Get display name from global Users data
+    const user = users.find(u => u.userId === technician.userId);
+    if (user) {
+      const fn = user.profile?.firstName || '';
+      const ln = user.profile?.lastName || '';
+      const full = [fn, ln].filter(Boolean).join(' ');
+      return full || user.email;
     }
-    return technician.email;
-  }, []);
+    // User ID not found in database
+    console.warn(`⚠️ [TECHNICIANS] User ID not found in user database: ${technician.userId}`);
+    return '-';
+  }, [users]);
+
+  const getTechnicianEmail = useCallback((technician: Technician) => {
+    const user = users.find(u => u.userId === technician.userId);
+    if (user) return user.email;
+    // User ID not found in database - return fallback
+    console.warn(`⚠️ [TECHNICIANS] User ID not found for email lookup: ${technician.userId}`);
+    return '-';
+  }, [users]);
 
   const getTechnicianNames = useCallback(() => {
     return technicians.map(t => getTechnicianDisplayName(t));
@@ -131,8 +175,9 @@ export const TechnicianProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     getActiveTechnicians,
     getTechnicianNames,
     getTechnicianDisplayName,
+    getTechnicianEmail,
     refreshTechnicians,
-  }), [technicians, loading, error, addTechnician, updateTechnician, deleteTechnician, getTechnicianById, getTechnicianByName, getActiveTechnicians, getTechnicianNames, getTechnicianDisplayName, refreshTechnicians]);
+  }), [technicians, loading, error, addTechnician, updateTechnician, deleteTechnician, getTechnicianById, getTechnicianByName, getActiveTechnicians, getTechnicianNames, getTechnicianDisplayName, getTechnicianEmail, refreshTechnicians]);
 
   return <TechnicianContext.Provider value={value}>{children}</TechnicianContext.Provider>;
 };

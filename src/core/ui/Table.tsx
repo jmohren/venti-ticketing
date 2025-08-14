@@ -23,7 +23,9 @@ import {
   ListItemText,
   Checkbox,
   FormControlLabel,
+  CircularProgress,
 } from '@mui/material';
+import { lighten } from '@mui/material/styles';
 import SearchIcon from '@mui/icons-material/Search';
 import FilterListIcon from '@mui/icons-material/FilterList';
 import ClearIcon from '@mui/icons-material/Clear';
@@ -64,23 +66,26 @@ const StyledTableHead = styled(TableHead)(({ theme }) => ({
 
 // TableCell styled component with hover effect
 const StyledTableCell = styled(TableCell)(() => ({
-  padding: '8px 16px',
+  padding: '6px 12px',
   whiteSpace: 'nowrap'
 }));
 
 // Add StyledLabel component after the existing styled components
-const StyledLabel = styled(Box)<{ color: string }>(({ color }) => ({
-  display: 'inline-block',
-  padding: '3px 8px',
-  borderRadius: '12px',
-  fontWeight: 500,
-  fontSize: '0.75rem',
-  border: `1px solid ${color}`,
-  color: color,
-  backgroundColor: `${color}20`, // 20% opacity version of the color
-  textAlign: 'center',
-  minWidth: '60px'
-}));
+const StyledLabel = styled(Box)<{ color: string }>(({ color }) => {
+  const bgColor = lighten(color, 0.9); // very light variant of the base colour (90% closer to white)
+  return {
+    display: 'inline-block',
+    padding: '3px 8px',
+    borderRadius: '12px',
+    fontWeight: 500,
+    fontSize: '0.75rem',
+    border: `1px solid ${color}`,
+    color: color,
+    backgroundColor: bgColor,
+    textAlign: 'center',
+    minWidth: '60px'
+  };
+});
 
 export type ColumnType = 
   | 'text' 
@@ -140,6 +145,7 @@ export interface TableProps {
   // Server-side search props
   enableServerSideSearch?: boolean;
   onServerSearch?: (searchQuery: string) => void;
+  searchLoading?: boolean;
   totalCount?: number;
   onPageChange?: (page: number, rowsPerPage: number) => void;
 }
@@ -172,6 +178,7 @@ const Table: React.FC<TableProps> = ({
   // Server-side search props
   enableServerSideSearch = false,
   onServerSearch,
+  searchLoading = false,
   totalCount,
   onPageChange
 }) => {
@@ -597,14 +604,19 @@ const Table: React.FC<TableProps> = ({
                 variant="contained"
                 size="small"
                 onClick={handleServerSearch}
+                disabled={searchLoading}
                 sx={{ 
-                  minWidth: 'auto', 
+                  minWidth: '80px', // Fixed width to prevent layout shift
                   px: 2, 
                   flexShrink: 0,
                   height: '40px' // Match TextField small size height
                 }}
               >
-                Suchen
+                {searchLoading ? (
+                  <CircularProgress size={16} color="inherit" />
+                ) : (
+                  'Suchen'
+                )}
               </Button>
             )}
           </Box>
@@ -614,7 +626,7 @@ const Table: React.FC<TableProps> = ({
       {hasFilters && (
         <Box sx={{ px: 1, display: 'flex', alignItems: 'center', flexWrap: 'wrap', mb: 1, flexShrink: 0 }}>
           <Typography variant="body2" sx={{ mr: 1 }}>
-            Active filters:
+            Aktive Filter:
           </Typography>
           {Object.entries(filters).map(([columnId, values]) => {
             if (values.length === 0) return null;
@@ -636,7 +648,7 @@ const Table: React.FC<TableProps> = ({
                   fontSize: '0.75rem'
                 }}
               >
-                {column.label}: {values.length === 1 ? values[0] : `${values.length} selected`}
+                {column.label}: {values.length === 1 ? values[0] : `${values.length} ausgewählt`}
                 <IconButton 
                   size="small" 
                   sx={{ ml: 0.5, p: 0.2, color: 'white' }}
@@ -659,7 +671,7 @@ const Table: React.FC<TableProps> = ({
             onClick={clearAllFilters}
             sx={{ ml: 'auto', fontSize: '0.75rem' }}
           >
-            Clear all
+            Alle löschen
           </Button>
         </Box>
       )}
@@ -697,7 +709,7 @@ const Table: React.FC<TableProps> = ({
                     indeterminate={numSelected > 0 && numSelected < rowCount}
                     checked={rowCount > 0 && numSelected === rowCount}
                     onChange={handleSelectAllClick}
-                    inputProps={{ 'aria-label': 'select all' }}
+                    inputProps={{ 'aria-label': 'Alle auswählen' }}
                     size="small"
                   />
                 </StyledTableCell>
@@ -820,7 +832,7 @@ const Table: React.FC<TableProps> = ({
             {displayData.length === 0 && (
               <TableRow>
                 <StyledTableCell colSpan={enableRowSelection ? columns.length + 1 : columns.length} align="center">
-                  {searchQuery.trim() || hasFilters ? 'No matching results' : 'No data available'}
+                  {searchQuery.trim() || hasFilters ? 'Keine Treffer' : 'Keine Daten verfügbar'}
                 </StyledTableCell>
               </TableRow>
             )}
@@ -868,11 +880,11 @@ const Table: React.FC<TableProps> = ({
       >
         <Box sx={{ p: 2, width: 250 }}>
           <Typography variant="subtitle2" gutterBottom>
-            Filter by {columns.find(col => col.id === activeFilterColumn)?.label}
+            Filtern nach {columns.find(col => col.id === activeFilterColumn)?.label}
           </Typography>
           
           <TextField
-            placeholder="Search values..."
+            placeholder="Werte suchen..."
             size="small"
             fullWidth
             variant="outlined"
@@ -895,33 +907,50 @@ const Table: React.FC<TableProps> = ({
           }}>
             <List dense disablePadding>
               {activeFilterColumn && uniqueColumnValues[activeFilterColumn] ? (
-                uniqueColumnValues[activeFilterColumn].map((value) => (
-                  <ListItem 
-                    key={value} 
-                    dense 
-                    disablePadding
-                    sx={{ 
-                      py: 0,
-                      borderBottom: '1px solid #f0f0f0',
-                      '&:last-child': { borderBottom: 'none' }
-                    }}
-                  >
-                    <FormControlLabel
-                      control={
-                        <Checkbox 
-                          checked={selectedFilters.includes(value)}
-                          onChange={() => handleFilterToggle(value)}
-                          size="small"
-                        />
-                      }
-                      label={<Typography variant="body2">{value}</Typography>}
-                      sx={{ width: '100%', ml: 0, px: 1 }}
-                    />
-                  </ListItem>
-                ))
+                uniqueColumnValues[activeFilterColumn].map((value) => {
+                  const column = columns.find(col => col.id === activeFilterColumn);
+                  // Decide how to render the label/value inside the filter list
+                  const renderedLabel = (column?.type === 'label' && column.options) ? (() => {
+                    const option = column.options.find(opt => opt.value === value);
+                    return option ? (
+                      <StyledLabel color={option.color || '#666666'}>
+                        {option.label}
+                      </StyledLabel>
+                    ) : (
+                      <Typography variant="body2">{value}</Typography>
+                    );
+                  })() : (
+                    <Typography variant="body2">{value}</Typography>
+                  );
+
+                  return (
+                    <ListItem 
+                      key={value} 
+                      dense 
+                      disablePadding
+                      sx={{ 
+                        py: 0,
+                        borderBottom: '1px solid #f0f0f0',
+                        '&:last-child': { borderBottom: 'none' }
+                      }}
+                    >
+                      <FormControlLabel
+                        control={
+                          <Checkbox 
+                            checked={selectedFilters.includes(value)}
+                            onChange={() => handleFilterToggle(value)}
+                            size="small"
+                          />
+                        }
+                        label={renderedLabel}
+                        sx={{ width: '100%', ml: 0, px: 1 }}
+                      />
+                    </ListItem>
+                  );
+                })
               ) : (
                 <ListItem>
-                  <ListItemText primary="No values available" />
+                  <ListItemText primary="Keine Werte verfügbar" />
                 </ListItem>
               )}
             </List>
@@ -933,14 +962,14 @@ const Table: React.FC<TableProps> = ({
               size="small" 
               onClick={selectAllFilters}
             >
-              Select All
+              Alle auswählen
             </Button>
             <Button 
               variant="text" 
               size="small" 
               onClick={() => setSelectedFilters([])}
             >
-              Clear
+              Leeren
             </Button>
           </Box>
           
@@ -952,7 +981,7 @@ const Table: React.FC<TableProps> = ({
               size="small" 
               onClick={clearFilter}
             >
-              Reset
+              Zurücksetzen
             </Button>
             <Button 
               variant="contained" 
@@ -960,7 +989,7 @@ const Table: React.FC<TableProps> = ({
               onClick={applyFilter}
               disabled={selectedFilters.length === 0 && !filters[activeFilterColumn]}
             >
-              Apply
+              Anwenden
             </Button>
           </Box>
         </Box>

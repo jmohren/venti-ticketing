@@ -1,9 +1,10 @@
-import React from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { format } from 'date-fns';
 import { useTickets, Ticket } from '@/app/hooks/useTickets';
 import { useTicketUrlState } from '@/app/hooks/useTicketUrlState';
 import Table, { TableColumn } from '@/core/ui/Table';
 import AddTicketDialog from '@/app/dialogs/AddTicketDialog';
+import { Box, CircularProgress, Typography } from '@mui/material';
 
 const priorityColor = {
   rot: '#d32f2f',
@@ -52,11 +53,90 @@ const categoryColor = {
 } as const;
 
 const WissensdatenbankWidget: React.FC = () => {
-  const { tickets, updateTicket } = useTickets();
-  const { selectedTicket, isDialogOpen, openTicket, closeTicket } = useTicketUrlState();
+  const { updateTicket, loadArchivedTickets } = useTickets();
+  const { ticketId, isDialogOpen, openTicket, closeTicket } = useTicketUrlState();
+  
+  // Local state for archived tickets (loaded separately)
+  const [archivedTickets, setArchivedTickets] = useState<Ticket[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [totalCount, setTotalCount] = useState(0);
 
-  // Show only archived tickets for the knowledge database
-  const archivedTickets = tickets.filter(ticket => ticket.status === 'archived');
+  // Handle server-side search from Table component
+  const handleServerSearch = useCallback(async (query: string) => {
+    try {
+      setSearchLoading(true);
+      setError(null);
+      const tickets = await loadArchivedTickets({
+        page: 0, // Reset to first page when searching
+        limit: 75, // Use default page size
+        search: query
+      });
+      setArchivedTickets(tickets);
+      // Estimate total count based on results
+      if (tickets.length < 75) {
+        setTotalCount(tickets.length);
+      } else {
+        setTotalCount(76); // +1 to indicate more pages exist
+      }
+    } catch (err) {
+      console.error('Failed to search archived tickets:', err);
+      setError('Failed to search archived tickets');
+    } finally {
+      setSearchLoading(false);
+    }
+  }, [loadArchivedTickets]);
+
+  // Handle pagination changes from Table component
+  const handlePageChange = useCallback(async (page: number, rowsPerPageValue: number) => {
+    try {
+      setError(null);
+      const tickets = await loadArchivedTickets({
+        page,
+        limit: rowsPerPageValue,
+        search: '' // No search when paginating
+      });
+      setArchivedTickets(tickets);
+      // Estimate total count
+      if (tickets.length < rowsPerPageValue) {
+        setTotalCount(page * rowsPerPageValue + tickets.length);
+      } else {
+        setTotalCount((page + 1) * rowsPerPageValue + 1);
+      }
+    } catch (err) {
+      console.error('Failed to load archived tickets:', err);
+      setError('Failed to load archived tickets');
+    }
+  }, [loadArchivedTickets]);
+
+  // Initial load
+  useEffect(() => {
+    const initialLoad = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const tickets = await loadArchivedTickets({
+          page: 0,
+          limit: 75,
+          search: ''
+        });
+        setArchivedTickets(tickets);
+        if (tickets.length < 75) {
+          setTotalCount(tickets.length);
+        } else {
+          setTotalCount(76);
+        }
+      } catch (err) {
+        console.error('Failed to load archived tickets:', err);
+        setError('Failed to load archived tickets');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    initialLoad();
+  }, [loadArchivedTickets]);
 
   const columns: TableColumn[] = [
     {
@@ -186,22 +266,55 @@ const WissensdatenbankWidget: React.FC = () => {
     openTicket(row.id);
   };
 
+  // Get selected ticket from local archived tickets (since they're not in global state)
+  const selectedTicket = useMemo(() => {
+    if (!ticketId || !archivedTickets.length) return null;
+    return archivedTickets.find(t => t.id === ticketId) || null;
+  }, [ticketId, archivedTickets]);
+
+  // Only show loading screen on initial load, not during search/pagination
+  if (loading && archivedTickets.length === 0) {
+    return (
+      <Box display="flex" justifyContent="center" alignItems="center" minHeight="200px">
+        <CircularProgress />
+        <Typography variant="body2" sx={{ ml: 2 }}>
+          Lade archivierte Tickets...
+        </Typography>
+      </Box>
+    );
+  }
+
+  if (error) {
+    return (
+      <Box display="flex" justifyContent="center" alignItems="center" minHeight="200px">
+        <Typography variant="body2" color="error">
+          {error}
+        </Typography>
+      </Box>
+    );
+  }
+
   return (
     <>
       <Table
         columns={columns}
         data={tableData}
         enablePagination={true}
-        defaultRowsPerPage={75}
         rowsPerPageOptions={[50, 75, 100, 200]}
+        defaultRowsPerPage={75}
+        totalCount={totalCount}
         enableSorting={true}
         searchable={true}
+        enableServerSideSearch={true}
+        searchLoading={searchLoading}
         enableFiltering={true}
         enableRowSelection={false}
         enableRowDeletion={false}
         enableRowAddition={false}
         enableRowEditing={true}
         onEditRow={handleRowDoubleClick}
+        onServerSearch={handleServerSearch}
+        onPageChange={handlePageChange}
         getRowStyle={(_rowData: Record<string, any>) => ({
           cursor: 'pointer',
           '&:hover': {
@@ -230,7 +343,7 @@ const WissensdatenbankWidget: React.FC = () => {
             raumnummer: selectedTicket.raumnummer,
             equipmentNummer: selectedTicket.equipmentNummer,
             created_at: selectedTicket.created_at,
-            createdByName: selectedTicket.createdByName,
+            createdByUserId: selectedTicket.createdByUserId,
           }}
           showStatus
           onSave={(upd) => updateTicket(selectedTicket.id, { 

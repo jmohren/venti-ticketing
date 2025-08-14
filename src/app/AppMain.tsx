@@ -34,13 +34,13 @@ const BASE_VIEWS = [
 // Provider composition - add new providers here
 const AppProviders = ({ children }: { children: React.ReactNode }) => (
   <UsersProvider>
-    <TicketProvider>
-      <MachineProvider>
-        <TechnicianProvider>
+    <TechnicianProvider>
+      <TicketProvider>
+        <MachineProvider>
           {children}
-        </TechnicianProvider>
-      </MachineProvider>
-    </TicketProvider>
+        </MachineProvider>
+      </TicketProvider>
+    </TechnicianProvider>
   </UsersProvider>
 );
 
