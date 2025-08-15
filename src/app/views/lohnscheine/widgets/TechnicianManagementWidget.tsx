@@ -24,7 +24,7 @@ import {
 
 import { useTechnicians } from '@/app/hooks/useTechnicians';
 import { restApiClient } from '@/core/api/rest/RestApiClient';
-import { Ticket, useTickets } from '@/app/hooks/useTickets';
+import { Ticket } from '@/app/hooks/useTickets';
 import { useTicketUrlState } from '@/app/hooks/useTicketUrlState';
 import AddTicketDialog from '@/app/dialogs/AddTicketDialog';
 import { format, startOfMonth, endOfMonth } from 'date-fns';
@@ -33,7 +33,6 @@ import { format, startOfMonth, endOfMonth } from 'date-fns';
 
 
 const TechnicianManagementWidget: React.FC = () => {
-  const { updateTicket } = useTickets();
   const { ticketId, isDialogOpen, openTicket, closeTicket } = useTicketUrlState();
 
   const [monthPickerOpen, setMonthPickerOpen] = useState(false);
@@ -463,7 +462,6 @@ const TechnicianManagementWidget: React.FC = () => {
           open={isDialogOpen}
           onClose={closeTicket}
           readOnly
-          ticketId={selectedTicket.id}
           initialData={{
             machine: selectedTicket.machine,
             description: selectedTicket.description,
@@ -482,13 +480,6 @@ const TechnicianManagementWidget: React.FC = () => {
             totalWorkTimeMinutes: selectedTicket.totalWorkTimeMinutes,
           }}
           showStatus
-          onSave={(upd) => updateTicket(selectedTicket.id, { 
-            responsible: upd.responsible || '', 
-            plannedCompletion: upd.plannedCompletion ?? selectedTicket.plannedCompletion,
-            category: upd.category ?? selectedTicket.category
-          })}
-          allowResponsibleEdit
-          allowPlanEdit
         />
       )}
     </>

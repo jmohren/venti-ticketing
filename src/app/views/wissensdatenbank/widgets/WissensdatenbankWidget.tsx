@@ -54,7 +54,7 @@ const categoryColor = {
 } as const;
 
 const WissensdatenbankWidget: React.FC = () => {
-  const { updateTicket, loadArchivedTickets } = useTickets();
+  const { loadArchivedTickets } = useTickets();
   const { ticketId, isDialogOpen, openTicket, closeTicket } = useTicketUrlState();
   const { users } = useUsersContext();
   
@@ -357,7 +357,6 @@ const WissensdatenbankWidget: React.FC = () => {
           open={isDialogOpen}
           onClose={closeTicket}
           readOnly
-          ticketId={selectedTicket.id}
           initialData={{
             machine: selectedTicket.machine,
             description: selectedTicket.description,
@@ -376,13 +375,6 @@ const WissensdatenbankWidget: React.FC = () => {
             totalWorkTimeMinutes: selectedTicket.totalWorkTimeMinutes,
           }}
           showStatus
-          onSave={(upd) => updateTicket(selectedTicket.id, { 
-            responsible: upd.responsible || '', 
-            plannedCompletion: upd.plannedCompletion ?? selectedTicket.plannedCompletion,
-            category: upd.category ?? selectedTicket.category
-          })}
-          allowResponsibleEdit
-          allowPlanEdit
         />
       )}
     </>
