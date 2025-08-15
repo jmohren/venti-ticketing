@@ -12,6 +12,10 @@ import {
   Chip,
   Paper,
   Button,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
 } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import SearchIcon from '@mui/icons-material/Search';
@@ -66,6 +70,10 @@ const MachinesRoomsWidget: React.FC<Props> = ({ onSelect, selectedId }) => {
   const [search, setSearch] = useState('');
   const [machineDialogOpen, setMachineDialogOpen] = useState(false);
   const [editMachine, setEditMachine] = useState<Machine | null>(null);
+  
+  // Delete confirmation dialog state
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [machineToDelete, setMachineToDelete] = useState<Machine | null>(null);
 
   // Filter machines based on search
   const filteredMachines = machines.filter(machine => 
@@ -87,10 +95,26 @@ const MachinesRoomsWidget: React.FC<Props> = ({ onSelect, selectedId }) => {
     setMachineDialogOpen(true);
   };
 
-  const handleDeleteMachine = (machineId: number) => {
-    if (window.confirm('Maschine löschen?')) {
-      deleteMachine(machineId);
+  const handleDeleteMachine = (machine: Machine) => {
+    setMachineToDelete(machine);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!machineToDelete) return;
+    
+    try {
+      await deleteMachine(machineToDelete.id);
+      setDeleteDialogOpen(false);
+      setMachineToDelete(null);
+    } catch (error) {
+      console.error('Error deleting machine:', error);
     }
+  };
+
+  const handleCancelDelete = () => {
+    setDeleteDialogOpen(false);
+    setMachineToDelete(null);
   };
 
   const handleMachineSave = (machine: Machine) => {
@@ -217,7 +241,7 @@ const MachinesRoomsWidget: React.FC<Props> = ({ onSelect, selectedId }) => {
                 color="error"
                         onClick={(e) => {
                           e.stopPropagation();
-                            handleDeleteMachine(machine.id);
+                            handleDeleteMachine(machine);
                         }}
                       >
                         <DeleteIcon fontSize="small" />
@@ -242,6 +266,33 @@ const MachinesRoomsWidget: React.FC<Props> = ({ onSelect, selectedId }) => {
         initial={editMachine}
         onSave={handleMachineSave}
       />
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog 
+        open={deleteDialogOpen} 
+        onClose={handleCancelDelete}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>Maschine löschen</DialogTitle>
+        <DialogContent>
+          <Typography>
+            Sind Sie sicher, dass Sie die Maschine <strong>{machineToDelete?.name}</strong> löschen möchten?
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCancelDelete}>
+            Abbrechen
+          </Button>
+          <Button 
+            onClick={handleConfirmDelete}
+            variant="contained"
+            color="error"
+          >
+            Löschen
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };

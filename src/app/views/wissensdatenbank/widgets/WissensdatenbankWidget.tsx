@@ -344,6 +344,7 @@ const WissensdatenbankWidget: React.FC = () => {
             equipmentNummer: selectedTicket.equipmentNummer,
             created_at: selectedTicket.created_at,
             createdByUserId: selectedTicket.createdByUserId,
+            totalWorkTimeMinutes: selectedTicket.totalWorkTimeMinutes,
           }}
           showStatus
           onSave={(upd) => updateTicket(selectedTicket.id, { 

@@ -47,14 +47,14 @@ const TicketPoolWidget: React.FC = () => {
 
   const backlog = tickets.filter(t => t.status === 'backlog');
   const inProgress = tickets.filter(t => t.status === 'progress');
-  const todayDone = tickets.filter(t => t.status === 'done' && t.completedAt && new Date(t.completedAt).toDateString() === new Date().toDateString());
+  const done = tickets.filter(t => t.status === 'done');
 
   const findTicket = (id: number): { lane: 'backlog' | 'progress' | 'done'; index: number } | null => {
     const idxBack = backlog.findIndex((t) => t.id === id);
     if (idxBack !== -1) return { lane: 'backlog', index: idxBack };
     const idxProg = inProgress.findIndex((t) => t.id === id);
     if (idxProg !== -1) return { lane: 'progress', index: idxProg };
-    const idxDone = todayDone.findIndex((t) => t.id === id);
+    const idxDone = done.findIndex((t) => t.id === id);
     if (idxDone !== -1) return { lane: 'done', index: idxDone };
     return null;
   };
@@ -169,11 +169,11 @@ const TicketPoolWidget: React.FC = () => {
       <KanbanLane
         sx={{ flex: 1.2 }}
         key="done"
-        header="Done (Heute)"
+        header="Done"
         onDragOver={(e) => e.preventDefault()}
         onDrop={(e) => handleDrop('done', e)}
       >
-        {todayDone.map((t) => (
+        {done.map((t) => (
           <TicketCard key={t.id} ticket={t} onClick={() => openTicket(t.id)} draggable onDropCard={handleCardDrop} />
         ))}
       </KanbanLane>
@@ -199,6 +199,7 @@ const TicketPoolWidget: React.FC = () => {
             equipmentNummer: selectedTicket.equipmentNummer,
             created_at: selectedTicket.created_at,
             createdByUserId: selectedTicket.createdByUserId,
+            totalWorkTimeMinutes: selectedTicket.totalWorkTimeMinutes,
           }}
           showStatus
           onSave={(upd) => updateTicket(selectedTicket.id, { 

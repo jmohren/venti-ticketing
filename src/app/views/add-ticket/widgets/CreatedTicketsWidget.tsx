@@ -156,6 +156,7 @@ const CreatedTicketsWidget: React.FC = () => {
             equipmentNummer: selectedTicket.equipmentNummer,
             created_at: selectedTicket.created_at,
             createdByUserId: selectedTicket.createdByUserId,
+            totalWorkTimeMinutes: selectedTicket.totalWorkTimeMinutes,
           }}
         />
       )}

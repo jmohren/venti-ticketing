@@ -122,6 +122,7 @@ const InstandhaltungWidget: React.FC<Props> = ({ currentUserId }) => {
             equipmentNummer: selectedTicket.equipmentNummer,
             created_at: selectedTicket.created_at,
             createdByUserId: selectedTicket.createdByUserId,
+            totalWorkTimeMinutes: selectedTicket.totalWorkTimeMinutes,
           }}
         />
       )}

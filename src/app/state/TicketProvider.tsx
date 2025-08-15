@@ -35,6 +35,8 @@ export interface Ticket {
   raumnummer?: string;
   // Betrieb specific fields
   equipmentNummer?: string;
+  // Work time tracking
+  totalWorkTimeMinutes?: number;
   // Database fields
   created_at?: string;
   updated_at?: string;

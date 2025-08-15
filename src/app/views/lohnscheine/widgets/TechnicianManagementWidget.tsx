@@ -1,61 +1,100 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import {
   Box,
   Typography,
-  Autocomplete,
-  TextField,
   Button,
-  IconButton,
   Dialog,
   DialogTitle,
   DialogContent,
   DialogActions,
-  Fab,
+  Chip,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
   Table,
   TableBody,
   TableCell,
   TableContainer,
   TableHead,
   TableRow,
-  Chip,
+  Paper,
+  CircularProgress,
 } from '@mui/material';
-import { Delete, Add } from '@mui/icons-material';
+
 import { useTechnicians } from '@/app/hooks/useTechnicians';
-import { useTickets } from '@/app/hooks/useTickets';
-import { format, startOfMonth, endOfMonth, isWithinInterval } from 'date-fns';
-import { useUsers } from '@/core/hooks/useUsers';
+import { restApiClient } from '@/core/api/rest/RestApiClient';
+import { Ticket } from '@/app/hooks/useTickets';
+import { format, startOfMonth, endOfMonth } from 'date-fns';
 
-type User = ReturnType<typeof useUsers>['users'][number];
 
-interface TechnicianStats {
-  id: number;
-  name: string;
-  email: string;
-  assigned: number;
-  completed: number;
-  totalWorkTimeMinutes: number;
-}
+
 
 const TechnicianManagementWidget: React.FC = () => {
-  const { users, loading: loadingUsers, error: userError } = useUsers();
-  const [selectedUser, setSelectedUser] = useState<User | null>(null);
-  const [dialogOpen, setDialogOpen] = useState(false);
+
   const [monthPickerOpen, setMonthPickerOpen] = useState(false);
   const [selectedMonth, setSelectedMonth] = useState<Date>(new Date());
+  const [selectedTechnician, setSelectedTechnician] = useState<string>(''); // userId of selected technician
+  const [technicianTickets, setTechnicianTickets] = useState<Ticket[]>([]);
+  const [loadingTickets, setLoadingTickets] = useState(false);
+  const [ticketError, setTicketError] = useState<string | null>(null);
   
   // Use the shared technician provider
   const { 
     technicians, 
-    loading: technicianLoading, 
     error: technicianError, 
-    addTechnician, 
-    deleteTechnician,
     getTechnicianDisplayName,
-    getTechnicianEmail,
   } = useTechnicians();
   
-  // Use tickets for performance analysis
-  const { tickets } = useTickets();
+
+
+  // Load tickets for selected technician and month
+  const loadTechnicianTickets = useCallback(async (technicianUserId: string, month: Date) => {
+    if (!technicianUserId) {
+      setTechnicianTickets([]);
+      return;
+    }
+
+    setLoadingTickets(true);
+    setTicketError(null);
+
+    try {
+      const startDate = startOfMonth(month).toISOString();
+      const endDate = endOfMonth(month).toISOString();
+      
+      // Query for tickets assigned to this technician, completed in this month
+      // Note: PostgREST doesn't support range queries easily, so we'll filter client-side
+      const allTickets = await restApiClient.get('tickets', {
+        responsible: `eq.${technicianUserId}`,
+        order: ['completedAt.desc']
+      });
+      
+      // Filter by completion date range on client side
+      const startTime = new Date(startDate).getTime();
+      const endTime = new Date(endDate).getTime();
+      
+      const tickets = allTickets.filter((ticket: Ticket) => {
+        if (!ticket.completedAt) return false;
+        const completedTime = new Date(ticket.completedAt).getTime();
+        return completedTime >= startTime && completedTime <= endTime;
+      });
+      
+      setTechnicianTickets(tickets);
+    } catch (error) {
+      console.error('Error loading technician tickets:', error);
+      setTicketError(error instanceof Error ? error.message : 'Failed to load tickets');
+      setTechnicianTickets([]);
+    } finally {
+      setLoadingTickets(false);
+    }
+  }, []);
+
+  // Load tickets when technician or month changes
+  useEffect(() => {
+    if (selectedTechnician) {
+      loadTechnicianTickets(selectedTechnician, selectedMonth);
+    }
+  }, [selectedTechnician, selectedMonth, loadTechnicianTickets]);
 
   // Selected month for performance stats
   const currentMonth = useMemo(() => {
@@ -66,113 +105,9 @@ const TechnicianManagementWidget: React.FC = () => {
     };
   }, [selectedMonth]);
 
-  // Calculate performance stats
-  const technicianStats = useMemo(() => {
-    const stats: TechnicianStats[] = technicians.map(technician => {
-      const displayName = getTechnicianDisplayName(technician);
-      const email = getTechnicianEmail(technician);
-      
-      // Get tickets assigned to this technician in current month (by userId)
-      const technicianTickets = tickets.filter(ticket => 
-        ticket.responsible === technician.userId
-      );
 
-      // Count assigned tickets in current month (by creation date)
-      const assigned = technicianTickets.filter(ticket => {
-        if (!ticket.created_at) return false;
-        const createdDate = new Date(ticket.created_at);
-        return isWithinInterval(createdDate, currentMonth);
-      }).length;
 
-      // Count completed tickets in current month (by completion date)
-      const completed = technicianTickets.filter(ticket => {
-        if (!ticket.completedAt) return false;
-        const completedDate = new Date(ticket.completedAt);
-        return isWithinInterval(completedDate, currentMonth);
-      }).length;
 
-      // Calculate total work time in minutes from work events
-      let totalWorkTimeMinutes = 0;
-      
-      technicianTickets.forEach(ticket => {
-        const workEvents = ticket.events
-          .filter(event => 
-            (event.type === 'work_started' || event.type === 'work_paused') &&
-            event.details?.startsWith(displayName) &&
-            isWithinInterval(new Date(event.timestamp), currentMonth)
-          )
-          .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
-
-        let currentWorkStart: Date | null = null;
-        
-        workEvents.forEach(event => {
-          if (event.type === 'work_started') {
-            currentWorkStart = new Date(event.timestamp);
-          } else if (event.type === 'work_paused' && currentWorkStart) {
-            const workEnd = new Date(event.timestamp);
-            const workDurationMinutes = Math.round((workEnd.getTime() - currentWorkStart.getTime()) / (1000 * 60));
-            totalWorkTimeMinutes += workDurationMinutes;
-            currentWorkStart = null;
-          }
-        });
-      });
-
-      return {
-        id: technician.id,
-        name: displayName,
-        email,
-        assigned,
-        completed,
-        totalWorkTimeMinutes
-      };
-    });
-
-    return stats.sort((a, b) => {
-      // Sort by completed tickets (desc), then by work time (desc)
-      if (b.completed !== a.completed) {
-        return b.completed - a.completed;
-      }
-      return b.totalWorkTimeMinutes - a.totalWorkTimeMinutes;
-    });
-  }, [technicians, tickets, getTechnicianDisplayName, currentMonth]);
-
-  // Format work time helper
-  const formatWorkTime = (minutes: number) => {
-    if (minutes < 60) {
-      return `${minutes}m`;
-    }
-    const hours = Math.floor(minutes / 60);
-    const remainingMinutes = minutes % 60;
-    return remainingMinutes > 0 ? `${hours}h ${remainingMinutes}m` : `${hours}h`;
-  };
-
-  // Global users are fetched by the UsersProvider on app start
-
-  // Add a new technician
-  const handleAddTechnician = async () => {
-    if (!selectedUser) return;
-    
-    try {
-      // Only send userId; names/emails will be derived from global users
-      await addTechnician({ userId: selectedUser.userId });
-      setSelectedUser(null);
-      setDialogOpen(false);
-    } catch (err) {
-      console.error('Failed to add technician:', err);
-    }
-  };
-
-  // Open add dialog
-  const handleOpenDialog = () => {
-    setDialogOpen(true);
-    setSelectedUser(null);
-  };
-
-  // Close add dialog
-  const handleCloseDialog = () => {
-    setDialogOpen(false);
-    setSelectedUser(null);
-  };
 
   // Open month picker
   const handleOpenMonthPicker = () => {
@@ -204,34 +139,10 @@ const TechnicianManagementWidget: React.FC = () => {
     return months;
   }, []);
 
-  // Remove a technician
-  const handleRemoveTechnician = async (technicianId: number) => {
-    try {
-      await deleteTechnician(technicianId);
-    } catch (err) {
-      console.error('Failed to remove technician:', err);
-    }
-  };
 
-  // Users are already available globally, no need to fetch here
-
-  // Filter out users who are already technicians
-  const availableUsers = users.filter(user => 
-    !technicians.some(tech => tech.userId === user.userId)
-  );
-
-  // Get display name for user
-  const getUserDisplayName = (user: User) => {
-    const { firstName, lastName } = user.profile;
-    if (firstName && lastName) {
-      return `${firstName} ${lastName} (${user.email})`;
-    }
-    return user.email;
-  };
 
   // Combined loading and error states
-  const isLoading = loadingUsers || technicianLoading;
-  const error = userError || technicianError;
+  const error = technicianError;
 
   return (
     <>
@@ -240,16 +151,30 @@ const TechnicianManagementWidget: React.FC = () => {
         <Box sx={{ 
           display: 'flex', 
           alignItems: 'center', 
-          justifyContent: 'space-between',
           px: 2,
           py: 1,
           backgroundColor: 'grey.100'
         }}>
-          <Typography variant="h6">
-            Technicians
-          </Typography>
-          
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            {/* Technician Selector */}
+            <FormControl size="small" sx={{ minWidth: 200 }}>
+              <InputLabel>Technician</InputLabel>
+              <Select
+                value={selectedTechnician}
+                label="Technician"
+                onChange={(e) => setSelectedTechnician(e.target.value)}
+              >
+                <MenuItem value="">
+                  <em>Select Technician</em>
+                </MenuItem>
+                {technicians.map((tech) => (
+                  <MenuItem key={tech.id} value={tech.userId}>
+                    {getTechnicianDisplayName(tech)}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+
             <Chip 
               label={currentMonth.name} 
               size="small" 
@@ -258,14 +183,6 @@ const TechnicianManagementWidget: React.FC = () => {
               onClick={handleOpenMonthPicker}
               sx={{ cursor: 'pointer' }}
             />
-            <Fab 
-              size="small" 
-              color="primary" 
-              onClick={handleOpenDialog}
-              sx={{ width: 40, height: 40 }}
-            >
-              <Add />
-            </Fab>
           </Box>
         </Box>
 
@@ -275,143 +192,128 @@ const TechnicianManagementWidget: React.FC = () => {
           </Typography>
         )}
 
-        {/* Unified Table */}
+        {/* Ticket List for Selected Technician */}
         <Box sx={{ flex: 1, overflowY: 'auto' }}>
-          {technicians.length === 0 ? (
+          {!selectedTechnician ? (
             <Box sx={{ p: 2, textAlign: 'center' }}>
               <Typography variant="body2" color="text.secondary">
-                Keine Service Techniker konfiguriert
+                Select a technician to view their tickets
               </Typography>
             </Box>
           ) : (
-            <TableContainer>
-              <Table size="small" stickyHeader>
-                <TableHead>
-                  <TableRow>
-                    <TableCell>
-                      <Typography variant="subtitle2" fontWeight="bold">
-                        Techniker
-                      </Typography>
-                    </TableCell>
-                    <TableCell align="center">
-                      <Typography variant="subtitle2" fontWeight="bold">
-                        Zugewiesen
-                      </Typography>
-                    </TableCell>
-                    <TableCell align="center">
-                      <Typography variant="subtitle2" fontWeight="bold">
-                        Erledigt
-                      </Typography>
-                    </TableCell>
-                    <TableCell align="center">
-                      <Typography variant="subtitle2" fontWeight="bold">
-                        Arbeitszeit
-                      </Typography>
-                    </TableCell>
-                    <TableCell align="center" sx={{ width: 60 }}>
-                      <Typography variant="subtitle2" fontWeight="bold">
-                        Aktionen
-                      </Typography>
-                    </TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {technicianStats.map((stat) => (
-                    <TableRow key={stat.id} hover>
-                      <TableCell>
-                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
-                          <Typography variant="body2" fontWeight="medium">
-                            {stat.name}
-                          </Typography>
-                          <Typography variant="caption" color="text.secondary" noWrap>
-                            {stat.email}
-                          </Typography>
-                        </Box>
-                      </TableCell>
-                      <TableCell align="center">
-                        <Chip 
-                          label={stat.assigned} 
-                          size="small" 
-                          color={stat.assigned > 0 ? "primary" : "default"}
-                          variant="outlined"
-                        />
-                      </TableCell>
-                      <TableCell align="center">
-                        <Chip 
-                          label={stat.completed} 
-                          size="small" 
-                          color={stat.completed > 0 ? "success" : "default"}
-                          variant={stat.completed > 0 ? "filled" : "outlined"}
-                        />
-                      </TableCell>
-                      <TableCell align="center">
-                        <Typography 
-                          variant="body2" 
-                          fontWeight="medium"
-                          color={stat.totalWorkTimeMinutes > 0 ? "text.primary" : "text.secondary"}
-                        >
-                          {stat.totalWorkTimeMinutes > 0 ? formatWorkTime(stat.totalWorkTimeMinutes) : '-'}
-                        </Typography>
-                      </TableCell>
-                      <TableCell align="center">
-                        <IconButton
-                          color="error"
-                          onClick={() => handleRemoveTechnician(stat.id)}
-                          size="small"
-                        >
-                          <Delete fontSize="small" />
-                        </IconButton>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </TableContainer>
+            <>
+              {/* Summary Header */}
+              <Box sx={{ p: 2, backgroundColor: 'grey.50', borderBottom: 1, borderColor: 'divider' }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+                  <Typography variant="h6">
+                    {technicians.find(t => t.userId === selectedTechnician) && 
+                      getTechnicianDisplayName(technicians.find(t => t.userId === selectedTechnician)!)
+                    } - {currentMonth.name}
+                  </Typography>
+                  <Typography variant="body2">
+                    <strong>Tickets completed:</strong> {technicianTickets.length}
+                  </Typography>
+                  <Typography variant="body2">
+                    <strong>Total work time:</strong> {(() => {
+                      const totalMinutes = technicianTickets.reduce((sum, ticket) => sum + (ticket.totalWorkTimeMinutes || 0), 0);
+                      if (totalMinutes < 60) return `${totalMinutes}m`;
+                      const hours = Math.floor(totalMinutes / 60);
+                      const minutes = totalMinutes % 60;
+                      return minutes > 0 ? `${hours}h ${minutes}m` : `${hours}h`;
+                    })()}
+                  </Typography>
+                </Box>
+              </Box>
+
+              {/* Loading State */}
+              {loadingTickets && (
+                <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
+                  <CircularProgress />
+                </Box>
+              )}
+
+              {/* Error State */}
+              {ticketError && (
+                <Box sx={{ p: 2 }}>
+                  <Typography color="error">
+                    Error loading tickets: {ticketError}
+                  </Typography>
+                </Box>
+              )}
+
+              {/* Ticket Table */}
+              {!loadingTickets && !ticketError && (
+                <TableContainer component={Paper} sx={{ boxShadow: 'none' }}>
+                  <Table size="small">
+                    <TableHead>
+                      <TableRow sx={{ backgroundColor: 'grey.100' }}>
+                        <TableCell sx={{ width: '80px', fontWeight: 600 }}>Ticket</TableCell>
+                        <TableCell sx={{ width: '200px', fontWeight: 600 }}>Machine</TableCell>
+                        <TableCell sx={{ fontWeight: 600 }}>Description</TableCell>
+                        <TableCell sx={{ width: '140px', fontWeight: 600 }}>Completed</TableCell>
+                        <TableCell align="right" sx={{ width: '100px', fontWeight: 600 }}>Work Time</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {technicianTickets.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={5} align="center" sx={{ py: 4 }}>
+                            <Typography variant="body2" color="text.secondary">
+                              No tickets completed in this month
+                            </Typography>
+                            <Typography variant="caption" color="text.secondary">
+                              This technician has no completed tickets for the selected month
+                            </Typography>
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        technicianTickets.map((ticket) => (
+                          <TableRow key={ticket.id} hover>
+                            <TableCell>
+                              <Typography variant="body2">
+                                #{ticket.id}
+                              </Typography>
+                            </TableCell>
+                            <TableCell>
+                              <Typography variant="body2">
+                                {ticket.machine}
+                              </Typography>
+                            </TableCell>
+                            <TableCell>
+                              <Typography variant="body2" noWrap>
+                                {ticket.description}
+                              </Typography>
+                            </TableCell>
+                            <TableCell>
+                              <Typography variant="body2">
+                                {ticket.completedAt ? format(new Date(ticket.completedAt), 'dd.MM.yyyy HH:mm') : 'N/A'}
+                              </Typography>
+                            </TableCell>
+                            <TableCell align="right">
+                              <Typography variant="body2">
+                                {(() => {
+                                  const minutes = ticket.totalWorkTimeMinutes || 0;
+                                  if (minutes < 60) return `${minutes}m`;
+                                  const hours = Math.floor(minutes / 60);
+                                  const remainingMinutes = minutes % 60;
+                                  return remainingMinutes > 0 ? `${hours}h ${remainingMinutes}m` : `${hours}h`;
+                                })()}
+                              </Typography>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      )}
+                    </TableBody>
+                  </Table>
+                </TableContainer>
+              )}
+            </>
           )}
         </Box>
       </Box>
 
-      {/* Add Technician Dialog */}
-      <Dialog 
-        open={dialogOpen} 
-        onClose={handleCloseDialog}
-        maxWidth="sm"
-        fullWidth
-      >
-        <DialogTitle>Add Technician</DialogTitle>
-        <DialogContent sx={{ pt: 3 }}>
-          <Autocomplete
-            options={availableUsers}
-            getOptionLabel={getUserDisplayName}
-            value={selectedUser}
-            onChange={(_, newValue) => setSelectedUser(newValue)}
-            loading={isLoading}
-            disabled={isLoading}
-            renderInput={(params) => (
-              <TextField
-                {...params}
-                label="Select User"
-                fullWidth
-                placeholder="Choose a registered user..."
-                sx={{ '& .MuiInputLabel-root': { paddingTop: '16px' } }}
-              />
-            )}
-            noOptionsText="No available users"
-          />
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleCloseDialog}>
-            Cancel
-          </Button>
-          <Button 
-            onClick={handleAddTechnician}
-            variant="contained"
-            disabled={!selectedUser || isLoading}
-          >
-            Add
-          </Button>
-        </DialogActions>
-      </Dialog>
+
+
 
       {/* Month Picker Dialog */}
       <Dialog 

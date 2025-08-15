@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Box, Typography, useTheme } from '@mui/material';
+import { Box, Typography, useTheme, IconButton } from '@mui/material';
+import { Close } from '@mui/icons-material';
 import { styled } from '@mui/material/styles';
 
 export interface BarChartDataPoint {
@@ -21,6 +22,7 @@ interface BarChartProps {
   showValues?: boolean;
   stacked?: boolean;
   horizontal?: boolean;
+  onRemoveItem?: (label: string) => void;
 }
 
 const ChartContainer = styled(Box)(({ theme }) => ({
@@ -98,7 +100,8 @@ const BarChart: React.FC<BarChartProps> = ({
   height = 300, 
   maxValue, 
   showValues = true,
-  stacked = false 
+  stacked = false,
+  onRemoveItem
 }) => {
   const theme = useTheme();
   const [labelColumnWidth, setLabelColumnWidth] = useState<number>(0);
@@ -174,6 +177,22 @@ const BarChart: React.FC<BarChartProps> = ({
             
               return (
                 <BarContainer key={label}>
+                  {onRemoveItem && (
+                    <IconButton
+                      size="small"
+                      onClick={() => onRemoveItem(label)}
+                      sx={{ 
+                        p: 0,
+                        mr: 0.5,
+                        backgroundColor: theme.palette.grey[200],
+                        '&:hover': {
+                          backgroundColor: theme.palette.grey[300]
+                        }
+                      }}
+                    >
+                      <Close fontSize="small" sx={{ color: theme.palette.primary.main }} />
+                    </IconButton>
+                  )}
                   <BarLabel style={{ width: labelColumnWidth }}>{label}</BarLabel>
                 <BarTrack>
                   <Box sx={{ display: 'flex', height: '100%', width: `${percentage}%` }}>
@@ -208,6 +227,22 @@ const BarChart: React.FC<BarChartProps> = ({
             
               return (
                 <BarContainer key={label}>
+                  {onRemoveItem && (
+                    <IconButton
+                      size="small"
+                      onClick={() => onRemoveItem(label)}
+                      sx={{ 
+                        p: 0,
+                        mr: 0.5,
+                        backgroundColor: theme.palette.grey[200],
+                        '&:hover': {
+                          backgroundColor: theme.palette.grey[300]
+                        }
+                      }}
+                    >
+                      <Close fontSize="small" sx={{ color: theme.palette.primary.main }} />
+                    </IconButton>
+                  )}
                   <BarLabel style={{ width: labelColumnWidth }}>{label}</BarLabel>
                 <BarTrack>
                   <BarSegment width={percentage} color={color}>

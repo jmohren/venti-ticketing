@@ -47,6 +47,8 @@ interface TicketData {
   raumnummer?: string;
   // Betrieb specific fields
   equipmentNummer?: string;
+  // Work time tracking
+  totalWorkTimeMinutes?: number;
   // Metadata fields
   created_at?: string;
   createdByUserId?: string;
@@ -542,19 +544,44 @@ const AddTicketDialog: React.FC<AddTicketDialogProps> = ({ open, onClose, readOn
     if (!ticketId) return;
     
     const userDisplayName = getUserDisplayName();
+    const now = new Date().toISOString();
+    
+    // Find the last work_started event by this user
+    const workStartedEvent = [...localEvents]
+      .reverse()
+      .find(event => 
+        event.type === 'work_started' && 
+        event.details?.startsWith(userDisplayName)
+      );
+    
+    let sessionDurationMinutes = 0;
+    const pauseDetails = `${userDisplayName}: Arbeit pausiert`;
+    
+    if (workStartedEvent) {
+      const startTime = new Date(workStartedEvent.timestamp);
+      const endTime = new Date(now);
+      sessionDurationMinutes = Math.round((endTime.getTime() - startTime.getTime()) / (1000 * 60));
+    }
     
     const newEvent: TicketEvent = {
-      timestamp: new Date().toISOString(),
+      timestamp: now,
       type: 'work_paused',
-      details: `${userDisplayName}: Arbeit pausiert`
+      details: pauseDetails
     };
 
     // Update local state for immediate UI update
     const updatedEvents = [...localEvents, newEvent];
     setLocalEvents(updatedEvents);
     
-    // Update the ticket in the backend
-    updateTicket(ticketId, { events: updatedEvents });
+    // Calculate new total work time
+    const currentTotal = initialData?.totalWorkTimeMinutes || 0;
+    const newTotal = currentTotal + sessionDurationMinutes;
+    
+    // Update the ticket in the backend with events and total work time
+    updateTicket(ticketId, { 
+      events: updatedEvents,
+      totalWorkTimeMinutes: newTotal
+    });
   };
 
   return (
@@ -716,15 +743,40 @@ const AddTicketDialog: React.FC<AddTicketDialogProps> = ({ open, onClose, readOn
             </Box>
           )}
 
-          {/* Statusanzeige (nur Pool) */}
-          {showStatus && initialData?.status && (
-            <TextField
-              label="Status"
-              value={statusLabelMap[initialData.status]}
-              size="small"
-              InputProps={{ readOnly: true }}
-            />
-          )}
+          {/* Status and Work Time Row */}
+          <Box sx={{ 
+            display: 'flex', 
+            gap: 2,
+            ...(isMobile && { flexDirection: 'column', gap: 1.5 })
+          }}>
+            {/* Statusanzeige (nur Pool) */}
+            {showStatus && initialData?.status && (
+              <TextField
+                label="Status"
+                value={statusLabelMap[initialData.status]}
+                size={isMobile ? "medium" : "small"}
+                InputProps={{ readOnly: true }}
+                sx={{ flex: 1 }}
+              />
+            )}
+
+            {/* Total Work Time */}
+            {initialData?.totalWorkTimeMinutes !== undefined && (
+              <TextField
+                label="Arbeitszeit gesamt"
+                value={(() => {
+                  const minutes = initialData.totalWorkTimeMinutes;
+                  if (minutes < 60) return `${minutes} Min`;
+                  const hours = Math.floor(minutes / 60);
+                  const remainingMinutes = minutes % 60;
+                  return remainingMinutes > 0 ? `${hours}h ${remainingMinutes}m` : `${hours}h`;
+                })()}
+                size={isMobile ? "medium" : "small"}
+                InputProps={{ readOnly: true }}
+                sx={{ flex: 1 }}
+              />
+            )}
+          </Box>
 
           {/* Problem Beschreibung */}
           <TextField
