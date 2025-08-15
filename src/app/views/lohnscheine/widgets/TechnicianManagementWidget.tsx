@@ -93,6 +93,13 @@ const TechnicianManagementWidget: React.FC = () => {
     }
   }, []);
 
+  // Set default technician to first in list when technicians are loaded
+  useEffect(() => {
+    if (technicians.length > 0 && !selectedTechnician) {
+      setSelectedTechnician(technicians[0].userId);
+    }
+  }, [technicians, selectedTechnician]);
+
   // Load tickets when technician or month changes
   useEffect(() => {
     if (selectedTechnician) {
@@ -179,9 +186,6 @@ const TechnicianManagementWidget: React.FC = () => {
                 label="Techniker"
                 onChange={(e) => setSelectedTechnician(e.target.value)}
               >
-                <MenuItem value="">
-                  <em>Techniker auswählen</em>
-                </MenuItem>
                 {technicians.map((tech) => (
                   <MenuItem key={tech.id} value={tech.userId}>
                     {getTechnicianDisplayName(tech)}
@@ -196,7 +200,13 @@ const TechnicianManagementWidget: React.FC = () => {
               color="primary" 
               variant="outlined"
               onClick={handleOpenMonthPicker}
-              sx={{ cursor: 'pointer' }}
+              sx={{ 
+                cursor: 'pointer',
+                height: '40px', // Match the height of the small Select component
+                '& .MuiChip-label': {
+                  fontSize: '0.875rem' // Match Select font size
+                }
+              }}
             />
           </Box>
         </Box>
@@ -209,13 +219,7 @@ const TechnicianManagementWidget: React.FC = () => {
 
         {/* Ticket List for Selected Technician */}
         <Box sx={{ flex: 1, overflowY: 'auto' }}>
-          {!selectedTechnician ? (
-            <Box sx={{ p: 2, textAlign: 'center' }}>
-              <Typography variant="body2" color="text.secondary">
-                Wählen Sie einen Techniker aus, um dessen Tickets anzuzeigen
-              </Typography>
-            </Box>
-          ) : (
+          {selectedTechnician && (
             <>
               {/* Summary Header */}
               <Box sx={{ p: 2, backgroundColor: 'grey.50', borderBottom: 1, borderColor: 'divider' }}>
