@@ -24,13 +24,17 @@ import {
 
 import { useTechnicians } from '@/app/hooks/useTechnicians';
 import { restApiClient } from '@/core/api/rest/RestApiClient';
-import { Ticket } from '@/app/hooks/useTickets';
+import { Ticket, useTickets } from '@/app/hooks/useTickets';
+import { useTicketUrlState } from '@/app/hooks/useTicketUrlState';
+import AddTicketDialog from '@/app/dialogs/AddTicketDialog';
 import { format, startOfMonth, endOfMonth } from 'date-fns';
 
 
 
 
 const TechnicianManagementWidget: React.FC = () => {
+  const { updateTicket } = useTickets();
+  const { ticketId, isDialogOpen, openTicket, closeTicket } = useTicketUrlState();
 
   const [monthPickerOpen, setMonthPickerOpen] = useState(false);
   const [selectedMonth, setSelectedMonth] = useState<Date>(new Date());
@@ -144,6 +148,17 @@ const TechnicianManagementWidget: React.FC = () => {
   // Combined loading and error states
   const error = technicianError;
 
+  // Handle ticket row click
+  const handleTicketClick = (ticketId: number) => {
+    openTicket(ticketId);
+  };
+
+  // Get selected ticket from local tickets
+  const selectedTicket = useMemo(() => {
+    if (!ticketId || !technicianTickets.length) return null;
+    return technicianTickets.find(t => t.id === ticketId) || null;
+  }, [ticketId, technicianTickets]);
+
   return (
     <>
       <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
@@ -158,14 +173,14 @@ const TechnicianManagementWidget: React.FC = () => {
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
             {/* Technician Selector */}
             <FormControl size="small" sx={{ minWidth: 200 }}>
-              <InputLabel>Technician</InputLabel>
+              <InputLabel>Techniker</InputLabel>
               <Select
                 value={selectedTechnician}
-                label="Technician"
+                label="Techniker"
                 onChange={(e) => setSelectedTechnician(e.target.value)}
               >
                 <MenuItem value="">
-                  <em>Select Technician</em>
+                  <em>Techniker auswählen</em>
                 </MenuItem>
                 {technicians.map((tech) => (
                   <MenuItem key={tech.id} value={tech.userId}>
@@ -197,7 +212,7 @@ const TechnicianManagementWidget: React.FC = () => {
           {!selectedTechnician ? (
             <Box sx={{ p: 2, textAlign: 'center' }}>
               <Typography variant="body2" color="text.secondary">
-                Select a technician to view their tickets
+                Wählen Sie einen Techniker aus, um dessen Tickets anzuzeigen
               </Typography>
             </Box>
           ) : (
@@ -211,10 +226,10 @@ const TechnicianManagementWidget: React.FC = () => {
                     } - {currentMonth.name}
                   </Typography>
                   <Typography variant="body2">
-                    <strong>Tickets completed:</strong> {technicianTickets.length}
+                    <strong>Tickets erledigt:</strong> {technicianTickets.length}
                   </Typography>
                   <Typography variant="body2">
-                    <strong>Total work time:</strong> {(() => {
+                    <strong>Gesamte Arbeitszeit:</strong> {(() => {
                       const totalMinutes = technicianTickets.reduce((sum, ticket) => sum + (ticket.totalWorkTimeMinutes || 0), 0);
                       if (totalMinutes < 60) return `${totalMinutes}m`;
                       const hours = Math.floor(totalMinutes / 60);
@@ -236,7 +251,7 @@ const TechnicianManagementWidget: React.FC = () => {
               {ticketError && (
                 <Box sx={{ p: 2 }}>
                   <Typography color="error">
-                    Error loading tickets: {ticketError}
+                    Fehler beim Laden der Tickets: {ticketError}
                   </Typography>
                 </Box>
               )}
@@ -248,10 +263,10 @@ const TechnicianManagementWidget: React.FC = () => {
                     <TableHead>
                       <TableRow sx={{ backgroundColor: 'grey.100' }}>
                         <TableCell sx={{ width: '80px', fontWeight: 600 }}>Ticket</TableCell>
-                        <TableCell sx={{ width: '200px', fontWeight: 600 }}>Machine</TableCell>
-                        <TableCell sx={{ fontWeight: 600 }}>Description</TableCell>
-                        <TableCell sx={{ width: '140px', fontWeight: 600 }}>Completed</TableCell>
-                        <TableCell align="right" sx={{ width: '100px', fontWeight: 600 }}>Work Time</TableCell>
+                        <TableCell sx={{ width: '200px', fontWeight: 600 }}>Maschine</TableCell>
+                        <TableCell sx={{ fontWeight: 600 }}>Beschreibung</TableCell>
+                        <TableCell sx={{ width: '140px', fontWeight: 600 }}>Erledigt</TableCell>
+                        <TableCell align="right" sx={{ width: '100px', fontWeight: 600 }}>Arbeitszeit</TableCell>
                       </TableRow>
                     </TableHead>
                     <TableBody>
@@ -259,16 +274,21 @@ const TechnicianManagementWidget: React.FC = () => {
                         <TableRow>
                           <TableCell colSpan={5} align="center" sx={{ py: 4 }}>
                             <Typography variant="body2" color="text.secondary">
-                              No tickets completed in this month
+                              Keine Tickets in diesem Monat erledigt
                             </Typography>
                             <Typography variant="caption" color="text.secondary">
-                              This technician has no completed tickets for the selected month
+                              Dieser Techniker hat keine erledigten Tickets für den ausgewählten Monat
                             </Typography>
                           </TableCell>
                         </TableRow>
                       ) : (
                         technicianTickets.map((ticket) => (
-                          <TableRow key={ticket.id} hover>
+                          <TableRow 
+                            key={ticket.id} 
+                            hover 
+                            onClick={() => handleTicketClick(ticket.id)}
+                            sx={{ cursor: 'pointer' }}
+                          >
                             <TableCell>
                               <Typography variant="body2">
                                 #{ticket.id}
@@ -335,10 +355,10 @@ const TechnicianManagementWidget: React.FC = () => {
           borderColor: 'divider'
         }}>
           <Typography variant="h6" sx={{ fontWeight: 600 }}>
-            Select Month
+            Monat auswählen
           </Typography>
           <Typography variant="body2" sx={{ color: 'text.secondary', mt: 0.5 }}>
-            Choose a month to view performance data
+            Wählen Sie einen Monat aus, um Leistungsdaten anzuzeigen
           </Typography>
         </DialogTitle>
         <DialogContent sx={{ pt: 2, pb: 1 }}>
@@ -361,7 +381,7 @@ const TechnicianManagementWidget: React.FC = () => {
                         px: 1
                       }}
                     >
-                      {year} {isCurrentYear && <Chip label="Current" size="small" color="primary" sx={{ ml: 1, height: 20 }} />}
+                      {year} {isCurrentYear && <Chip label="Aktuell" size="small" color="primary" sx={{ ml: 1, height: 20 }} />}
                     </Typography>
                     <Box sx={{ 
                       display: 'grid', 
@@ -398,7 +418,7 @@ const TechnicianManagementWidget: React.FC = () => {
                             {format(month, 'MMM')}
                             {isCurrentMonth && (
                               <Chip 
-                                label="Now" 
+                                label="Jetzt" 
                                 size="small" 
                                 color="success"
                                 sx={{ 
@@ -425,13 +445,48 @@ const TechnicianManagementWidget: React.FC = () => {
           borderColor: 'divider' 
         }}>
           <Typography variant="caption" sx={{ color: 'text.secondary', ml: 1 }}>
-            Showing {availableMonths.length} months
+            {availableMonths.length} Monate angezeigt
           </Typography>
           <Button onClick={handleCloseMonthPicker} variant="outlined">
-            Close
+            Schließen
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* Ticket Dialog */}
+      {selectedTicket && (
+        <AddTicketDialog
+          open={isDialogOpen}
+          onClose={closeTicket}
+          readOnly
+          ticketId={selectedTicket.id}
+          initialData={{
+            machine: selectedTicket.machine,
+            description: selectedTicket.description,
+            priority: selectedTicket.priority,
+            status: selectedTicket.status as any,
+            type: selectedTicket.type,
+            category: selectedTicket.category,
+            responsible: selectedTicket.responsible,
+            events: selectedTicket.events,
+            plannedCompletion: selectedTicket.plannedCompletion,
+            images: selectedTicket.images,
+            raumnummer: selectedTicket.raumnummer,
+            equipmentNummer: selectedTicket.equipmentNummer,
+            created_at: selectedTicket.created_at,
+            createdByUserId: selectedTicket.createdByUserId,
+            totalWorkTimeMinutes: selectedTicket.totalWorkTimeMinutes,
+          }}
+          showStatus
+          onSave={(upd) => updateTicket(selectedTicket.id, { 
+            responsible: upd.responsible || '', 
+            plannedCompletion: upd.plannedCompletion ?? selectedTicket.plannedCompletion,
+            category: upd.category ?? selectedTicket.category
+          })}
+          allowResponsibleEdit
+          allowPlanEdit
+        />
+      )}
     </>
   );
 };
