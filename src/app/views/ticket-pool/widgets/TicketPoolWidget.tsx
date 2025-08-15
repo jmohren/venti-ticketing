@@ -205,10 +205,12 @@ const TicketPoolWidget: React.FC = () => {
           onSave={(upd) => updateTicket(selectedTicket.id, { 
             responsible: upd.responsible || '', 
             plannedCompletion: upd.plannedCompletion ?? selectedTicket.plannedCompletion,
-            category: upd.category ?? selectedTicket.category
+            category: upd.category ?? selectedTicket.category,
+            status: upd.status ?? selectedTicket.status
           })}
           allowResponsibleEdit
           allowPlanEdit
+          allowStatusEdit
           allowWorkTracking
           showArchiveButton={selectedTicket.status === 'done'}
           onArchive={() => handleArchiveTicket(selectedTicket.id)}

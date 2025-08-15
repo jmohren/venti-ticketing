@@ -63,6 +63,7 @@ interface AddTicketDialogProps {
   onSave?: (data: TicketData) => void;
   allowResponsibleEdit?: boolean;
   allowPlanEdit?: boolean;
+  allowStatusEdit?: boolean;
   ticketId?: number;
   showArchiveButton?: boolean;
   onArchive?: () => void;
@@ -74,7 +75,7 @@ interface AddTicketDialogProps {
  * The full form will be expanded later – for now we only collect
  * a short description and priority so that we can wire up the workflow.
  */
-const AddTicketDialog: React.FC<AddTicketDialogProps> = ({ open, onClose, readOnly = false, initialData, showStatus = false, onSave, allowResponsibleEdit = false, allowPlanEdit = false, ticketId, showArchiveButton = false, onArchive, allowWorkTracking = false }) => {
+const AddTicketDialog: React.FC<AddTicketDialogProps> = ({ open, onClose, readOnly = false, initialData, showStatus = false, onSave, allowResponsibleEdit = false, allowPlanEdit = false, allowStatusEdit = false, ticketId, showArchiveButton = false, onArchive, allowWorkTracking = false }) => {
   const { user, profile } = useUser();
   const { updateTicket, getCreatorDisplayName } = useTickets();
   const { technicians, getTechnicianDisplayName } = useTechnicians();
@@ -205,6 +206,7 @@ const AddTicketDialog: React.FC<AddTicketDialogProps> = ({ open, onClose, readOn
 
   const [description, setDescription] = useState(initialData?.description || '');
   const [priority, setPriority] = useState<'rot' | 'gelb' | 'gruen'>(initialData?.priority || 'gruen');
+  const [status, setStatus] = useState<'backlog' | 'progress' | 'done' | 'archived'>(initialData?.status || 'backlog');
 
   // For new tickets, use URL state; for existing tickets, use local state
   const [machine, setMachine] = useState(initialData?.machine || '');
@@ -284,6 +286,7 @@ const AddTicketDialog: React.FC<AddTicketDialogProps> = ({ open, onClose, readOn
       // Reset all form fields to initial values when dialog opens
       setDescription(initialData?.description || '');
       setPriority(initialData?.priority || 'gruen');
+      setStatus(initialData?.status || 'backlog');
 
       setMachine(initialData?.machine || '');
       // Reset responsible with proper userId handling
@@ -408,7 +411,7 @@ const AddTicketDialog: React.FC<AddTicketDialogProps> = ({ open, onClose, readOn
       description, 
       priority, 
         machine: currentValues.ticketType === 'verwaltung' ? 'Verwaltung' : currentValues.machine, 
-      status: initialData?.status, 
+      status: allowStatusEdit ? status : initialData?.status, 
         type: currentValues.ticketType,
         category,
       responsible, 
@@ -609,7 +612,7 @@ const AddTicketDialog: React.FC<AddTicketDialogProps> = ({ open, onClose, readOn
           borderColor: 'divider'
         })
       }}>
-        Neues Ticket erstellen
+{isNewTicket ? 'Neues Ticket erstellen' : 'Ticket'}
         {isMobile && (
           <IconButton onClick={onClose} size="small">
             <Close />
@@ -749,15 +752,31 @@ const AddTicketDialog: React.FC<AddTicketDialogProps> = ({ open, onClose, readOn
             gap: 2,
             ...(isMobile && { flexDirection: 'column', gap: 1.5 })
           }}>
-            {/* Statusanzeige (nur Pool) */}
+            {/* Status - editable dropdown or read-only display */}
             {showStatus && initialData?.status && (
-              <TextField
-                label="Status"
-                value={statusLabelMap[initialData.status]}
-                size={isMobile ? "medium" : "small"}
-                InputProps={{ readOnly: true }}
-                sx={{ flex: 1 }}
-              />
+              allowStatusEdit ? (
+                <FormControl sx={{ flex: 1 }} disabled={readOnly && !allowStatusEdit}>
+                  <InputLabel>Status</InputLabel>
+                  <Select
+                    label="Status"
+                    value={status}
+                    onChange={(e) => setStatus(e.target.value as any)}
+                    size={isMobile ? "medium" : "small"}
+                  >
+                    <MenuItem value="backlog">Backlog</MenuItem>
+                    <MenuItem value="progress">In Bearbeitung</MenuItem>
+                    <MenuItem value="done">Erledigt</MenuItem>
+                  </Select>
+                </FormControl>
+              ) : (
+                <TextField
+                  label="Status"
+                  value={statusLabelMap[initialData.status]}
+                  size={isMobile ? "medium" : "small"}
+                  InputProps={{ readOnly: true }}
+                  sx={{ flex: 1 }}
+                />
+              )
             )}
 
             {/* Total Work Time */}
@@ -789,18 +808,37 @@ const AddTicketDialog: React.FC<AddTicketDialogProps> = ({ open, onClose, readOn
             disabled={readOnly}
           />
 
-          <FormControl fullWidth disabled={readOnly}>
-            <InputLabel>Dringlichkeit</InputLabel>
-            <Select
-              label="Dringlichkeit"
-              value={priority}
-              onChange={(e) => setPriority(e.target.value as any)}
-            >
-              <MenuItem value="rot">Rot (hoch)</MenuItem>
-              <MenuItem value="gelb">Gelb (mittel)</MenuItem>
-              <MenuItem value="gruen">Grün (niedrig)</MenuItem>
-            </Select>
-          </FormControl>
+          <Box sx={{ 
+            display: 'flex', 
+            gap: 2,
+            ...(isMobile && { flexDirection: 'column', gap: 1.5 })
+          }}>
+            <FormControl sx={{ flex: 1 }} disabled={readOnly}>
+              <InputLabel>Dringlichkeit</InputLabel>
+              <Select
+                label="Dringlichkeit"
+                value={priority}
+                onChange={(e) => setPriority(e.target.value as any)}
+                size="small"
+              >
+                <MenuItem value="rot">Rot (hoch)</MenuItem>
+                <MenuItem value="gelb">Gelb (mittel)</MenuItem>
+                <MenuItem value="gruen">Grün (niedrig)</MenuItem>
+              </Select>
+            </FormControl>
+
+            {/* Planned completion date (Pool) */}
+            {allowPlanEdit && (
+              <LocalizationProvider dateAdapter={AdapterDateFns}>
+                <DatePicker
+                  label="Geplantes Abschlussdatum"
+                  value={plannedDate}
+                  onChange={(newVal) => setPlannedDate(newVal)}
+                  slotProps={{ textField: { size: 'small', sx: { flex: 1 } } }}
+                />
+              </LocalizationProvider>
+            )}
+          </Box>
 
           {/* Responsible - show when explicitly allowed for editing OR in read-only mode */}
           {(allowResponsibleEdit || readOnly) && (
@@ -812,7 +850,7 @@ const AddTicketDialog: React.FC<AddTicketDialogProps> = ({ open, onClose, readOn
                 onChange={(e) => setResponsible(e.target.value as string)}
                 displayEmpty
                 renderValue={(selected) => {
-                  if (!selected) return <em>Niemand</em>;
+                  if (!selected) return '';
                   return getDisplayNameFromUserId(selected);
                 }}
               >
@@ -861,17 +899,7 @@ const AddTicketDialog: React.FC<AddTicketDialogProps> = ({ open, onClose, readOn
             </Box>
           )}
 
-          {/* Planned completion date (Pool) */}
-          {allowPlanEdit && (
-            <LocalizationProvider dateAdapter={AdapterDateFns}>
-              <DatePicker
-                label="Geplantes Abschlussdatum"
-                value={plannedDate}
-                onChange={(newVal) => setPlannedDate(newVal)}
-                slotProps={{ textField: { size: 'small', fullWidth: true } }}
-              />
-            </LocalizationProvider>
-          )}
+
 
           {/* Image Upload (disabled in read-only) */}
           <Box sx={{ width: '100%' }}>
