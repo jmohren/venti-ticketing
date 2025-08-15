@@ -35,7 +35,7 @@ const TicketCard: React.FC<{ ticket: Ticket; onClick: () => void; draggable?: bo
       draggable={draggable}
       dragData={ticket.id.toString()}
       onDragOver={(e)=>e.preventDefault()}
-      onDrop={(e)=>{ e.stopPropagation(); onDropCard(ticket.id, e); }}
+      onDrop={(e)=>{ onDropCard(ticket.id, e); }}
       data-ticketid={ticket.id}
     />
   );
@@ -111,6 +111,22 @@ const TicketPoolWidget: React.FC = () => {
     if (!dragIdString) return;
     const dragId = parseInt(dragIdString);
     if (!dragId || dragId === targetId) return;
+    
+    // Find the lanes of both tickets
+    const dragTicketLoc = findTicket(dragId);
+    const targetTicketLoc = findTicket(targetId);
+    
+    if (!dragTicketLoc || !targetTicketLoc) return;
+    
+    // If tickets are in different lanes, handle as lane change
+    if (dragTicketLoc.lane !== targetTicketLoc.lane) {
+      // Call handleDrop with the target lane
+      await handleDrop(targetTicketLoc.lane as any, e);
+      return;
+    }
+    
+    // Same lane - handle as reorder
+    e.stopPropagation(); // Prevent lane drop handler from also running
     const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
     const placeAfter = e.clientY > rect.top + rect.height / 2;
     try {
