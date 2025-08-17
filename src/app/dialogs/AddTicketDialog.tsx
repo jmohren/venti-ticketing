@@ -23,7 +23,7 @@ import {
 } from '@mui/material';
 import { format } from 'date-fns';
 import { useUser } from '@/core/state/UserProvider';
-// import { useUsersContext } from '@/core/state/UsersProvider'; // Currently unused due to async nature
+import { useUsersContext } from '@/core/state/UsersProvider';
 import { IconButton } from '@mui/material';
 import { CloudUpload, Delete, ZoomIn, Clear, ExpandMore, ContentCopy, Archive, Send, Close, CameraAlt, Image, PlayArrow, Pause } from '@mui/icons-material';
 import { TicketEvent, useTickets } from '@/app/hooks/useTickets';
@@ -86,9 +86,10 @@ interface AddTicketDialogProps {
  */
 const AddTicketDialog: React.FC<AddTicketDialogProps> = ({ open, onClose, readOnly = false, initialData, showStatus = false, onSave, allowResponsibleEdit = false, allowPlanEdit = false, allowStatusEdit = false, ticketId, showArchiveButton = false, onArchive, allowWorkTracking = false, allowWorkedByUsersEdit = false, allowWorkedByUsersView = false }) => {
   const { user, profile } = useUser();
-  const { updateTicket, getCreatorDisplayName } = useTickets();
-  const { technicians } = useTechnicians();
+  const { updateTicket } = useTickets();
+  const { technicians, getTechnicianDisplayName } = useTechnicians();
   const { machines } = useMachines();
+  const { getDisplayNameFromUserIdSync } = useUsersContext();
 
 
   // Helper to get userId from display name (for legacy compatibility)
@@ -135,9 +136,9 @@ const AddTicketDialog: React.FC<AddTicketDialogProps> = ({ open, onClose, readOn
   const userOptions = useMemo(() => {
     return technicians.map(tech => ({
       userId: tech.userId,
-      displayName: tech.userId // TODO: Use async getTechnicianDisplayName when UI supports it
+      displayName: getTechnicianDisplayName(tech)
     }));
-  }, [technicians]);
+  }, [technicians, getTechnicianDisplayName]);
 
   // Handle machine selection - auto-fill equipment number
   const handleMachineSelect = (selectedMachine: string | null) => {
@@ -393,9 +394,9 @@ const AddTicketDialog: React.FC<AddTicketDialogProps> = ({ open, onClose, readOn
   const technicianOptions = useMemo(() => {
     return technicians.map(tech => ({
       userId: tech.userId,
-      displayName: tech.userId // TODO: Use async getTechnicianDisplayName when UI supports it
+      displayName: getTechnicianDisplayName(tech)
     }));
-  }, [technicians]);
+  }, [technicians, getTechnicianDisplayName]);
 
 
 
@@ -411,10 +412,10 @@ const AddTicketDialog: React.FC<AddTicketDialogProps> = ({ open, onClose, readOn
 
   const creatorName = useMemo(() => {
     if (initialData?.createdByUserId) {
-      return getCreatorDisplayName(initialData.createdByUserId);
+      return getDisplayNameFromUserIdSync(initialData.createdByUserId, getUserDisplayName());
     }
     return getUserDisplayName();
-  }, [initialData?.createdByUserId, getCreatorDisplayName, profile, user]);
+  }, [initialData?.createdByUserId, getDisplayNameFromUserIdSync, profile, user]);
 
 
 
@@ -925,9 +926,8 @@ const AddTicketDialog: React.FC<AddTicketDialogProps> = ({ open, onClose, readOn
                     displayEmpty
                     size={isMobile ? "medium" : "small"}
                     renderValue={(selected) => {
-                      if (!selected) return '\u00A0'; // Non-breaking space to maintain height
-                      // TODO: This needs to be updated to handle async getDisplayNameFromUserId
-                      return selected; // Temporary fallback to userId
+                      if (!selected) return '\u00A0';
+                      return getDisplayNameFromUserIdSync(selected, 'Nicht zugewiesen');
                     }}
                     sx={{
                       '& .MuiSelect-select': {
@@ -984,7 +984,7 @@ const AddTicketDialog: React.FC<AddTicketDialogProps> = ({ open, onClose, readOn
                           selected.map((userId) => (
                             <Chip 
                               key={userId} 
-                              label={userId} // TODO: This needs to be updated to handle async getDisplayNameFromUserId 
+                              label={getDisplayNameFromUserIdSync(userId, userId)}
                               size="small"
                               sx={{
                                 flexShrink: 0,

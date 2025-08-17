@@ -28,7 +28,7 @@ interface TechnicianContextValue {
 const TechnicianContext = createContext<TechnicianContextValue | undefined>(undefined);
 
 export const TechnicianProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { users } = useUsersContext();
+  const { users, getDisplayNameFromUserIdSync } = useUsersContext();
   const [technicians, setTechnicians] = useState<Technician[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -129,15 +129,14 @@ export const TechnicianProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     return technicians;
   }, [technicians]);
 
-  const getTechnicianDisplayName = useCallback((_technician: Technician) => {
-    // Synchronous fallback for UI usage
-    return _technician.userId;
-  }, []);
+  const getTechnicianDisplayName = useCallback((technician: Technician) => {
+    return getDisplayNameFromUserIdSync(technician.userId, '-');
+  }, [getDisplayNameFromUserIdSync]);
 
   const getTechnicianByName = useCallback((name: string) => {
-    // Names currently equal userId labels; find by userId
-    return technicians.find(t => t.userId === name);
-  }, [technicians]);
+    // Compare against display names
+    return technicians.find(t => getDisplayNameFromUserIdSync(t.userId, '-') === name);
+  }, [technicians, getDisplayNameFromUserIdSync]);
 
   const getTechnicianEmail = useCallback((technician: Technician) => {
     const user = users.find(u => u.userId === technician.userId);

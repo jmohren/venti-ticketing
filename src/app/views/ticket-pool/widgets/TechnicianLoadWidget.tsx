@@ -65,8 +65,10 @@ const TechnicianLoadWidget: React.FC = () => {
   const handleConfirmRemove = async () => {
     if (!technicianToRemove) return;
     
-    // Find the technician by userId (labels currently use userId)
-    const technician = technicians.find(tech => tech.userId === technicianToRemove);
+    // Find the technician by display name (labels show display names)
+    const technician = technicians.find(tech => 
+      getTechnicianDisplayName(tech) === technicianToRemove
+    );
     
     if (!technician) {
       console.error('Technician not found:', technicianToRemove);
@@ -110,7 +112,7 @@ const TechnicianLoadWidget: React.FC = () => {
     
     // Start with all official technicians (with 0 tickets initially)
     technicians.forEach(technician => {
-      const displayName = technician.userId; // TODO: Use async getTechnicianDisplayName when UI supports it
+      const displayName = getTechnicianDisplayName(technician);
       technicianData[technician.userId] = { backlog: 0, progress: 0, displayName };
     });
     

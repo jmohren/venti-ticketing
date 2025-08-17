@@ -45,7 +45,8 @@ const TechnicianManagementWidget: React.FC = () => {
   // Use the shared technician provider
   const { 
     technicians, 
-    error: technicianError
+    error: technicianError,
+    getTechnicianDisplayName
   } = useTechnicians();
   
 
@@ -186,7 +187,7 @@ const TechnicianManagementWidget: React.FC = () => {
               >
                 {technicians.map((tech) => (
                   <MenuItem key={tech.id} value={tech.userId}>
-                    {tech.userId}
+                    {getTechnicianDisplayName(tech)}
                   </MenuItem>
                 ))}
               </Select>
@@ -223,7 +224,10 @@ const TechnicianManagementWidget: React.FC = () => {
               <Box sx={{ p: 2, backgroundColor: 'grey.50', borderBottom: 1, borderColor: 'divider' }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 3 }}>
                   <Typography variant="h6">
-                    {selectedTechnician} - {currentMonth.name}
+                    {(() => {
+                      const tech = technicians.find(t => t.userId === selectedTechnician);
+                      return tech ? getTechnicianDisplayName(tech) : selectedTechnician;
+                    })()} - {currentMonth.name}
                   </Typography>
                   <Typography variant="body2">
                     <strong>Tickets erledigt:</strong> {technicianTickets.length}

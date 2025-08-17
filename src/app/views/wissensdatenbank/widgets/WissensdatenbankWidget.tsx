@@ -65,8 +65,8 @@ const WissensdatenbankWidget: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [totalCount, setTotalCount] = useState(0);
 
-  // Use centralized function from UsersProvider
-  const { getDisplayNameFromUserId } = useUsersContext();
+  // Use centralized function from UsersProvider (sync for table formatting)
+  const { getDisplayNameFromUserIdSync } = useUsersContext();
 
   // Handle server-side search from Table component
   const handleServerSearch = useCallback(async (query: string) => {
@@ -216,7 +216,7 @@ const WissensdatenbankWidget: React.FC = () => {
       label: 'Verantwortlich',
       type: 'text',
       minWidth: 150,
-      format: (value: string) => value || 'Nicht zugewiesen', // TODO: Handle async getDisplayNameFromUserId
+      format: (value: string) => getDisplayNameFromUserIdSync(value, 'Nicht zugewiesen'),
     },
 
     {
@@ -257,7 +257,7 @@ const WissensdatenbankWidget: React.FC = () => {
       align: 'center',
       format: (value: string | null) => value ? format(new Date(value), 'dd.MM.yyyy') : '-',
     },
-  ], [getDisplayNameFromUserId, archivedTickets]);
+  ], [getDisplayNameFromUserIdSync, archivedTickets]);
 
   // Transform archived tickets data for the table
   const tableData = archivedTickets.map((ticket: Ticket) => {

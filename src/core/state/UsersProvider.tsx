@@ -26,6 +26,7 @@ interface UsersContextValue {
   lastFetchedAt: number | null;
   refresh: () => Promise<void>;
   getDisplayNameFromUserId: (userId?: string | null, fallback?: string, timeoutMs?: number) => Promise<string>;
+  getDisplayNameFromUserIdSync: (userId?: string | null, fallback?: string) => string;
 }
 
 const UsersContext = createContext<UsersContextValue | undefined>(undefined);
@@ -119,10 +120,10 @@ export const UsersProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         let errorPayload: unknown = null;
         try {
           errorPayload = await res.clone().json();
-        } catch (_) {
+        } catch {
           try {
             errorPayload = await res.clone().text();
-          } catch (_) {
+          } catch {
             // ignore
           }
         }
@@ -150,7 +151,7 @@ export const UsersProvider: React.FC<{ children: React.ReactNode }> = ({ childre
               isComplete: u.profile?.isComplete ?? null,
             }))
           );
-        } catch (_) {
+        } catch {
           // Fallback pretty-print if console.table is not available
           console.log('📋 [USERS] Users (first 10):', JSON.stringify(data.users.slice(0, 10), null, 2));
         }
@@ -177,6 +178,18 @@ export const UsersProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     fetchUsers(controller.signal);
     return () => controller.abort();
   }, [fetchUsers]);
+
+  // Build synchronous lookup map from userId to display name
+  const userIdToDisplayName = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const u of users) {
+      const fn = u.profile?.firstName || '';
+      const ln = u.profile?.lastName || '';
+      const full = [fn, ln].filter(Boolean).join(' ');
+      map.set(u.userId, full || u.email || u.userId);
+    }
+    return map;
+  }, [users]);
 
   // Centralized function to get display name from user ID
   const getDisplayNameFromUserId = useCallback(async (userId?: string | null, fallback: string = '-', timeoutMs: number = 10000): Promise<string> => {
@@ -216,6 +229,15 @@ export const UsersProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     return fallback;
   }, [users, loading, error]);
 
+  // Synchronous getter for render paths (race-safe via map + fallback)
+  const getDisplayNameFromUserIdSync = useCallback((userId?: string | null, fallback: string = '-') => {
+    if (!userId?.trim()) return fallback;
+    // If legacy display name already passed, return as-is
+    const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(userId);
+    if (!isUUID) return userId;
+    return userIdToDisplayName.get(userId) || fallback || userId;
+  }, [userIdToDisplayName]);
+
 
 
   const value = useMemo<UsersContextValue>(() => ({
@@ -225,7 +247,8 @@ export const UsersProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     lastFetchedAt,
     refresh: () => fetchUsers(undefined, true), // Force refresh when manually called
     getDisplayNameFromUserId,
-  }), [users, loading, error, lastFetchedAt, fetchUsers, getDisplayNameFromUserId]);
+    getDisplayNameFromUserIdSync,
+  }), [users, loading, error, lastFetchedAt, fetchUsers, getDisplayNameFromUserId, getDisplayNameFromUserIdSync]);
 
   return (
     <UsersContext.Provider value={value}>
