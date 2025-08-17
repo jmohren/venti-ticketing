@@ -24,6 +24,7 @@ const TechnicianLoadWidget: React.FC = () => {
   const { tickets } = useTickets();
   const { technicians, getTechnicianDisplayName, addTechnician, deleteTechnician } = useTechnicians();
   const { users, loading: loadingUsers } = useUsers();
+  const usersReady = users.length > 0;
   const theme = useTheme();
 
   // Dialog state
@@ -107,6 +108,13 @@ const TechnicianLoadWidget: React.FC = () => {
   const isLoading = loadingUsers;
 
   const chartData = useMemo(() => {
+    // Gate until user display names are ready to avoid placeholder labels and duplicate rows
+    if (!usersReady) {
+      return [
+        { name: 'Backlog', color: theme.palette.primary.dark, data: [] },
+        { name: 'In Bearbeitung', color: theme.palette.primary.light, data: [] },
+      ] as BarChartSeries[];
+    }
     // Initialize data for all official technicians (keyed by userId)
     const technicianData: Record<string, { backlog: number; progress: number; displayName: string }> = {};
     
@@ -165,7 +173,7 @@ const TechnicianLoadWidget: React.FC = () => {
     ];
 
     return series;
-  }, [tickets, technicians, getTechnicianDisplayName, theme]);
+  }, [tickets, technicians, usersReady, getTechnicianDisplayName, theme]);
 
   return (
     <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
