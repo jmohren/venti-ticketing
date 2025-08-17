@@ -16,9 +16,14 @@ import {
   AccordionDetails,
   Typography,
   Autocomplete,
+  OutlinedInput,
+  ListItemText,
+  Checkbox,
+  Chip,
 } from '@mui/material';
 import { format } from 'date-fns';
 import { useUser } from '@/core/state/UserProvider';
+import { useUsersContext } from '@/core/state/UsersProvider';
 import { IconButton } from '@mui/material';
 import { CloudUpload, Delete, ZoomIn, Clear, ExpandMore, ContentCopy, Archive, Send, Close, CameraAlt, Image, PlayArrow, Pause } from '@mui/icons-material';
 import { TicketEvent, useTickets } from '@/app/hooks/useTickets';
@@ -52,6 +57,8 @@ interface TicketData {
   // Metadata fields
   created_at?: string;
   createdByUserId?: string;
+  // Users who have worked on this ticket
+  worked_by_users?: string[];
 }
 
 interface AddTicketDialogProps {
@@ -68,6 +75,8 @@ interface AddTicketDialogProps {
   showArchiveButton?: boolean;
   onArchive?: () => void;
   allowWorkTracking?: boolean; // Only show work tracking in specific views
+  allowWorkedByUsersEdit?: boolean; // Only show worked by users multi-select in ticket pool
+  allowWorkedByUsersView?: boolean; // Only show worked by users for viewing (read-only)
 }
 
 /**
@@ -75,11 +84,12 @@ interface AddTicketDialogProps {
  * The full form will be expanded later – for now we only collect
  * a short description and priority so that we can wire up the workflow.
  */
-const AddTicketDialog: React.FC<AddTicketDialogProps> = ({ open, onClose, readOnly = false, initialData, showStatus = false, onSave, allowResponsibleEdit = false, allowPlanEdit = false, allowStatusEdit = false, ticketId, showArchiveButton = false, onArchive, allowWorkTracking = false }) => {
+const AddTicketDialog: React.FC<AddTicketDialogProps> = ({ open, onClose, readOnly = false, initialData, showStatus = false, onSave, allowResponsibleEdit = false, allowPlanEdit = false, allowStatusEdit = false, ticketId, showArchiveButton = false, onArchive, allowWorkTracking = false, allowWorkedByUsersEdit = false, allowWorkedByUsersView = false }) => {
   const { user, profile } = useUser();
   const { updateTicket, getCreatorDisplayName } = useTickets();
   const { technicians, getTechnicianDisplayName } = useTechnicians();
   const { machines } = useMachines();
+  const { users } = useUsersContext();
 
   // Helper to get userId from display name (for legacy compatibility)
   // Must be defined before useState calls that use it
@@ -117,6 +127,26 @@ const AddTicketDialog: React.FC<AddTicketDialogProps> = ({ open, onClose, readOn
       machineName: m.name
     }));
   }, [machines]);
+
+  // Helper function to get display name from user ID
+  const getDisplayNameFromUserId = useCallback((userId: string) => {
+    const user = users.find(u => u.userId === userId);
+    if (user) {
+      const fn = user.profile?.firstName || '';
+      const ln = user.profile?.lastName || '';
+      const full = [fn, ln].filter(Boolean).join(' ');
+      return full || user.email;
+    }
+    return userId; // fallback to userId if not found
+  }, [users]);
+
+  // User options for worked by users multi-select (only technicians)
+  const userOptions = useMemo(() => {
+    return technicians.map(tech => ({
+      userId: tech.userId,
+      displayName: getTechnicianDisplayName(tech)
+    }));
+  }, [technicians, getTechnicianDisplayName]);
 
   // Handle machine selection - auto-fill equipment number
   const handleMachineSelect = (selectedMachine: string | null) => {
@@ -225,6 +255,7 @@ const AddTicketDialog: React.FC<AddTicketDialogProps> = ({ open, onClose, readOn
   const [category, setCategory] = useState<'elektrisch' | 'mechanisch'>(initialData?.category || 'mechanisch');
   const [raumnummer, setRaumnummer] = useState(initialData?.raumnummer || '');
   const [equipmentNummer, setEquipmentNummer] = useState(initialData?.equipmentNummer || '');
+  const [workedByUsers, setWorkedByUsers] = useState<string[]>(initialData?.worked_by_users || []);
   
   // Get current values (URL for new tickets, state for existing)
   const getCurrentValues = () => {
@@ -265,6 +296,50 @@ const AddTicketDialog: React.FC<AddTicketDialogProps> = ({ open, onClose, readOn
   const isMobile = useMemo(() => {
     return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
   }, []);
+
+  // Custom styles for disabled fields to make text black and readable with light gray background
+  const disabledFieldStyles = {
+    '& .MuiInputBase-input.Mui-disabled': {
+      color: 'black',
+      '-webkit-text-fill-color': 'black',
+      backgroundColor: 'grey.50',
+    },
+    '& .MuiInputBase-root.Mui-disabled': {
+      backgroundColor: 'grey.50',
+    },
+    '& .MuiOutlinedInput-root.Mui-disabled': {
+      backgroundColor: 'grey.50',
+      '& .MuiOutlinedInput-notchedOutline': {
+        borderColor: 'rgba(0, 0, 0, 0.23)',
+      },
+    },
+    '& .MuiInputLabel-root.Mui-disabled': {
+      color: 'rgba(0, 0, 0, 0.6)',
+    },
+    '& .MuiSelect-select.Mui-disabled': {
+      color: 'black',
+      '-webkit-text-fill-color': 'black',
+      backgroundColor: 'grey.50',
+    },
+    '& .MuiChip-root': {
+      backgroundColor: 'grey.200',
+      '& .MuiChip-label': {
+        color: 'black',
+      },
+    },
+    '& .MuiListItemText-primary': {
+      color: 'black',
+    },
+    '& .MuiInputBase-input': {
+      color: 'black',
+      '-webkit-text-fill-color': 'black',
+    },
+    '& .MuiInputBase-input[readonly]': {
+      color: 'black',
+      '-webkit-text-fill-color': 'black',
+      backgroundColor: 'grey.50',
+    },
+  };
 
   // Check if work is currently in progress
   const isWorkInProgress = useMemo(() => {
@@ -331,11 +406,7 @@ const AddTicketDialog: React.FC<AddTicketDialogProps> = ({ open, onClose, readOn
     }));
   }, [technicians, getTechnicianDisplayName]);
 
-  // Helper to get display name from userId (for showing current selection)
-  const getDisplayNameFromUserId = useCallback((userId: string) => {
-    const tech = technicians.find(t => t.userId === userId);
-    return tech ? getTechnicianDisplayName(tech) : userId;
-  }, [technicians, getTechnicianDisplayName]);
+
 
 
 
@@ -418,7 +489,8 @@ const AddTicketDialog: React.FC<AddTicketDialogProps> = ({ open, onClose, readOn
       plannedCompletion: plannedDate ? plannedDate.toISOString() : null,
         images: uploadedImageUrls, // Pass uploaded image URLs
         raumnummer: currentValues.ticketType === 'verwaltung' ? currentValues.raumnummer : undefined,
-        equipmentNummer: currentValues.ticketType === 'betrieb' ? currentValues.equipmentNummer : undefined
+        equipmentNummer: currentValues.ticketType === 'betrieb' ? currentValues.equipmentNummer : undefined,
+        worked_by_users: workedByUsers
     });
     onClose();
     } catch (error) {
@@ -638,7 +710,7 @@ const AddTicketDialog: React.FC<AddTicketDialogProps> = ({ open, onClose, readOn
               value={format(createdAt, 'dd.MM.yyyy HH:mm')}
               size={isMobile ? "medium" : "small"}
               InputProps={{ readOnly: true }}
-              sx={{ flex: 1 }}
+              sx={{ flex: 1, ...disabledFieldStyles }}
             />
 
             <TextField
@@ -646,7 +718,7 @@ const AddTicketDialog: React.FC<AddTicketDialogProps> = ({ open, onClose, readOn
               value={creatorName}
               size={isMobile ? "medium" : "small"}
               InputProps={{ readOnly: true }}
-              sx={{ flex: 1 }}
+              sx={{ flex: 1, ...disabledFieldStyles }}
             />
           </Box>
 
@@ -656,7 +728,7 @@ const AddTicketDialog: React.FC<AddTicketDialogProps> = ({ open, onClose, readOn
             gap: 2,
             ...(isMobile && { flexDirection: 'column', gap: 1.5 })
           }}>
-            <FormControl fullWidth disabled={readOnly}>
+            <FormControl fullWidth disabled={readOnly} sx={disabledFieldStyles}>
               <InputLabel>Ticket Typ</InputLabel>
               <Select
                 label="Ticket Typ"
@@ -669,7 +741,7 @@ const AddTicketDialog: React.FC<AddTicketDialogProps> = ({ open, onClose, readOn
               </Select>
             </FormControl>
 
-            <FormControl fullWidth disabled={readOnly && !allowResponsibleEdit}>
+            <FormControl fullWidth disabled={readOnly && !allowResponsibleEdit} sx={disabledFieldStyles}>
               <InputLabel>Kategorie</InputLabel>
               <Select
                 label="Kategorie"
@@ -694,6 +766,7 @@ const AddTicketDialog: React.FC<AddTicketDialogProps> = ({ open, onClose, readOn
               fullWidth
               disabled={readOnly}
               placeholder="z.B. A-204, B-101"
+              sx={disabledFieldStyles}
             />
           ) : (
             // Betrieb fields
@@ -716,9 +789,10 @@ const AddTicketDialog: React.FC<AddTicketDialogProps> = ({ open, onClose, readOn
                     label="Equipment Nummer"
                     size="small"
                     placeholder="z.B. EQ-001, EQ-205"
+                    sx={disabledFieldStyles}
                   />
                 )}
-                sx={{ flex: 1 }}
+                sx={{ flex: 1, ...disabledFieldStyles }}
               />
               
               <Autocomplete
@@ -739,9 +813,10 @@ const AddTicketDialog: React.FC<AddTicketDialogProps> = ({ open, onClose, readOn
                     label="Maschine"
                     size="small"
                     placeholder="z.B. Presse 1, Fräse A"
+                    sx={disabledFieldStyles}
                   />
                 )}
-                sx={{ flex: 1 }}
+                sx={{ flex: 1, ...disabledFieldStyles }}
               />
             </Box>
           )}
@@ -755,7 +830,7 @@ const AddTicketDialog: React.FC<AddTicketDialogProps> = ({ open, onClose, readOn
             {/* Status - editable dropdown or read-only display */}
             {showStatus && initialData?.status && (
               allowStatusEdit ? (
-                <FormControl sx={{ flex: 1 }} disabled={readOnly && !allowStatusEdit}>
+                <FormControl sx={{ flex: 1, ...disabledFieldStyles }} disabled={readOnly && !allowStatusEdit}>
                   <InputLabel>Status</InputLabel>
                   <Select
                     label="Status"
@@ -774,7 +849,7 @@ const AddTicketDialog: React.FC<AddTicketDialogProps> = ({ open, onClose, readOn
                   value={statusLabelMap[initialData.status]}
                   size={isMobile ? "medium" : "small"}
                   InputProps={{ readOnly: true }}
-                  sx={{ flex: 1 }}
+                  sx={{ flex: 1, ...disabledFieldStyles }}
                 />
               )
             )}
@@ -792,7 +867,7 @@ const AddTicketDialog: React.FC<AddTicketDialogProps> = ({ open, onClose, readOn
                 })()}
                 size={isMobile ? "medium" : "small"}
                 InputProps={{ readOnly: true }}
-                sx={{ flex: 1 }}
+                sx={{ flex: 1, ...disabledFieldStyles }}
               />
             )}
           </Box>
@@ -806,6 +881,7 @@ const AddTicketDialog: React.FC<AddTicketDialogProps> = ({ open, onClose, readOn
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             disabled={readOnly}
+            sx={disabledFieldStyles}
           />
 
           <Box sx={{ 
@@ -813,7 +889,7 @@ const AddTicketDialog: React.FC<AddTicketDialogProps> = ({ open, onClose, readOn
             gap: 2,
             ...(isMobile && { flexDirection: 'column', gap: 1.5 })
           }}>
-            <FormControl sx={{ flex: 1 }} disabled={readOnly}>
+            <FormControl sx={{ flex: 1, ...disabledFieldStyles }} disabled={readOnly}>
               <InputLabel>Dringlichkeit</InputLabel>
               <Select
                 label="Dringlichkeit"
@@ -834,34 +910,131 @@ const AddTicketDialog: React.FC<AddTicketDialogProps> = ({ open, onClose, readOn
                   label="Geplantes Abschlussdatum"
                   value={plannedDate}
                   onChange={(newVal) => setPlannedDate(newVal)}
-                  slotProps={{ textField: { size: 'small', sx: { flex: 1 } } }}
+                  slotProps={{ textField: { size: 'small', sx: { flex: 1, ...disabledFieldStyles } } }}
                 />
               </LocalizationProvider>
             )}
           </Box>
 
-          {/* Responsible - show when explicitly allowed for editing OR in read-only mode */}
-          {(allowResponsibleEdit || readOnly) && (
-            <FormControl fullWidth disabled={readOnly && !allowResponsibleEdit}>
-              <InputLabel>Verantwortlich</InputLabel>
-              <Select
-                label="Verantwortlich"
-                value={responsible}
-                onChange={(e) => setResponsible(e.target.value as string)}
-                displayEmpty
-                renderValue={(selected) => {
-                  if (!selected) return '';
-                  return getDisplayNameFromUserId(selected);
-                }}
-              >
-                <MenuItem value=""><em>Niemand</em></MenuItem>
-                {technicianOptions.map(option => (
-                  <MenuItem key={option.userId} value={option.userId}>
-                    {option.displayName}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
+          {/* Responsible and Worked By Users - show when explicitly allowed for editing OR in read-only mode */}
+          {(allowResponsibleEdit || readOnly || allowWorkedByUsersEdit || allowWorkedByUsersView) && (
+            <Box sx={{ 
+              display: 'flex', 
+              gap: 2,
+              ...(isMobile && { flexDirection: 'column', gap: 1.5 })
+            }}>
+              {/* Responsible */}
+              {(allowResponsibleEdit || readOnly) && (
+                <FormControl sx={{ flex: 1, ...disabledFieldStyles }} disabled={readOnly && !allowResponsibleEdit}>
+                  <InputLabel>Verantwortlich</InputLabel>
+                  <Select
+                    label="Verantwortlich"
+                    value={responsible}
+                    onChange={(e) => setResponsible(e.target.value as string)}
+                    displayEmpty
+                    size={isMobile ? "medium" : "small"}
+                    renderValue={(selected) => {
+                      if (!selected) return '\u00A0'; // Non-breaking space to maintain height
+                      return getDisplayNameFromUserId(selected);
+                    }}
+                    sx={{
+                      '& .MuiSelect-select': {
+                        display: 'flex',
+                        alignItems: 'center',
+                        minHeight: '1.4375em', // Match TextField height
+                      },
+                      '& .MuiSelect-nativeInput': {
+                        top: '50%',
+                        transform: 'translateY(-50%)',
+                      }
+                    }}
+                  >
+                    <MenuItem value=""><em>Niemand</em></MenuItem>
+                    {technicianOptions.map(option => (
+                      <MenuItem key={option.userId} value={option.userId}>
+                        {option.displayName}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              )}
+
+              {/* Worked By Users - editable in ticket pool, viewable in other views */}
+              {(allowWorkedByUsersEdit || allowWorkedByUsersView) && (
+                <FormControl sx={{ 
+                  flex: 1, 
+                  ...disabledFieldStyles,
+                  ...(allowWorkedByUsersView && {
+                    '& .MuiOutlinedInput-root': {
+                      backgroundColor: 'grey.50',
+                    }
+                  })
+                }}>
+                  <InputLabel>Bearbeitet von</InputLabel>
+                  <Select
+                    label="Bearbeitet von"
+                    multiple
+                    value={workedByUsers}
+                    onChange={(e) => setWorkedByUsers(typeof e.target.value === 'string' ? e.target.value.split(',') : e.target.value)}
+                    input={<OutlinedInput label="Bearbeitet von" size={isMobile ? "medium" : "small"} />}
+                    renderValue={(selected) => (
+                      <Box sx={{ 
+                        display: 'flex', 
+                        gap: 0.5, 
+                        overflow: 'hidden',
+                        width: '100%',
+                        minHeight: '1.4375em', // Match TextField height
+                        alignItems: 'center'
+                      }}>
+                        {selected.length === 0 ? (
+                          <span style={{ visibility: 'hidden' }}>\u00A0</span> // Hidden non-breaking space for height
+                        ) : (
+                          selected.map((userId) => (
+                            <Chip 
+                              key={userId} 
+                              label={getDisplayNameFromUserId(userId)} 
+                              size="small"
+                              sx={{
+                                flexShrink: 0,
+                                maxWidth: '120px',
+                                '& .MuiChip-label': {
+                                  overflow: 'hidden',
+                                  textOverflow: 'ellipsis',
+                                  whiteSpace: 'nowrap'
+                                }
+                              }}
+                            />
+                          ))
+                        )}
+                      </Box>
+                    )}
+                    size={isMobile ? "medium" : "small"}
+                    sx={{
+                      '& .MuiSelect-select': {
+                        display: 'flex',
+                        alignItems: 'center',
+                        minHeight: '1.4375em', // Match TextField height
+                      },
+                      '& .MuiSelect-nativeInput': {
+                        top: '50%',
+                        transform: 'translateY(-50%)',
+                      }
+                    }}
+                  >
+                    {userOptions.map((option) => (
+                      <MenuItem key={option.userId} value={option.userId} disabled={allowWorkedByUsersView}>
+                        <Checkbox 
+                          checked={workedByUsers.indexOf(option.userId) > -1} 
+                          disabled={allowWorkedByUsersView}
+                          onChange={allowWorkedByUsersView ? undefined : () => {}}
+                        />
+                        <ListItemText primary={option.displayName} />
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              )}
+            </Box>
           )}
 
           {/* Work tracking controls */}

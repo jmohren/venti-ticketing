@@ -81,7 +81,12 @@ const InstandhaltungWidget: React.FC<Props> = ({ currentUserId }) => {
     reorderTickets(dragId,targetId,after);
   };
 
-  const filtered = tickets.filter(t=> t.responsible===currentUserId);
+  // Filter tickets where user is responsible OR mentioned in worked_by_users (avoid duplicates)
+  const filtered = tickets.filter(t => {
+    const isResponsible = t.responsible === currentUserId;
+    const hasWorkedOn = t.worked_by_users?.includes(currentUserId) || false;
+    return isResponsible || hasWorkedOn;
+  });
   const backlog = filtered.filter(t=>t.status==='backlog');
   const progress = filtered.filter(t=>t.status==='progress');
   const todayDone = filtered.filter(t=> t.status==='done' && t.completedAt && new Date(t.completedAt).toDateString()===new Date().toDateString());
@@ -107,6 +112,7 @@ const InstandhaltungWidget: React.FC<Props> = ({ currentUserId }) => {
           readOnly
           showStatus
           allowWorkTracking
+          allowWorkedByUsersView
           ticketId={selectedTicket.id}
           initialData={{
             machine: selectedTicket.machine,
@@ -123,6 +129,7 @@ const InstandhaltungWidget: React.FC<Props> = ({ currentUserId }) => {
             created_at: selectedTicket.created_at,
             createdByUserId: selectedTicket.createdByUserId,
             totalWorkTimeMinutes: selectedTicket.totalWorkTimeMinutes,
+            worked_by_users: selectedTicket.worked_by_users,
           }}
         />
       )}

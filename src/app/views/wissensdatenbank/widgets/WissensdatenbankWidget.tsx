@@ -357,6 +357,7 @@ const WissensdatenbankWidget: React.FC = () => {
           open={isDialogOpen}
           onClose={closeTicket}
           readOnly
+          allowWorkedByUsersView
           initialData={{
             machine: selectedTicket.machine,
             description: selectedTicket.description,

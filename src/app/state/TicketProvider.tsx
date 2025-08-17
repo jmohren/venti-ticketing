@@ -43,6 +43,8 @@ export interface Ticket {
   // User tracking fields
   createdByUserId?: string;
   createdByName?: string;
+  // Users who have worked on this ticket
+  worked_by_users?: string[];
 }
 
 interface TicketContextValue {

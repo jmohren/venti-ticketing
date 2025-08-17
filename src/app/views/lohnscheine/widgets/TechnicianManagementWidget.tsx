@@ -51,7 +51,7 @@ const TechnicianManagementWidget: React.FC = () => {
   
 
 
-  // Load tickets for selected technician and month
+  // Load tickets for selected technician and month (including archived tickets)
   const loadTechnicianTickets = useCallback(async (technicianUserId: string, month: Date) => {
     if (!technicianUserId) {
       setTechnicianTickets([]);
@@ -65,10 +65,10 @@ const TechnicianManagementWidget: React.FC = () => {
       const startDate = startOfMonth(month).toISOString();
       const endDate = endOfMonth(month).toISOString();
       
-      // Query for tickets assigned to this technician, completed in this month
-      // Note: PostgREST doesn't support range queries easily, so we'll filter client-side
+      // Query for tickets where user is responsible OR in worked_by_users array
+      // Include all statuses (including archived) for Lohnscheine
       const allTickets = await restApiClient.get('tickets', {
-        responsible: `eq.${technicianUserId}`,
+        or: `(responsible.eq.${technicianUserId},worked_by_users.cs.["${technicianUserId}"])`,
         order: ['completedAt.desc']
       });
       
@@ -462,6 +462,7 @@ const TechnicianManagementWidget: React.FC = () => {
           open={isDialogOpen}
           onClose={closeTicket}
           readOnly
+          allowWorkedByUsersView
           initialData={{
             machine: selectedTicket.machine,
             description: selectedTicket.description,
