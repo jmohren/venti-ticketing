@@ -129,9 +129,6 @@ export const TechnicianProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     return technicians;
   }, [technicians]);
 
-  // Use centralized function from UsersProvider
-  const { getDisplayNameFromUserId } = useUsersContext();
-  
   const getTechnicianDisplayName = useCallback((_technician: Technician) => {
     // Synchronous fallback for UI usage
     return _technician.userId;

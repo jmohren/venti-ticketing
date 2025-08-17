@@ -87,7 +87,7 @@ interface AddTicketDialogProps {
 const AddTicketDialog: React.FC<AddTicketDialogProps> = ({ open, onClose, readOnly = false, initialData, showStatus = false, onSave, allowResponsibleEdit = false, allowPlanEdit = false, allowStatusEdit = false, ticketId, showArchiveButton = false, onArchive, allowWorkTracking = false, allowWorkedByUsersEdit = false, allowWorkedByUsersView = false }) => {
   const { user, profile } = useUser();
   const { updateTicket, getCreatorDisplayName } = useTickets();
-  const { technicians, getTechnicianDisplayName } = useTechnicians();
+  const { technicians } = useTechnicians();
   const { machines } = useMachines();
 
 

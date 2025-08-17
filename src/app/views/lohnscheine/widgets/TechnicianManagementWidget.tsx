@@ -45,8 +45,7 @@ const TechnicianManagementWidget: React.FC = () => {
   // Use the shared technician provider
   const { 
     technicians, 
-    error: technicianError, 
-    getTechnicianDisplayName,
+    error: technicianError
   } = useTechnicians();
   
 
