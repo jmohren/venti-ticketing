@@ -56,7 +56,7 @@ const categoryColor = {
 const WissensdatenbankWidget: React.FC = () => {
   const { loadArchivedTickets } = useTickets();
   const { ticketId, isDialogOpen, openTicket, closeTicket } = useTicketUrlState();
-  const { users } = useUsersContext();
+
   
   // Local state for archived tickets (loaded separately)
   const [archivedTickets, setArchivedTickets] = useState<Ticket[]>([]);
@@ -65,31 +65,8 @@ const WissensdatenbankWidget: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [totalCount, setTotalCount] = useState(0);
 
-  // Helper function to get display name from user ID
-  const getDisplayNameFromUserId = useCallback((userId?: string) => {
-    if (!userId?.trim()) return 'Nicht zugewiesen';
-    
-    // Check if it looks like a UUID (userId format)
-    const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(userId);
-    
-    if (isUUID) {
-      // It's a userId, try to find the user
-      const user = users.find(u => u.userId === userId);
-      if (user) {
-        const fn = user.profile?.firstName || '';
-        const ln = user.profile?.lastName || '';
-        const full = [fn, ln].filter(Boolean).join(' ');
-        return full || user.email;
-      }
-      
-      // User ID not found in database
-      console.warn(`⚠️ [WISSENSDATENBANK] User ID not found in user database: ${userId}`);
-      return 'Unbekannter Benutzer';
-    }
-    
-    // Legacy data: it's already a display name, return as-is
-    return userId;
-  }, [users]);
+  // Use centralized function from UsersProvider
+  const { getDisplayNameFromUserId } = useUsersContext();
 
   // Handle server-side search from Table component
   const handleServerSearch = useCallback(async (query: string) => {
@@ -239,7 +216,7 @@ const WissensdatenbankWidget: React.FC = () => {
       label: 'Verantwortlich',
       type: 'text',
       minWidth: 150,
-      format: (value: string) => getDisplayNameFromUserId(value),
+      format: (value: string) => value || 'Nicht zugewiesen', // TODO: Handle async getDisplayNameFromUserId
     },
 
     {

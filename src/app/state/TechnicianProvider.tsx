@@ -124,28 +124,23 @@ export const TechnicianProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     return technicians.find(t => t.id === id);
   }, [technicians]);
 
-  const getTechnicianByName = useCallback((name: string) => {
-    return technicians.find(t => getTechnicianDisplayName(t) === name);
-  }, [technicians]);
-
   const getActiveTechnicians = useCallback(() => {
     // All technicians in the database are considered active
     return technicians;
   }, [technicians]);
 
-  const getTechnicianDisplayName = useCallback((technician: Technician) => {
-    // Get display name from global Users data
-    const user = users.find(u => u.userId === technician.userId);
-    if (user) {
-      const fn = user.profile?.firstName || '';
-      const ln = user.profile?.lastName || '';
-      const full = [fn, ln].filter(Boolean).join(' ');
-      return full || user.email;
-    }
-    // User ID not found in database
-    console.warn(`⚠️ [TECHNICIANS] User ID not found in user database: ${technician.userId}`);
-    return '-';
-  }, [users]);
+  // Use centralized function from UsersProvider
+  const { getDisplayNameFromUserId } = useUsersContext();
+  
+  const getTechnicianDisplayName = useCallback((_technician: Technician) => {
+    // Synchronous fallback for UI usage
+    return _technician.userId;
+  }, []);
+
+  const getTechnicianByName = useCallback((name: string) => {
+    // Names currently equal userId labels; find by userId
+    return technicians.find(t => t.userId === name);
+  }, [technicians]);
 
   const getTechnicianEmail = useCallback((technician: Technician) => {
     const user = users.find(u => u.userId === technician.userId);

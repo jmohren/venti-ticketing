@@ -25,6 +25,7 @@ interface UsersContextValue {
   error: string | null;
   lastFetchedAt: number | null;
   refresh: () => Promise<void>;
+  getDisplayNameFromUserId: (userId?: string | null, fallback?: string, timeoutMs?: number) => Promise<string>;
 }
 
 const UsersContext = createContext<UsersContextValue | undefined>(undefined);
@@ -177,13 +178,54 @@ export const UsersProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     return () => controller.abort();
   }, [fetchUsers]);
 
+  // Centralized function to get display name from user ID
+  const getDisplayNameFromUserId = useCallback(async (userId?: string | null, fallback: string = '-', timeoutMs: number = 10000): Promise<string> => {
+    if (!userId?.trim()) return fallback;
+    
+    // Check if it looks like a UUID (userId format)
+    const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(userId);
+    
+    if (!isUUID) {
+      // Legacy data: it's already a display name, return as-is
+      return userId;
+    }
+
+    // Wait for users data to be available or timeout
+    const startTime = Date.now();
+    while (users.length === 0 && (Date.now() - startTime) < timeoutMs) {
+      await new Promise(resolve => setTimeout(resolve, 100)); // Wait 100ms before checking again
+    }
+
+    // Check if we timed out
+    if (users.length === 0 && (Date.now() - startTime) >= timeoutMs) {
+      console.warn(`⚠️ [USERS] Timeout waiting for user data (${timeoutMs}ms) for userId: ${userId}`);
+      return fallback;
+    }
+
+    // It's a userId, try to find the user
+    const user = users.find(u => u.userId === userId);
+    if (user) {
+      const fn = user.profile?.firstName || '';
+      const ln = user.profile?.lastName || '';
+      const full = [fn, ln].filter(Boolean).join(' ');
+      return full || user.email;
+    }
+    
+    // User ID not found in database
+    console.warn(`⚠️ [USERS] User ID not found in user database: ${userId}`);
+    return fallback;
+  }, [users, loading, error]);
+
+
+
   const value = useMemo<UsersContextValue>(() => ({
     users,
     loading,
     error,
     lastFetchedAt,
     refresh: () => fetchUsers(undefined, true), // Force refresh when manually called
-  }), [users, loading, error, lastFetchedAt, fetchUsers]);
+    getDisplayNameFromUserId,
+  }), [users, loading, error, lastFetchedAt, fetchUsers, getDisplayNameFromUserId]);
 
   return (
     <UsersContext.Provider value={value}>

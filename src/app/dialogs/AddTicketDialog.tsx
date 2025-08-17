@@ -23,7 +23,7 @@ import {
 } from '@mui/material';
 import { format } from 'date-fns';
 import { useUser } from '@/core/state/UserProvider';
-import { useUsersContext } from '@/core/state/UsersProvider';
+// import { useUsersContext } from '@/core/state/UsersProvider'; // Currently unused due to async nature
 import { IconButton } from '@mui/material';
 import { CloudUpload, Delete, ZoomIn, Clear, ExpandMore, ContentCopy, Archive, Send, Close, CameraAlt, Image, PlayArrow, Pause } from '@mui/icons-material';
 import { TicketEvent, useTickets } from '@/app/hooks/useTickets';
@@ -89,14 +89,14 @@ const AddTicketDialog: React.FC<AddTicketDialogProps> = ({ open, onClose, readOn
   const { updateTicket, getCreatorDisplayName } = useTickets();
   const { technicians, getTechnicianDisplayName } = useTechnicians();
   const { machines } = useMachines();
-  const { users } = useUsersContext();
+
 
   // Helper to get userId from display name (for legacy compatibility)
   // Must be defined before useState calls that use it
   const getUserIdFromDisplayName = useCallback((displayName: string) => {
-    const tech = technicians.find(t => getTechnicianDisplayName(t) === displayName);
+    const tech = technicians.find(t => t.userId === displayName); // TODO: Update when async display names are supported
     return tech ? tech.userId : displayName;
-  }, [technicians, getTechnicianDisplayName]);
+  }, [technicians]);
   
   // URL state management for new ticket creation (single source of truth)
   const { getFormData, updateType, updateMachine, updateEquipment, updateMachineOnly, updateEquipmentOnly, updateRoom } = useTicketCreationUrlState();
@@ -128,25 +128,16 @@ const AddTicketDialog: React.FC<AddTicketDialogProps> = ({ open, onClose, readOn
     }));
   }, [machines]);
 
-  // Helper function to get display name from user ID
-  const getDisplayNameFromUserId = useCallback((userId: string) => {
-    const user = users.find(u => u.userId === userId);
-    if (user) {
-      const fn = user.profile?.firstName || '';
-      const ln = user.profile?.lastName || '';
-      const full = [fn, ln].filter(Boolean).join(' ');
-      return full || user.email;
-    }
-    return userId; // fallback to userId if not found
-  }, [users]);
+  // Use centralized function from UsersProvider (currently unused due to async nature)
+  // const { getDisplayNameFromUserId } = useUsersContext();
 
   // User options for worked by users multi-select (only technicians)
   const userOptions = useMemo(() => {
     return technicians.map(tech => ({
       userId: tech.userId,
-      displayName: getTechnicianDisplayName(tech)
+      displayName: tech.userId // TODO: Use async getTechnicianDisplayName when UI supports it
     }));
-  }, [technicians, getTechnicianDisplayName]);
+  }, [technicians]);
 
   // Handle machine selection - auto-fill equipment number
   const handleMachineSelect = (selectedMachine: string | null) => {
@@ -402,9 +393,9 @@ const AddTicketDialog: React.FC<AddTicketDialogProps> = ({ open, onClose, readOn
   const technicianOptions = useMemo(() => {
     return technicians.map(tech => ({
       userId: tech.userId,
-      displayName: getTechnicianDisplayName(tech)
+      displayName: tech.userId // TODO: Use async getTechnicianDisplayName when UI supports it
     }));
-  }, [technicians, getTechnicianDisplayName]);
+  }, [technicians]);
 
 
 
@@ -935,7 +926,8 @@ const AddTicketDialog: React.FC<AddTicketDialogProps> = ({ open, onClose, readOn
                     size={isMobile ? "medium" : "small"}
                     renderValue={(selected) => {
                       if (!selected) return '\u00A0'; // Non-breaking space to maintain height
-                      return getDisplayNameFromUserId(selected);
+                      // TODO: This needs to be updated to handle async getDisplayNameFromUserId
+                      return selected; // Temporary fallback to userId
                     }}
                     sx={{
                       '& .MuiSelect-select': {
@@ -992,7 +984,7 @@ const AddTicketDialog: React.FC<AddTicketDialogProps> = ({ open, onClose, readOn
                           selected.map((userId) => (
                             <Chip 
                               key={userId} 
-                              label={getDisplayNameFromUserId(userId)} 
+                              label={userId} // TODO: This needs to be updated to handle async getDisplayNameFromUserId 
                               size="small"
                               sx={{
                                 flexShrink: 0,

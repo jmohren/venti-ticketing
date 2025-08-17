@@ -59,7 +59,7 @@ interface TicketContextValue {
   refreshTickets: () => Promise<void>;
   getTicketsByCreator: (userId: string) => Ticket[];
   getMyTickets: () => Ticket[];
-  getCreatorDisplayName: (createdByUserId?: string) => string;
+  getCreatorDisplayName: (createdByUserId?: string) => Promise<string>;
   loadArchivedTickets: (options?: { page?: number; limit?: number; search?: string; }) => Promise<Ticket[]>;
 }
 
@@ -67,7 +67,7 @@ const TicketContext = createContext<TicketContextValue | undefined>(undefined);
 
 export const TicketProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user, profile } = useUser();
-  const { users } = useUsersContext();
+
   const { getResponsibleDisplayName } = useResponsibleDisplay();
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [loading, setLoading] = useState(true);
@@ -80,31 +80,13 @@ export const TicketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     return 'Demo User';
   };
 
+  // Use centralized function from UsersProvider
+  const { getDisplayNameFromUserId } = useUsersContext();
+  
   // Get creator display name from userId (for display purposes)
-  const getCreatorDisplayName = useCallback((createdByUserId?: string) => {
-    if (!createdByUserId?.trim()) return '-';
-    
-    // Check if it looks like a UUID (userId format)
-    const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(createdByUserId);
-    
-    if (isUUID) {
-      // It's a userId, try to find the user
-      const creator = users.find(u => u.userId === createdByUserId);
-      if (creator) {
-        const fn = creator.profile?.firstName || '';
-        const ln = creator.profile?.lastName || '';
-        const full = [fn, ln].filter(Boolean).join(' ');
-        return full || creator.email;
-      }
-      
-      // User ID not found in database
-      console.warn(`⚠️ [TICKETS] User ID not found in user database: ${createdByUserId}`);
-      return '-';
-    }
-    
-    // Legacy data: it's already a display name, return as-is
-    return createdByUserId;
-  }, [users]);
+  const getCreatorDisplayName = useCallback(async (createdByUserId?: string) => {
+    return await getDisplayNameFromUserId(createdByUserId, '-');
+  }, [getDisplayNameFromUserId]);
 
   // Load tickets from API (excluding archived tickets for global views)
   const loadTickets = useCallback(async () => {

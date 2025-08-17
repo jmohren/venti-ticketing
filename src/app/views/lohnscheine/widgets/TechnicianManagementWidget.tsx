@@ -187,7 +187,7 @@ const TechnicianManagementWidget: React.FC = () => {
               >
                 {technicians.map((tech) => (
                   <MenuItem key={tech.id} value={tech.userId}>
-                    {getTechnicianDisplayName(tech)}
+                    {tech.userId}
                   </MenuItem>
                 ))}
               </Select>
@@ -224,9 +224,7 @@ const TechnicianManagementWidget: React.FC = () => {
               <Box sx={{ p: 2, backgroundColor: 'grey.50', borderBottom: 1, borderColor: 'divider' }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 3 }}>
                   <Typography variant="h6">
-                    {technicians.find(t => t.userId === selectedTechnician) && 
-                      getTechnicianDisplayName(technicians.find(t => t.userId === selectedTechnician)!)
-                    } - {currentMonth.name}
+                    {selectedTechnician} - {currentMonth.name}
                   </Typography>
                   <Typography variant="body2">
                     <strong>Tickets erledigt:</strong> {technicianTickets.length}
