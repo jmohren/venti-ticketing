@@ -457,8 +457,21 @@ const CalendarWidget: React.FC<CalendarWidgetProps> = ({ selectedMachine }) => {
         <AddTicketDialog
           open={selectedTicket !== null}
           onClose={() => setSelectedTicket(null)}
+          mode="view"
           initialData={tickets.find(t => t.id === selectedTicket)}
-          readOnly={true}
+          fieldPermissions={{
+            description: 'view',
+            priority: 'view',
+            status: 'view',
+            ticketType: 'view',
+            category: 'view',
+            machine: 'view',
+            equipmentNummer: 'view',
+            raumnummer: 'view',
+            responsible: 'view',
+            plannedCompletion: 'view',
+            costCenter: 'view',
+          }}
         />
       )}
 
