@@ -198,7 +198,7 @@ const TicketPoolWidget: React.FC = () => {
         <AddTicketDialog
           open={isDialogOpen}
           onClose={closeTicket}
-          readOnly
+          mode="edit"
           ticketId={selectedTicket.id}
           initialData={{
             machine: selectedTicket.machine,
@@ -217,20 +217,33 @@ const TicketPoolWidget: React.FC = () => {
             createdByUserId: selectedTicket.createdByUserId,
             totalWorkTimeMinutes: selectedTicket.totalWorkTimeMinutes,
             worked_by_users: selectedTicket.worked_by_users,
+            cost_center: selectedTicket.cost_center,
           }}
-          showStatus
+          fieldPermissions={{
+            // View only fields
+            description: 'view',
+            priority: 'view',
+            ticketType: 'view',
+            machine: 'view',
+            equipmentNummer: 'view',
+            raumnummer: 'view',
+            workTracking: 'view',
+            // Editable fields
+            responsible: 'edit',
+            plannedCompletion: 'edit',
+            category: 'edit',
+            status: 'edit',
+            workedByUsers: 'edit',
+            costCenter: 'edit',
+          }}
           onSave={(upd) => updateTicket(selectedTicket.id, { 
             responsible: upd.responsible || '', 
             plannedCompletion: upd.plannedCompletion ?? selectedTicket.plannedCompletion,
             category: upd.category ?? selectedTicket.category,
             status: upd.status ?? selectedTicket.status,
-            worked_by_users: upd.worked_by_users
+            worked_by_users: upd.worked_by_users,
+            cost_center: upd.cost_center
           })}
-          allowResponsibleEdit
-          allowPlanEdit
-          allowStatusEdit
-          allowWorkTracking
-          allowWorkedByUsersEdit
           showArchiveButton={selectedTicket.status === 'done'}
           onArchive={() => handleArchiveTicket(selectedTicket.id)}
         />

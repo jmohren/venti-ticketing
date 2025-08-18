@@ -59,24 +59,55 @@ interface TicketData {
   createdByUserId?: string;
   // Users who have worked on this ticket
   worked_by_users?: string[];
+  // Cost center field
+  cost_center?: string;
+}
+
+type FieldPermission = 'hidden' | 'view' | 'edit';
+
+interface FieldPermissions {
+  // Basic ticket info
+  description?: FieldPermission;
+  priority?: FieldPermission;
+  status?: FieldPermission;
+  
+  // Ticket type and category
+  ticketType?: FieldPermission;
+  category?: FieldPermission;
+  
+  // Location/Machine fields
+  machine?: FieldPermission;
+  equipmentNummer?: FieldPermission;
+  raumnummer?: FieldPermission;
+  
+  // Assignment and users
+  responsible?: FieldPermission;
+  workedByUsers?: FieldPermission;
+  
+  // Planning
+  plannedCompletion?: FieldPermission;
+  costCenter?: FieldPermission;
+  
+  // Work tracking
+  workTracking?: FieldPermission;
+  
+  // Images
+  images?: FieldPermission;
+  
+  // Comments
+  comments?: FieldPermission;
 }
 
 interface AddTicketDialogProps {
   open: boolean;
   onClose: () => void;
-  readOnly?: boolean;
+  mode?: 'view' | 'edit'; // Controls if dialog is in view-only or edit mode
   initialData?: TicketData;
-  showStatus?: boolean;
   onSave?: (data: TicketData) => void;
-  allowResponsibleEdit?: boolean;
-  allowPlanEdit?: boolean;
-  allowStatusEdit?: boolean;
   ticketId?: number;
   showArchiveButton?: boolean;
   onArchive?: () => void;
-  allowWorkTracking?: boolean; // Only show work tracking in specific views
-  allowWorkedByUsersEdit?: boolean; // Only show worked by users multi-select in ticket pool
-  allowWorkedByUsersView?: boolean; // Only show worked by users for viewing (read-only)
+  fieldPermissions?: FieldPermissions; // Granular field-level permissions
 }
 
 /**
@@ -84,12 +115,41 @@ interface AddTicketDialogProps {
  * The full form will be expanded later – for now we only collect
  * a short description and priority so that we can wire up the workflow.
  */
-const AddTicketDialog: React.FC<AddTicketDialogProps> = ({ open, onClose, readOnly = false, initialData, showStatus = false, onSave, allowResponsibleEdit = false, allowPlanEdit = false, allowStatusEdit = false, ticketId, showArchiveButton = false, onArchive, allowWorkTracking = false, allowWorkedByUsersEdit = false, allowWorkedByUsersView = false }) => {
+const AddTicketDialog: React.FC<AddTicketDialogProps> = ({ 
+  open, 
+  onClose, 
+  mode = 'view', 
+  initialData, 
+  onSave, 
+  ticketId, 
+  showArchiveButton = false, 
+  onArchive, 
+  fieldPermissions = {} 
+}) => {
   const { user, profile } = useUser();
   const { updateTicket } = useTickets();
   const { technicians, getTechnicianDisplayName } = useTechnicians();
   const { machines } = useMachines();
   const { getDisplayNameFromUserIdSync } = useUsersContext();
+
+  // Helper functions for field permissions
+  const getFieldPermission = (field: keyof FieldPermissions): FieldPermission => {
+    return fieldPermissions[field] || 'hidden';
+  };
+
+  const isFieldVisible = (field: keyof FieldPermissions): boolean => {
+    const permission = getFieldPermission(field);
+    return permission === 'view' || permission === 'edit';
+  };
+
+  const isFieldEditable = (field: keyof FieldPermissions): boolean => {
+    const permission = getFieldPermission(field);
+    return permission === 'edit' && mode === 'edit';
+  };
+
+  // Determine if dialog is in edit mode and has any editable fields
+  const hasEditableFields = mode === 'edit' && Object.values(fieldPermissions).some(p => p === 'edit');
+  const showSaveButton = hasEditableFields;
 
 
   // Helper to get userId from display name (for legacy compatibility)
@@ -248,6 +308,7 @@ const AddTicketDialog: React.FC<AddTicketDialogProps> = ({ open, onClose, readOn
   const [raumnummer, setRaumnummer] = useState(initialData?.raumnummer || '');
   const [equipmentNummer, setEquipmentNummer] = useState(initialData?.equipmentNummer || '');
   const [workedByUsers, setWorkedByUsers] = useState<string[]>(initialData?.worked_by_users || []);
+  const [costCenter, setCostCenter] = useState(initialData?.cost_center || '');
   
   // Get current values (URL for new tickets, state for existing)
   const getCurrentValues = () => {
@@ -369,6 +430,7 @@ const AddTicketDialog: React.FC<AddTicketDialogProps> = ({ open, onClose, readOn
       setCategory(initialData?.category || 'mechanisch');
       setRaumnummer(initialData?.raumnummer || '');
       setEquipmentNummer(initialData?.equipmentNummer || '');
+      setCostCenter(initialData?.cost_center || '');
       setSelectedFiles([]);
       setExistingImages(initialData?.images || []);
       setPreviewOpen(false);
@@ -384,7 +446,7 @@ const AddTicketDialog: React.FC<AddTicketDialogProps> = ({ open, onClose, readOn
   const newFileItems = selectedFiles.map(file => URL.createObjectURL(file));
   const previewItems = [...existingImages, ...newFileItems];
 
-  const canSelectMore = !readOnly && previewItems.length < 3;
+  const canSelectMore = isFieldEditable('images') && previewItems.length < 3;
 
 
 
@@ -422,7 +484,7 @@ const AddTicketDialog: React.FC<AddTicketDialogProps> = ({ open, onClose, readOn
   const formValidBase = description.trim().length > 0 && 
     (currentValues.ticketType === 'verwaltung' ? (currentValues.raumnummer || '').trim().length > 0 : 
      currentValues.ticketType === 'betrieb' ? (currentValues.machine || '').trim().length > 0 && (currentValues.equipmentNummer || '').trim().length > 0 : false);
-  const formValid = readOnly && allowResponsibleEdit ? true : formValidBase;
+  const formValid = showSaveButton ? formValidBase : true;
 
   const handleSave = async () => {
     setIsSaving(true);
@@ -474,7 +536,7 @@ const AddTicketDialog: React.FC<AddTicketDialogProps> = ({ open, onClose, readOn
       description, 
       priority, 
         machine: currentValues.ticketType === 'verwaltung' ? 'Verwaltung' : currentValues.machine, 
-      status: allowStatusEdit ? status : initialData?.status, 
+      status: isFieldEditable('status') ? status : initialData?.status, 
         type: currentValues.ticketType,
         category,
       responsible, 
@@ -482,7 +544,8 @@ const AddTicketDialog: React.FC<AddTicketDialogProps> = ({ open, onClose, readOn
         images: uploadedImageUrls, // Pass uploaded image URLs
         raumnummer: currentValues.ticketType === 'verwaltung' ? currentValues.raumnummer : undefined,
         equipmentNummer: currentValues.ticketType === 'betrieb' ? currentValues.equipmentNummer : undefined,
-        worked_by_users: workedByUsers
+        worked_by_users: workedByUsers,
+        cost_center: costCenter
     });
     onClose();
     } catch (error) {
@@ -715,209 +778,195 @@ const AddTicketDialog: React.FC<AddTicketDialogProps> = ({ open, onClose, readOn
           </Box>
 
           {/* Ticket Type Selection */}
-          <Box sx={{ 
-            display: 'flex', 
-            gap: 2,
-            ...(isMobile && { flexDirection: 'column', gap: 1.5 })
-          }}>
-            <FormControl fullWidth disabled={readOnly} sx={disabledFieldStyles}>
-              <InputLabel>Ticket Typ</InputLabel>
-              <Select
-                label="Ticket Typ"
-                value={currentValues.ticketType}
-                onChange={(e) => handleTicketTypeChange(e.target.value as 'verwaltung' | 'betrieb')}
-                size={isMobile ? "medium" : "small"}
-              >
-                <MenuItem value="betrieb">Betrieb</MenuItem>
-                <MenuItem value="verwaltung">Verwaltung</MenuItem>
-              </Select>
-            </FormControl>
+          {(isFieldVisible('ticketType') || isFieldVisible('category')) && (
+            <Box sx={{ 
+              display: 'flex', 
+              gap: 2,
+              ...(isMobile && { flexDirection: 'column', gap: 1.5 })
+            }}>
+              {isFieldVisible('ticketType') && (
+                <FormControl fullWidth disabled={!isFieldEditable('ticketType')} sx={!isFieldEditable('ticketType') ? disabledFieldStyles : {}}>
+                  <InputLabel>Ticket Typ</InputLabel>
+                  <Select
+                    label="Ticket Typ"
+                    value={currentValues.ticketType}
+                    onChange={(e) => handleTicketTypeChange(e.target.value as 'verwaltung' | 'betrieb')}
+                    size={isMobile ? "medium" : "small"}
+                  >
+                    <MenuItem value="betrieb">Betrieb</MenuItem>
+                    <MenuItem value="verwaltung">Verwaltung</MenuItem>
+                  </Select>
+                </FormControl>
+              )}
 
-            <FormControl fullWidth disabled={readOnly && !allowResponsibleEdit} sx={disabledFieldStyles}>
-              <InputLabel>Kategorie</InputLabel>
-              <Select
-                label="Kategorie"
-                value={category}
-                onChange={(e) => setCategory(e.target.value as 'elektrisch' | 'mechanisch')}
-                size={isMobile ? "medium" : "small"}
-              >
-                <MenuItem value="mechanisch">Mechanisch</MenuItem>
-                <MenuItem value="elektrisch">Elektrisch</MenuItem>
-              </Select>
-            </FormControl>
-          </Box>
+              {isFieldVisible('category') && (
+                <FormControl fullWidth disabled={!isFieldEditable('category')} sx={!isFieldEditable('category') ? disabledFieldStyles : {}}>
+                  <InputLabel>Kategorie</InputLabel>
+                  <Select
+                    label="Kategorie"
+                    value={category}
+                    onChange={(e) => setCategory(e.target.value as 'elektrisch' | 'mechanisch')}
+                    size={isMobile ? "medium" : "small"}
+                  >
+                    <MenuItem value="mechanisch">Mechanisch</MenuItem>
+                    <MenuItem value="elektrisch">Elektrisch</MenuItem>
+                  </Select>
+                </FormControl>
+              )}
+            </Box>
+          )}
 
           {/* Conditional fields based on ticket type */}
           {currentValues.ticketType === 'verwaltung' ? (
             // Verwaltung fields
-            <TextField
-              label="Raumnummer"
-              value={currentValues.raumnummer}
-              onChange={(e) => handleRaumnummerChange(e.target.value)}
-              size="small"
-              fullWidth
-              disabled={readOnly}
-              placeholder="z.B. A-204, B-101"
-              sx={disabledFieldStyles}
-            />
+            isFieldVisible('raumnummer') && (
+              <TextField
+                label="Raumnummer"
+                value={currentValues.raumnummer}
+                onChange={(e) => handleRaumnummerChange(e.target.value)}
+                size="small"
+                fullWidth
+                disabled={!isFieldEditable('raumnummer')}
+                placeholder="z.B. A-204, B-101"
+                sx={!isFieldEditable('raumnummer') ? disabledFieldStyles : {}}
+              />
+            )
           ) : (
             // Betrieb fields
-            <Box sx={{ display: 'flex', gap: 2 }}>
-              <Autocomplete
-                options={equipmentOptions.map(option => option.label)}
-                value={currentValues.equipmentNummer}
-                onChange={(_, newValue) => handleEquipmentSelect(newValue)}
-                onInputChange={(event, newInputValue) => {
-                  // Only update equipment field during typing, no cross-updating
-                  if (event?.type === 'change') {
-                    handleEquipmentInput(newInputValue);
-                  }
-                }}
-                freeSolo
-                disabled={readOnly}
-                renderInput={(params) => (
-                  <TextField
-                    {...params}
-                    label="Equipment Nummer"
-                    size="small"
-                    placeholder="z.B. EQ-001, EQ-205"
-                    sx={disabledFieldStyles}
+            (isFieldVisible('equipmentNummer') || isFieldVisible('machine')) && (
+              <Box sx={{ display: 'flex', gap: 2 }}>
+                {isFieldVisible('equipmentNummer') && (
+                  <Autocomplete
+                    options={equipmentOptions.map(option => option.label)}
+                    value={currentValues.equipmentNummer}
+                    onChange={(_, newValue) => handleEquipmentSelect(newValue)}
+                    onInputChange={(event, newInputValue) => {
+                      // Only update equipment field during typing, no cross-updating
+                      if (event?.type === 'change') {
+                        handleEquipmentInput(newInputValue);
+                      }
+                    }}
+                    freeSolo
+                    disabled={!isFieldEditable('equipmentNummer')}
+                    renderInput={(params) => (
+                      <TextField
+                        {...params}
+                        label="Equipment Nummer"
+                        size="small"
+                        placeholder="z.B. EQ-001, EQ-205"
+                        sx={!isFieldEditable('equipmentNummer') ? disabledFieldStyles : {}}
+                      />
+                    )}
+                    sx={{ flex: 1, ...(!isFieldEditable('equipmentNummer') ? disabledFieldStyles : {}) }}
                   />
                 )}
-                sx={{ flex: 1, ...disabledFieldStyles }}
-              />
-              
-              <Autocomplete
-                options={machineOptions.map(option => option.label)}
-                value={currentValues.machine}
-                onChange={(_, newValue) => handleMachineSelect(newValue)}
-                onInputChange={(event, newInputValue) => {
-                  // Only update machine field during typing, no cross-updating
-                  if (event?.type === 'change') {
-                    handleMachineInput(newInputValue);
-                  }
-                }}
-                freeSolo
-                disabled={readOnly}
-                renderInput={(params) => (
-                  <TextField
-                    {...params}
-                    label="Maschine"
-                    size="small"
-                    placeholder="z.B. Presse 1, Fräse A"
-                    sx={disabledFieldStyles}
+                
+                {isFieldVisible('machine') && (
+                  <Autocomplete
+                    options={machineOptions.map(option => option.label)}
+                    value={currentValues.machine}
+                    onChange={(_, newValue) => handleMachineSelect(newValue)}
+                    onInputChange={(event, newInputValue) => {
+                      // Only update machine field during typing, no cross-updating
+                      if (event?.type === 'change') {
+                        handleMachineInput(newInputValue);
+                      }
+                    }}
+                    freeSolo
+                    disabled={!isFieldEditable('machine')}
+                    renderInput={(params) => (
+                      <TextField
+                        {...params}
+                        label="Maschine"
+                        size="small"
+                        placeholder="z.B. Presse 1, Fräse A"
+                        sx={!isFieldEditable('machine') ? disabledFieldStyles : {}}
+                      />
+                    )}
+                    sx={{ flex: 1, ...(!isFieldEditable('machine') ? disabledFieldStyles : {}) }}
                   />
                 )}
-                sx={{ flex: 1, ...disabledFieldStyles }}
-              />
-            </Box>
+              </Box>
+            )
           )}
 
-          {/* Status and Work Time Row */}
-          <Box sx={{ 
-            display: 'flex', 
-            gap: 2,
-            ...(isMobile && { flexDirection: 'column', gap: 1.5 })
-          }}>
-            {/* Status - editable dropdown or read-only display */}
-            {showStatus && initialData?.status && (
-              allowStatusEdit ? (
-                <FormControl sx={{ flex: 1, ...disabledFieldStyles }} disabled={readOnly && !allowStatusEdit}>
-                  <InputLabel>Status</InputLabel>
-                  <Select
+          {/* 1. Status and Work Time Row */}
+          {(isFieldVisible('status') || isFieldVisible('workTracking')) && (
+            <Box sx={{ 
+              display: 'flex', 
+              gap: 2,
+              ...(isMobile && { flexDirection: 'column', gap: 1.5 })
+            }}>
+              {/* Status - editable dropdown or read-only display */}
+              {isFieldVisible('status') && initialData?.status && (
+                isFieldEditable('status') ? (
+                  <FormControl sx={{ flex: 1, ...(!isFieldEditable('status') ? disabledFieldStyles : {}) }} disabled={!isFieldEditable('status')}>
+                    <InputLabel>Status</InputLabel>
+                    <Select
+                      label="Status"
+                      value={status}
+                      onChange={(e) => setStatus(e.target.value as any)}
+                      size={isMobile ? "medium" : "small"}
+                    >
+                      <MenuItem value="backlog">Backlog</MenuItem>
+                      <MenuItem value="progress">In Bearbeitung</MenuItem>
+                      <MenuItem value="done">Erledigt</MenuItem>
+                    </Select>
+                  </FormControl>
+                ) : (
+                  <TextField
                     label="Status"
-                    value={status}
-                    onChange={(e) => setStatus(e.target.value as any)}
+                    value={statusLabelMap[initialData.status]}
                     size={isMobile ? "medium" : "small"}
-                  >
-                    <MenuItem value="backlog">Backlog</MenuItem>
-                    <MenuItem value="progress">In Bearbeitung</MenuItem>
-                    <MenuItem value="done">Erledigt</MenuItem>
-                  </Select>
-                </FormControl>
-              ) : (
+                    InputProps={{ readOnly: true }}
+                    sx={{ flex: 1, ...disabledFieldStyles }}
+                  />
+                )
+              )}
+
+              {/* Total Work Time */}
+              {isFieldVisible('workTracking') && initialData?.totalWorkTimeMinutes !== undefined && (
                 <TextField
-                  label="Status"
-                  value={statusLabelMap[initialData.status]}
+                  label="Arbeitszeit gesamt"
+                  value={(() => {
+                    const minutes = initialData.totalWorkTimeMinutes;
+                    if (minutes < 60) return `${minutes} Min`;
+                    const hours = Math.floor(minutes / 60);
+                    const remainingMinutes = minutes % 60;
+                    return remainingMinutes > 0 ? `${hours}h ${remainingMinutes}m` : `${hours}h`;
+                  })()}
                   size={isMobile ? "medium" : "small"}
                   InputProps={{ readOnly: true }}
                   sx={{ flex: 1, ...disabledFieldStyles }}
                 />
-              )
-            )}
+              )}
+            </Box>
+          )}
 
-            {/* Total Work Time */}
-            {initialData?.totalWorkTimeMinutes !== undefined && (
-              <TextField
-                label="Arbeitszeit gesamt"
-                value={(() => {
-                  const minutes = initialData.totalWorkTimeMinutes;
-                  if (minutes < 60) return `${minutes} Min`;
-                  const hours = Math.floor(minutes / 60);
-                  const remainingMinutes = minutes % 60;
-                  return remainingMinutes > 0 ? `${hours}h ${remainingMinutes}m` : `${hours}h`;
-                })()}
-                size={isMobile ? "medium" : "small"}
-                InputProps={{ readOnly: true }}
-                sx={{ flex: 1, ...disabledFieldStyles }}
-              />
-            )}
-          </Box>
+          {/* 2. Kostenstelle field */}
+          {isFieldVisible('costCenter') && (
+            <TextField
+              label="Kostenstelle"
+              value={costCenter}
+              onChange={(e) => setCostCenter(e.target.value)}
+              size="small"
+              fullWidth
+              disabled={!isFieldEditable('costCenter')}
+              placeholder="z.B. KST-001, Marketing, IT"
+              sx={!isFieldEditable('costCenter') ? disabledFieldStyles : {}}
+            />
+          )}
 
-          {/* Problem Beschreibung */}
-          <TextField
-            label="Kurzbeschreibung"
-            fullWidth
-            multiline
-            rows={3}
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            disabled={readOnly}
-            sx={disabledFieldStyles}
-          />
-
-          <Box sx={{ 
-            display: 'flex', 
-            gap: 2,
-            ...(isMobile && { flexDirection: 'column', gap: 1.5 })
-          }}>
-            <FormControl sx={{ flex: 1, ...disabledFieldStyles }} disabled={readOnly}>
-              <InputLabel>Dringlichkeit</InputLabel>
-              <Select
-                label="Dringlichkeit"
-                value={priority}
-                onChange={(e) => setPriority(e.target.value as any)}
-                size="small"
-              >
-                <MenuItem value="rot">Rot (hoch)</MenuItem>
-                <MenuItem value="gelb">Gelb (mittel)</MenuItem>
-                <MenuItem value="gruen">Grün (niedrig)</MenuItem>
-              </Select>
-            </FormControl>
-
-            {/* Planned completion date (Pool) */}
-            {allowPlanEdit && (
-              <LocalizationProvider dateAdapter={AdapterDateFns}>
-                <DatePicker
-                  label="Geplantes Abschlussdatum"
-                  value={plannedDate}
-                  onChange={(newVal) => setPlannedDate(newVal)}
-                  slotProps={{ textField: { size: 'small', sx: { flex: 1, ...disabledFieldStyles } } }}
-                />
-              </LocalizationProvider>
-            )}
-          </Box>
-
-          {/* Responsible and Worked By Users - show when explicitly allowed for editing OR in read-only mode */}
-          {(allowResponsibleEdit || readOnly || allowWorkedByUsersEdit || allowWorkedByUsersView) && (
+          {/* 3. Responsible and Worked By Users */}
+          {(isFieldVisible('responsible') || isFieldVisible('workedByUsers')) && (
             <Box sx={{ 
               display: 'flex', 
               gap: 2,
               ...(isMobile && { flexDirection: 'column', gap: 1.5 })
             }}>
               {/* Responsible */}
-              {(allowResponsibleEdit || readOnly) && (
-                <FormControl sx={{ flex: 1, ...disabledFieldStyles }} disabled={readOnly && !allowResponsibleEdit}>
+              {isFieldVisible('responsible') && (
+                <FormControl sx={{ flex: 1, ...(!isFieldEditable('responsible') ? disabledFieldStyles : {}) }} disabled={!isFieldEditable('responsible')}>
                   <InputLabel>Verantwortlich</InputLabel>
                   <Select
                     label="Verantwortlich"
@@ -951,12 +1000,12 @@ const AddTicketDialog: React.FC<AddTicketDialogProps> = ({ open, onClose, readOn
                 </FormControl>
               )}
 
-              {/* Worked By Users - editable in ticket pool, viewable in other views */}
-              {(allowWorkedByUsersEdit || allowWorkedByUsersView) && (
+              {/* Worked By Users */}
+              {isFieldVisible('workedByUsers') && (
                 <FormControl sx={{ 
                   flex: 1, 
-                  ...disabledFieldStyles,
-                  ...(allowWorkedByUsersView && {
+                  ...(!isFieldEditable('workedByUsers') ? disabledFieldStyles : {}),
+                  ...(!isFieldEditable('workedByUsers') && {
                     '& .MuiOutlinedInput-root': {
                       backgroundColor: 'grey.50',
                     }
@@ -969,6 +1018,7 @@ const AddTicketDialog: React.FC<AddTicketDialogProps> = ({ open, onClose, readOn
                     value={workedByUsers}
                     onChange={(e) => setWorkedByUsers(typeof e.target.value === 'string' ? e.target.value.split(',') : e.target.value)}
                     input={<OutlinedInput label="Bearbeitet von" size={isMobile ? "medium" : "small"} />}
+                    disabled={!isFieldEditable('workedByUsers')}
                     renderValue={(selected) => (
                       <Box sx={{ 
                         display: 'flex', 
@@ -1014,11 +1064,11 @@ const AddTicketDialog: React.FC<AddTicketDialogProps> = ({ open, onClose, readOn
                     }}
                   >
                     {userOptions.map((option) => (
-                      <MenuItem key={option.userId} value={option.userId} disabled={allowWorkedByUsersView}>
+                      <MenuItem key={option.userId} value={option.userId} disabled={!isFieldEditable('workedByUsers')}>
                         <Checkbox 
                           checked={workedByUsers.indexOf(option.userId) > -1} 
-                          disabled={allowWorkedByUsersView}
-                          onChange={allowWorkedByUsersView ? undefined : () => {}}
+                          disabled={!isFieldEditable('workedByUsers')}
+                          onChange={!isFieldEditable('workedByUsers') ? undefined : () => {}}
                         />
                         <ListItemText primary={option.displayName} />
                       </MenuItem>
@@ -1029,8 +1079,60 @@ const AddTicketDialog: React.FC<AddTicketDialogProps> = ({ open, onClose, readOn
             </Box>
           )}
 
+          {/* 4. Priority and Planned Completion Date Row */}
+          {(isFieldVisible('priority') || isFieldVisible('plannedCompletion')) && (
+            <Box sx={{ 
+              display: 'flex', 
+              gap: 2,
+              ...(isMobile && { flexDirection: 'column', gap: 1.5 })
+            }}>
+              {isFieldVisible('priority') && (
+                <FormControl sx={{ flex: 1, ...(!isFieldEditable('priority') ? disabledFieldStyles : {}) }} disabled={!isFieldEditable('priority')}>
+                  <InputLabel>Dringlichkeit</InputLabel>
+                  <Select
+                    label="Dringlichkeit"
+                    value={priority}
+                    onChange={(e) => setPriority(e.target.value as any)}
+                    size="small"
+                  >
+                    <MenuItem value="rot">Rot (hoch)</MenuItem>
+                    <MenuItem value="gelb">Gelb (mittel)</MenuItem>
+                    <MenuItem value="gruen">Grün (niedrig)</MenuItem>
+                  </Select>
+                </FormControl>
+              )}
+
+              {/* Planned completion date */}
+              {isFieldVisible('plannedCompletion') && (
+                <LocalizationProvider dateAdapter={AdapterDateFns}>
+                  <DatePicker
+                    label="Geplantes Abschlussdatum"
+                    value={plannedDate}
+                    onChange={(newVal) => setPlannedDate(newVal)}
+                    disabled={!isFieldEditable('plannedCompletion')}
+                    slotProps={{ textField: { size: 'small', sx: { flex: 1, ...(!isFieldEditable('plannedCompletion') ? disabledFieldStyles : {}) } } }}
+                  />
+                </LocalizationProvider>
+              )}
+            </Box>
+          )}
+
+          {/* 5. Problem Beschreibung */}
+          {isFieldVisible('description') && (
+            <TextField
+              label="Kurzbeschreibung"
+              fullWidth
+              multiline
+              rows={3}
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              disabled={!isFieldEditable('description')}
+              sx={!isFieldEditable('description') ? disabledFieldStyles : {}}
+            />
+          )}
+
           {/* Work tracking controls */}
-          {ticketId && allowWorkTracking && (
+          {ticketId && isFieldVisible('workTracking') && (
             <Box sx={{ 
               display: 'flex',
               gap: 1,
@@ -1117,7 +1219,7 @@ const AddTicketDialog: React.FC<AddTicketDialogProps> = ({ open, onClose, readOn
                         }}
                       />
 
-                      {!readOnly && (
+                      {isFieldEditable('images') && (
                       <IconButton
                         onClick={() => {
                           setPreviewIndex(idx);
@@ -1130,7 +1232,7 @@ const AddTicketDialog: React.FC<AddTicketDialogProps> = ({ open, onClose, readOn
                       </IconButton>
                       )}
 
-                      {!readOnly && (
+                      {isFieldEditable('images') && (
                         <IconButton
                           onClick={() => {
                             if (isExisting) {
@@ -1532,9 +1634,9 @@ const AddTicketDialog: React.FC<AddTicketDialogProps> = ({ open, onClose, readOn
             size={isMobile ? "large" : "medium"}
             sx={isMobile ? { flex: 1 } : {}}
           >
-            {readOnly ? 'Schließen' : 'Abbrechen'}
+            {mode === 'view' ? 'Schließen' : 'Abbrechen'}
           </Button>
-          {(!readOnly || allowResponsibleEdit) && (
+          {showSaveButton && (
             <Button 
               onClick={handleSave} 
               variant="contained" 

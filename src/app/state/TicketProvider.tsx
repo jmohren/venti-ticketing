@@ -45,6 +45,8 @@ export interface Ticket {
   createdByName?: string;
   // Users who have worked on this ticket
   worked_by_users?: string[];
+  // Cost center field
+  cost_center?: string;
 }
 
 interface TicketContextValue {

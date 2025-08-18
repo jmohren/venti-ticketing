@@ -59,6 +59,7 @@ const AddTicketWidget: React.FC = () => {
     images?: string[];
     raumnummer?: string;
     equipmentNummer?: string;
+    cost_center?: string;
   }) => {
     try {
       const newTicket = {
@@ -74,6 +75,7 @@ const AddTicketWidget: React.FC = () => {
         images: data.images || [],
         raumnummer: data.raumnummer,
         equipmentNummer: data.equipmentNummer,
+        cost_center: data.cost_center,
         events: []
       };
 
@@ -122,8 +124,20 @@ const AddTicketWidget: React.FC = () => {
       <AddTicketDialog 
         open={isCreateDialogOpen} 
         onClose={closeCreateTicket} 
+        mode="edit"
         initialData={undefined}
         onSave={handleSaveTicket}
+        fieldPermissions={{
+          // Required fields for ticket creation
+          description: 'edit',
+          priority: 'edit',
+          ticketType: 'edit',
+          category: 'edit',
+          machine: 'edit',
+          equipmentNummer: 'edit',
+          raumnummer: 'edit',
+          images: 'edit',
+        }}
       />
     </Box>
   );

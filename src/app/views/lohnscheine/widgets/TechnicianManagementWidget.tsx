@@ -269,6 +269,7 @@ const TechnicianManagementWidget: React.FC = () => {
                         <TableCell sx={{ width: '80px', fontWeight: 600 }}>Ticket</TableCell>
                         <TableCell sx={{ width: '200px', fontWeight: 600 }}>Maschine</TableCell>
                         <TableCell sx={{ fontWeight: 600 }}>Beschreibung</TableCell>
+                        <TableCell sx={{ width: '120px', fontWeight: 600 }}>Kostenstelle</TableCell>
                         <TableCell sx={{ width: '140px', fontWeight: 600 }}>Erledigt</TableCell>
                         <TableCell align="right" sx={{ width: '100px', fontWeight: 600 }}>Arbeitszeit</TableCell>
                       </TableRow>
@@ -276,7 +277,7 @@ const TechnicianManagementWidget: React.FC = () => {
                     <TableBody>
                       {technicianTickets.length === 0 ? (
                         <TableRow>
-                          <TableCell colSpan={5} align="center" sx={{ py: 4 }}>
+                          <TableCell colSpan={6} align="center" sx={{ py: 4 }}>
                             <Typography variant="body2" color="text.secondary">
                               Keine Tickets in diesem Monat erledigt
                             </Typography>
@@ -306,6 +307,11 @@ const TechnicianManagementWidget: React.FC = () => {
                             <TableCell>
                               <Typography variant="body2" noWrap>
                                 {ticket.description}
+                              </Typography>
+                            </TableCell>
+                            <TableCell>
+                              <Typography variant="body2" noWrap>
+                                {ticket.cost_center || '-'}
                               </Typography>
                             </TableCell>
                             <TableCell>
@@ -462,8 +468,7 @@ const TechnicianManagementWidget: React.FC = () => {
         <AddTicketDialog
           open={isDialogOpen}
           onClose={closeTicket}
-          readOnly
-          allowWorkedByUsersView
+          mode="view"
           initialData={{
             machine: selectedTicket.machine,
             description: selectedTicket.description,
@@ -480,8 +485,23 @@ const TechnicianManagementWidget: React.FC = () => {
             created_at: selectedTicket.created_at,
             createdByUserId: selectedTicket.createdByUserId,
             totalWorkTimeMinutes: selectedTicket.totalWorkTimeMinutes,
+            cost_center: selectedTicket.cost_center,
           }}
-          showStatus
+          fieldPermissions={{
+            description: 'view',
+            priority: 'view',
+            status: 'view',
+            ticketType: 'view',
+            category: 'view',
+            machine: 'view',
+            equipmentNummer: 'view',
+            raumnummer: 'view',
+            responsible: 'view',
+            workedByUsers: 'view',
+            plannedCompletion: 'view',
+            costCenter: 'view',
+            workTracking: 'view',
+          }}
         />
       )}
     </>

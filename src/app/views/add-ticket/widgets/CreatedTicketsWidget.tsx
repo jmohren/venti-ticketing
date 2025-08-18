@@ -139,8 +139,7 @@ const CreatedTicketsWidget: React.FC = () => {
         <AddTicketDialog
           open={isDialogOpen}
           onClose={closeTicket}
-          readOnly
-          showStatus
+          mode="view"
           ticketId={selectedTicket.id}
           initialData={{
             machine: selectedTicket.machine,
@@ -157,6 +156,18 @@ const CreatedTicketsWidget: React.FC = () => {
             created_at: selectedTicket.created_at,
             createdByUserId: selectedTicket.createdByUserId,
             totalWorkTimeMinutes: selectedTicket.totalWorkTimeMinutes,
+            cost_center: selectedTicket.cost_center,
+          }}
+          fieldPermissions={{
+            description: 'view',
+            priority: 'view',
+            status: 'view',
+            ticketType: 'view',
+            category: 'view',
+            machine: 'view',
+            equipmentNummer: 'view',
+            raumnummer: 'view',
+            responsible: 'view',
           }}
         />
       )}

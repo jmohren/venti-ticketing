@@ -333,8 +333,7 @@ const WissensdatenbankWidget: React.FC = () => {
         <AddTicketDialog
           open={isDialogOpen}
           onClose={closeTicket}
-          readOnly
-          allowWorkedByUsersView
+          mode="view"
           initialData={{
             machine: selectedTicket.machine,
             description: selectedTicket.description,
@@ -351,8 +350,23 @@ const WissensdatenbankWidget: React.FC = () => {
             created_at: selectedTicket.created_at,
             createdByUserId: selectedTicket.createdByUserId,
             totalWorkTimeMinutes: selectedTicket.totalWorkTimeMinutes,
+            cost_center: selectedTicket.cost_center,
           }}
-          showStatus
+          fieldPermissions={{
+            description: 'view',
+            priority: 'view',
+            status: 'view',
+            ticketType: 'view',
+            category: 'view',
+            machine: 'view',
+            equipmentNummer: 'view',
+            raumnummer: 'view',
+            responsible: 'view',
+            workedByUsers: 'view',
+            plannedCompletion: 'view',
+            costCenter: 'view',
+            workTracking: 'view',
+          }}
         />
       )}
     </>

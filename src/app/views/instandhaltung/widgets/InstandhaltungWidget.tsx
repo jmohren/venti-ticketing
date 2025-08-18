@@ -109,10 +109,7 @@ const InstandhaltungWidget: React.FC<Props> = ({ currentUserId }) => {
         <AddTicketDialog
           open={isDialogOpen}
           onClose={closeTicket}
-          readOnly
-          showStatus
-          allowWorkTracking
-          allowWorkedByUsersView
+          mode="edit"
           ticketId={selectedTicket.id}
           initialData={{
             machine: selectedTicket.machine,
@@ -123,6 +120,7 @@ const InstandhaltungWidget: React.FC<Props> = ({ currentUserId }) => {
             category: selectedTicket.category,
             responsible: selectedTicket.responsible,
             events: selectedTicket.events,
+            plannedCompletion: selectedTicket.plannedCompletion,
             images: selectedTicket.images,
             raumnummer: selectedTicket.raumnummer,
             equipmentNummer: selectedTicket.equipmentNummer,
@@ -130,7 +128,29 @@ const InstandhaltungWidget: React.FC<Props> = ({ currentUserId }) => {
             createdByUserId: selectedTicket.createdByUserId,
             totalWorkTimeMinutes: selectedTicket.totalWorkTimeMinutes,
             worked_by_users: selectedTicket.worked_by_users,
+            cost_center: selectedTicket.cost_center,
           }}
+          fieldPermissions={{
+            // View only fields
+            description: 'view',
+            priority: 'view',
+            status: 'view',
+            ticketType: 'view',
+            category: 'view',
+            machine: 'view',
+            equipmentNummer: 'view',
+            raumnummer: 'view',
+            responsible: 'view',
+            workedByUsers: 'view',
+            workTracking: 'view',
+            // Editable fields
+            costCenter: 'edit',
+            plannedCompletion: 'edit',
+          }}
+          onSave={(upd) => updateTicket(selectedTicket.id, { 
+            cost_center: upd.cost_center,
+            plannedCompletion: upd.plannedCompletion
+          })}
         />
       )}
     </Box>
