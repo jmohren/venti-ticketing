@@ -468,7 +468,6 @@ const TechnicianManagementWidget: React.FC = () => {
         <AddTicketDialog
           open={isDialogOpen}
           onClose={closeTicket}
-          mode="view"
           initialData={{
             machine: selectedTicket.machine,
             description: selectedTicket.description,
@@ -487,6 +486,7 @@ const TechnicianManagementWidget: React.FC = () => {
             totalWorkTimeMinutes: selectedTicket.totalWorkTimeMinutes,
             cost_center: selectedTicket.cost_center,
           }}
+          mode="edit"
           fieldPermissions={{
             description: 'view',
             priority: 'view',
@@ -500,7 +500,32 @@ const TechnicianManagementWidget: React.FC = () => {
             workedByUsers: 'view',
             plannedCompletion: 'view',
             costCenter: 'view',
-            workTracking: 'view',
+            totalWorkTime: 'edit',
+          }}
+          onSave={async (upd) => {
+            // Handle total work time updates
+            if (upd.totalWorkTimeMinutes !== undefined && selectedTicket) {
+              try {
+                // Update the ticket in the backend
+                await restApiClient.patch(`tickets?id=eq.${selectedTicket.id}`, {
+                  totalWorkTimeMinutes: upd.totalWorkTimeMinutes
+                });
+                
+                // Update local state
+                setTechnicianTickets(prevTickets => 
+                  prevTickets.map(ticket => 
+                    ticket.id === selectedTicket.id 
+                      ? { ...ticket, totalWorkTimeMinutes: upd.totalWorkTimeMinutes }
+                      : ticket
+                  )
+                );
+                
+                console.log('Total work time updated successfully:', upd.totalWorkTimeMinutes);
+              } catch (error) {
+                console.error('Failed to update total work time:', error);
+                // You could show an error message to the user here
+              }
+            }
           }}
         />
       )}

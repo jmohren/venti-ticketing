@@ -90,6 +90,7 @@ interface FieldPermissions {
   
   // Work tracking
   workTracking?: FieldPermission;
+  totalWorkTime?: FieldPermission;
   
   // Images
   images?: FieldPermission;
@@ -309,6 +310,7 @@ const AddTicketDialog: React.FC<AddTicketDialogProps> = ({
   const [equipmentNummer, setEquipmentNummer] = useState(initialData?.equipmentNummer || '');
   const [workedByUsers, setWorkedByUsers] = useState<string[]>(initialData?.worked_by_users || []);
   const [costCenter, setCostCenter] = useState(initialData?.cost_center || '');
+  const [totalWorkTimeMinutes, setTotalWorkTimeMinutes] = useState<number | string>(initialData?.totalWorkTimeMinutes || 0);
   
   // Get current values (URL for new tickets, state for existing)
   const getCurrentValues = () => {
@@ -431,6 +433,7 @@ const AddTicketDialog: React.FC<AddTicketDialogProps> = ({
       setRaumnummer(initialData?.raumnummer || '');
       setEquipmentNummer(initialData?.equipmentNummer || '');
       setCostCenter(initialData?.cost_center || '');
+      setTotalWorkTimeMinutes(initialData?.totalWorkTimeMinutes || 0);
       setSelectedFiles([]);
       setExistingImages(initialData?.images || []);
       setPreviewOpen(false);
@@ -545,7 +548,8 @@ const AddTicketDialog: React.FC<AddTicketDialogProps> = ({
         raumnummer: currentValues.ticketType === 'verwaltung' ? currentValues.raumnummer : undefined,
         equipmentNummer: currentValues.ticketType === 'betrieb' ? currentValues.equipmentNummer : undefined,
         worked_by_users: workedByUsers,
-        cost_center: costCenter
+        cost_center: costCenter,
+        totalWorkTimeMinutes: typeof totalWorkTimeMinutes === 'string' && totalWorkTimeMinutes === '' ? 0 : Number(totalWorkTimeMinutes)
     });
     onClose();
     } catch (error) {
@@ -925,19 +929,27 @@ const AddTicketDialog: React.FC<AddTicketDialogProps> = ({
               )}
 
               {/* Total Work Time */}
-              {isFieldVisible('workTracking') && initialData?.totalWorkTimeMinutes !== undefined && (
+              {(isFieldVisible('workTracking') || isFieldVisible('totalWorkTime')) && (
                 <TextField
-                  label="Arbeitszeit gesamt"
-                  value={(() => {
-                    const minutes = initialData.totalWorkTimeMinutes;
+                  label="Arbeitszeit gesamt (min)"
+                  value={isFieldEditable('totalWorkTime') ? (totalWorkTimeMinutes === '' ? '' : totalWorkTimeMinutes.toString()) : (() => {
+                    const minutes = typeof totalWorkTimeMinutes === 'number' ? totalWorkTimeMinutes : parseInt(totalWorkTimeMinutes) || 0;
                     if (minutes < 60) return `${minutes} Min`;
                     const hours = Math.floor(minutes / 60);
                     const remainingMinutes = minutes % 60;
                     return remainingMinutes > 0 ? `${hours}h ${remainingMinutes}m` : `${hours}h`;
                   })()}
+                  onChange={isFieldEditable('totalWorkTime') ? (e) => {
+                    const value = e.target.value;
+                    // Allow empty string or positive integers (including 0)
+                    if (value === '' || /^\d+$/.test(value)) {
+                      setTotalWorkTimeMinutes(value === '' ? '' : parseInt(value));
+                    }
+                  } : undefined}
                   size={isMobile ? "medium" : "small"}
-                  InputProps={{ readOnly: true }}
-                  sx={{ flex: 1, ...disabledFieldStyles }}
+                  InputProps={{ readOnly: !isFieldEditable('totalWorkTime') }}
+                  sx={{ flex: 1, ...(!isFieldEditable('totalWorkTime') ? disabledFieldStyles : {}) }}
+                  placeholder={isFieldEditable('totalWorkTime') ? "z.B. 120" : undefined}
                 />
               )}
             </Box>
