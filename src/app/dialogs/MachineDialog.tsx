@@ -19,7 +19,7 @@ interface Props {
 const MachineDialog: React.FC<Props> = ({ open, onClose, onSave, initial }) => {
   // Basic fields
   const [equipmentDescription, setEquipmentDescription] = useState(initial?.equipment_description || '');
-  const [equipmentNumber, setEquipmentNumber] = useState(initial?.equipment_number || 0);
+  const [equipmentNumber, setEquipmentNumber] = useState(initial?.equipment_number || '');
   const [tasks, setTasks] = useState<Task[]>(initial?.tasks || []);
   const [taskDialogOpen, setTaskDialogOpen] = useState(false);
   const [editTask, setEditTask] = useState<Task | null>(null);
@@ -45,7 +45,7 @@ const MachineDialog: React.FC<Props> = ({ open, onClose, onSave, initial }) => {
     if (open) {
       // Basic fields
       setEquipmentDescription(initial?.equipment_description || '');
-      setEquipmentNumber(initial?.equipment_number || 0);
+      setEquipmentNumber(initial?.equipment_number || '');
       setTasks(initial?.tasks || []);
       setTaskDialogOpen(false);
       setEditTask(null);
@@ -69,12 +69,12 @@ const MachineDialog: React.FC<Props> = ({ open, onClose, onSave, initial }) => {
   }, [open, initial]);
 
   const handleSave = () => {
-    if (!equipmentDescription.trim() || !equipmentNumber) return;
+    if (!equipmentDescription.trim() || !equipmentNumber.trim()) return;
     
     const machine: Machine = {
-      ...(initial || { equipment_number: equipmentNumber.toString() }),
+      ...(initial || { equipment_number: equipmentNumber }),
       equipment_description: equipmentDescription,
-      equipment_number: equipmentNumber.toString(),
+      equipment_number: equipmentNumber,
       tasks,
       equipment_type: equipmentType || undefined,
       location: location || undefined,
@@ -135,9 +135,8 @@ const MachineDialog: React.FC<Props> = ({ open, onClose, onSave, initial }) => {
                 <Grid item xs={12} sm={6}>
                   <TextField 
                     label="Equipment Nummer" 
-                    type="number"
-                    value={equipmentNumber || ''} 
-                    onChange={e => setEquipmentNumber(parseInt(e.target.value) || 0)} 
+                    value={equipmentNumber} 
+                    onChange={e => setEquipmentNumber(e.target.value)} 
                     size="small" 
                     fullWidth
                     required
@@ -329,7 +328,7 @@ const MachineDialog: React.FC<Props> = ({ open, onClose, onSave, initial }) => {
         </DialogContent>
         <DialogActions>
           <Button onClick={onClose}>Abbrechen</Button>
-          <Button onClick={handleSave} variant="contained" disabled={!equipmentDescription.trim() || !equipmentNumber}>Speichern</Button>
+          <Button onClick={handleSave} variant="contained" disabled={!equipmentDescription.trim() || !equipmentNumber.trim()}>Speichern</Button>
         </DialogActions>
       </Dialog>
 

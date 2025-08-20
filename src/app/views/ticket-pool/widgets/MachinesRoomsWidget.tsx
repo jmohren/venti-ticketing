@@ -172,6 +172,12 @@ const MachinesRoomsWidget: React.FC<Props> = ({ onSelect, selectedId }) => {
     
     try {
       await deleteMachine(machineToDelete.equipment_number);
+      // Update local state immediately
+      setMachines(prev => prev.filter(m => m.equipment_number !== machineToDelete.equipment_number));
+      setPagination(prev => ({
+        ...prev,
+        total: Math.max(0, prev.total - 1)
+      }));
       setDeleteDialogOpen(false);
       setMachineToDelete(null);
     } catch (error) {
@@ -184,14 +190,34 @@ const MachinesRoomsWidget: React.FC<Props> = ({ onSelect, selectedId }) => {
     setMachineToDelete(null);
   };
 
-  const handleMachineSave = (machine: Machine) => {
-    if (editMachine) {
-      updateMachine(machine.equipment_number, machine);
-    } else {
-      addMachine(machine);
+  const handleMachineSave = async (machine: Machine) => {
+    try {
+      if (editMachine) {
+        await updateMachine(machine.equipment_number, machine);
+        // Update local state immediately
+        setMachines(prev => prev.map(m => 
+          m.equipment_number === machine.equipment_number 
+            ? { equipment_number: machine.equipment_number, equipment_description: machine.equipment_description }
+            : m
+        ));
+      } else {
+        await addMachine(machine);
+        // Add to local state immediately
+        const newMachineBasic = {
+          equipment_number: machine.equipment_number,
+          equipment_description: machine.equipment_description
+        };
+        setMachines(prev => [newMachineBasic, ...prev]);
+        setPagination(prev => ({
+          ...prev,
+          total: prev.total + 1
+        }));
+      }
+      setMachineDialogOpen(false);
+      setEditMachine(null);
+    } catch (error) {
+      console.error('Error saving machine:', error);
     }
-    setMachineDialogOpen(false);
-    setEditMachine(null);
   };
 
   return (

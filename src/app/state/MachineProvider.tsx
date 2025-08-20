@@ -208,7 +208,7 @@ export const MachineProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   const deleteMachine = useCallback(async (machineId: string) => {
     try {
-      await restApiClient.deleteById('machines_imported', machineId);
+      await restApiClient.delete('machines_imported', { equipment_number: `eq.${machineId}` });
     } catch (err) {
       console.error('Failed to delete machine:', err);
       throw err;
