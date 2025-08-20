@@ -12,7 +12,7 @@ import MachineFilters from './MachineFilters';
 import MachinePagination from '@/app/components/MachinePagination';
 
 const MachineCard = styled(Paper)(({ theme }) => ({
-  padding: theme.spacing(3),
+  padding: theme.spacing(1.5),
   backgroundColor: theme.palette.grey[50],
   borderRadius: theme.spacing(1),
   border: `1px solid ${theme.palette.grey[200]}`,
@@ -29,11 +29,7 @@ const MachineCard = styled(Paper)(({ theme }) => ({
   boxShadow: theme.shadows[2],
 }));
 
-const MachineHeader = styled(Box)(() => ({
-  display: 'flex',
-  justifyContent: 'space-between',
-  alignItems: 'flex-start',
-}));
+
 
 const UrgencyBadge = styled(Box)<{ urgencyColor: string }>(({ theme, urgencyColor }) => ({
   width: 24,
@@ -146,8 +142,19 @@ const MaschinenWidget: React.FC = () => {
 
   return (
     <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-      {/* Filters */}
-      <Box sx={{ px: 2, pt: 2 }}>
+      {/* Filters - Sticky Header */}
+      <Box 
+        sx={{ 
+          position: 'sticky',
+          top: 0,
+          zIndex: 2,
+          backgroundColor: 'grey.100',
+          borderBottom: 1,
+          borderColor: 'divider',
+          px: 2,
+          py: 1
+        }}
+      >
         <MachineFilters
           filters={filters}
           filterOptions={filterOptions}
@@ -210,32 +217,21 @@ const MaschinenWidget: React.FC = () => {
               onClick={() => handleMachineClick(machine)}
               key={machine.equipment_number}
             >
-              <MachineHeader>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                  <Typography 
-                    variant="h6" 
-                    sx={{ 
-                      fontWeight: 600,
-                      fontSize: '1.1rem',
-                      color: 'text.primary'
-                    }}
-                  >
-                    {machine.equipment_description}
-                  </Typography>
-                  <Chip
-                    label={machine.equipment_number}
-                    size="small"
-                    variant="outlined"
-                    sx={{
-                      borderColor: 'primary.main',
-                      color: 'primary.main',
-                      fontWeight: 500,
-                      fontSize: '0.75rem'
-                    }}
-                  />
-                </Box>
+              {/* Row 1: Machine Number (left) + Ticket badges (right) */}
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <Chip
+                  label={machine.equipment_number}
+                  size="small"
+                  variant="outlined"
+                  sx={{
+                    borderColor: 'primary.main',
+                    color: 'primary.main',
+                    fontWeight: 500,
+                    fontSize: '0.75rem'
+                  }}
+                />
                 
-                {/* Urgency badges in top right */}
+                {/* Ticket badges */}
                 <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
                   {Object.entries(priorityColors).map(([priority, color]) => {
                     const count = ticketData[priority as keyof typeof priorityColors].count;
@@ -252,9 +248,20 @@ const MaschinenWidget: React.FC = () => {
                     );
                   })}
                 </Box>
-              </MachineHeader>
+              </Box>
 
-
+              {/* Row 2: Machine description (left aligned) */}
+              <Typography 
+                variant="h6" 
+                sx={{ 
+                  fontWeight: 600,
+                  fontSize: '1.1rem',
+                  color: 'text.primary',
+                  textAlign: 'left'
+                }}
+              >
+                {machine.equipment_description}
+              </Typography>
             </MachineCard>
           );
         })}

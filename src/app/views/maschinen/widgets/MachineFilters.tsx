@@ -4,7 +4,6 @@ import {
   TextField,
   Chip,
   InputAdornment,
-  Paper,
   FormControl,
   InputLabel,
   Select,
@@ -59,22 +58,25 @@ const MachineFilters: React.FC<Props> = ({ filters, filterOptions, filterOptions
 
   if (!filterOptions) {
     return (
-      <Paper sx={{ p: 2, mb: 2 }}>
-        <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
-          <TextField
-            size="small"
-            placeholder="Filter werden geladen..."
-            disabled
-            sx={{ minWidth: 300, flex: 1 }}
-          />
-        </Box>
-      </Paper>
+      <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+        <TextField
+          size="small"
+          placeholder="Filter werden geladen..."
+          disabled
+          sx={{ 
+            minWidth: 300, 
+            flex: 1,
+            '& .MuiOutlinedInput-root': {
+              backgroundColor: 'white'
+            }
+          }}
+        />
+      </Box>
     );
   }
 
   return (
-    <Paper sx={{ p: 2, mb: 2 }}>
-      <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', flexWrap: 'wrap' }}>
+    <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', flexWrap: 'wrap' }}>
         {/* Search */}
         <TextField
           size="small"
@@ -89,11 +91,23 @@ const MachineFilters: React.FC<Props> = ({ filters, filterOptions, filterOptions
               </InputAdornment>
             ),
           }}
-          sx={{ minWidth: 250 }}
+          sx={{ 
+            minWidth: 250,
+            '& .MuiOutlinedInput-root': {
+              borderRadius: 1,
+              backgroundColor: 'white'
+            }
+          }}
         />
 
         {/* Location Filter */}
-        <FormControl size="small" sx={{ minWidth: 150 }}>
+        <FormControl size="small" sx={{ 
+          minWidth: 150,
+          '& .MuiOutlinedInput-root': {
+            borderRadius: 1,
+            backgroundColor: 'white'
+          }
+        }}>
           <InputLabel>Standort</InputLabel>
           <Select
             multiple
@@ -119,7 +133,13 @@ const MachineFilters: React.FC<Props> = ({ filters, filterOptions, filterOptions
         </FormControl>
 
         {/* Work Station Filter */}
-        <FormControl size="small" sx={{ minWidth: 150 }}>
+        <FormControl size="small" sx={{ 
+          minWidth: 150,
+          '& .MuiOutlinedInput-root': {
+            borderRadius: 1,
+            backgroundColor: 'white'
+          }
+        }}>
           <InputLabel>Arbeitsplatz</InputLabel>
           <Select
             multiple
@@ -145,7 +165,13 @@ const MachineFilters: React.FC<Props> = ({ filters, filterOptions, filterOptions
         </FormControl>
 
         {/* Manufacturer Filter */}
-        <FormControl size="small" sx={{ minWidth: 180 }}>
+        <FormControl size="small" sx={{ 
+          minWidth: 180,
+          '& .MuiOutlinedInput-root': {
+            borderRadius: 1,
+            backgroundColor: 'white'
+          }
+        }}>
           <InputLabel>Hersteller</InputLabel>
           <Select
             multiple
@@ -171,7 +197,13 @@ const MachineFilters: React.FC<Props> = ({ filters, filterOptions, filterOptions
         </FormControl>
 
         {/* ABC Classification Filter */}
-        <FormControl size="small" sx={{ minWidth: 120 }}>
+        <FormControl size="small" sx={{ 
+          minWidth: 120,
+          '& .MuiOutlinedInput-root': {
+            borderRadius: 1,
+            backgroundColor: 'white'
+          }
+        }}>
           <InputLabel>ABC-Klasse</InputLabel>
           <Select
             multiple
@@ -197,7 +229,13 @@ const MachineFilters: React.FC<Props> = ({ filters, filterOptions, filterOptions
         </FormControl>
 
         {/* Equipment Type Filter */}
-        <FormControl size="small" sx={{ minWidth: 120 }}>
+        <FormControl size="small" sx={{ 
+          minWidth: 120,
+          '& .MuiOutlinedInput-root': {
+            borderRadius: 1,
+            backgroundColor: 'white'
+          }
+        }}>
           <InputLabel>Typ</InputLabel>
           <Select
             multiple
@@ -244,8 +282,7 @@ const MachineFilters: React.FC<Props> = ({ filters, filterOptions, filterOptions
             size="small"
           />
         )}
-      </Box>
-    </Paper>
+    </Box>
   );
 };
 

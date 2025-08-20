@@ -667,10 +667,10 @@ const AddTicketDialog: React.FC<AddTicketDialogProps> = ({
       responsible,
     });
       
-      // For betrieb tickets, always use equipment number as machine identifier
+      // For betrieb tickets, use machine description as machine identifier
       const machineIdentifier = currentValues.ticketType === 'verwaltung' 
         ? 'Verwaltung' 
-        : currentValues.equipmentNummer; // Use equipment number, not description
+        : currentValues.machine; // Use machine description, not equipment number
 
       if (onSave) await onSave({ 
       description, 

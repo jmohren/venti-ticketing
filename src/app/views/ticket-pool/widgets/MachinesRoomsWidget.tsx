@@ -212,14 +212,23 @@ const MachinesRoomsWidget: React.FC<Props> = ({ onSelect, selectedId }) => {
                 </InputAdornment>
               ),
             }}
-            sx={{ flex: 1, minWidth: 0 }}
+            sx={{ 
+              flex: 1, 
+              minWidth: 0,
+              '& .MuiOutlinedInput-root': {
+                backgroundColor: 'white'
+              }
+            }}
           />
           <Button
             size="small"
             onClick={searchMachines}
             variant="outlined"
             disabled={loading}
-            sx={{ minWidth: 80 }}
+            sx={{ 
+              minWidth: 80,
+              height: '40px'
+            }}
           >
             Suchen
           </Button>
@@ -228,7 +237,10 @@ const MachinesRoomsWidget: React.FC<Props> = ({ onSelect, selectedId }) => {
             startIcon={<AddIcon />}
             onClick={handleAddMachine}
             variant="contained"
-            sx={{ minWidth: 'auto' }}
+            sx={{ 
+              minWidth: 'auto',
+              height: '40px'
+            }}
           >
             Hinzufügen
           </Button>

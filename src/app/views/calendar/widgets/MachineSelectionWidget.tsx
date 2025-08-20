@@ -122,14 +122,7 @@ const MachineSelectionWidget: React.FC<MachineSelectionWidgetProps> = ({
   return (
     <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
       <Paper sx={{ height: '100%', display: 'flex', flexDirection: 'column', border: 1, borderColor: 'divider' }}>
-        <MachineListHeader>
-          <Typography variant="subtitle2" fontWeight="bold">
-            Maschinen Auswahl
-          </Typography>
-        </MachineListHeader>
-        
-        {/* Search Filter */}
-        <Box sx={{ p: 2, borderBottom: 1, borderColor: 'divider', display: 'flex', gap: 1 }}>
+        <MachineListHeader sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
           <TextField
             size="small"
             placeholder="Suche nach Name oder Nummer..."
@@ -143,18 +136,26 @@ const MachineSelectionWidget: React.FC<MachineSelectionWidgetProps> = ({
                 </InputAdornment>
               ),
             }}
-            sx={{ flex: 1 }}
+            sx={{ 
+              flex: 1,
+              '& .MuiOutlinedInput-root': {
+                backgroundColor: 'white'
+              }
+            }}
           />
           <Button
             size="small"
             onClick={searchMachines}
             variant="outlined"
             disabled={loading}
-            sx={{ minWidth: 80 }}
+            sx={{ 
+              minWidth: 80,
+              height: '40px'
+            }}
           >
             Suchen
           </Button>
-        </Box>
+        </MachineListHeader>
         
         {loading ? (
           <Box sx={{ p: 2 }}>

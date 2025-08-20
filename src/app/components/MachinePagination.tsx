@@ -39,11 +39,12 @@ const MachinePagination: React.FC<Props> = ({ pagination, onPageChange, loading 
         borderTop: 1,
         borderColor: 'divider',
         borderRadius: 0,
-        p: 2,
+        px: 2,
+        py: 1,
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
-        backgroundColor: 'background.paper'
+        backgroundColor: 'grey.100'
       }}
     >
       <Typography variant="body2" color="text.secondary">
