@@ -174,34 +174,8 @@ class AxiosRestApiClient implements RestApiClient {
       });
       
       // PostgREST returns count in Content-Range header: "0-99/1000" or "*/0"
-      // Try different header case variations and access methods
-      let contentRange: string | undefined;
-      
-      // Method 1: Direct property access with different casings
-      contentRange = response.headers['content-range'] || 
-                    response.headers['Content-Range'] ||
-                    response.headers['CONTENT-RANGE'];
-      
-      // Method 2: If still not found, iterate through all headers (case-insensitive)
-      if (!contentRange) {
-        const headerKeys = Object.keys(response.headers);
-        const contentRangeKey = headerKeys.find(key => 
-          key.toLowerCase() === 'content-range'
-        );
-        if (contentRangeKey) {
-          contentRange = response.headers[contentRangeKey];
-        }
-      }
-      
+      const contentRange = response.headers['Content-Range'];
       let count = 0;
-      
-      // Debug logging for deployed environment
-      console.log('🔍 getWithCount debug:', {
-        table,
-        contentRange,
-        allHeaderKeys: Object.keys(response.headers),
-        dataLength: response.data.length
-      });
       
       if (contentRange) {
         const match = contentRange.match(/\/(\d+)$/);
@@ -209,7 +183,7 @@ class AxiosRestApiClient implements RestApiClient {
           count = parseInt(match[1], 10);
         }
       } else {
-        console.error('❌ Content-Range header missing! Check PostgREST configuration and proxy settings.');
+        console.error('❌ Content-Range header missing!', response.headers);
       }
       
       return {
