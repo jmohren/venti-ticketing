@@ -30,7 +30,7 @@ import { generateMachineTaskOccurrences, TaskOccurrence } from '@/app/utils/recu
 type CalendarView = 'week' | 'month';
 
 interface CalendarWidgetProps {
-  selectedMachine: string | null;
+  selectedMachine: string | null; // equipment_number
 }
 
 const priorityColor = {
@@ -124,38 +124,46 @@ const CalendarWidget: React.FC<CalendarWidgetProps> = ({ selectedMachine }) => {
   const [selectedTicket, setSelectedTicket] = useState<number | null>(null);
   const [selectedMaintenanceTask, setSelectedMaintenanceTask] = useState<TaskOccurrence | null>(null);
   const { tickets } = useTickets();
-  const { loadMachines } = useMachines();
-  const [allMachines, setAllMachines] = useState<any[]>([]);
+  const { getMachine } = useMachines();
+  const [selectedMachineData, setSelectedMachineData] = useState<any>(null);
+  const [loadingMachine, setLoadingMachine] = useState(false);
 
-  // Load machines for calendar
+  // Load full machine data when a machine is selected
   useEffect(() => {
-    const loadMachinesForCalendar = async () => {
+    const loadSelectedMachine = async () => {
+      if (!selectedMachine) {
+        setSelectedMachineData(null);
+        return;
+      }
+
       try {
-        const result = await loadMachines({}, 0);
-        setAllMachines(result.data);
+        setLoadingMachine(true);
+        const machineData = await getMachine(selectedMachine);
+        setSelectedMachineData(machineData);
       } catch (error) {
-        console.error('Failed to load machines for calendar:', error);
+        console.error('Failed to load selected machine data:', error);
+        setSelectedMachineData(null);
+      } finally {
+        setLoadingMachine(false);
       }
     };
-    loadMachinesForCalendar();
-  }, [loadMachines]);
+    
+    loadSelectedMachine();
+  }, [selectedMachine, getMachine]);
 
   // Filter tickets for the selected machine with planned completion dates
   const machineTickets = React.useMemo(() => {
-    if (!selectedMachine) return [];
+    if (!selectedMachine || !selectedMachineData) return [];
     return tickets.filter(ticket => 
-      ticket.machine === selectedMachine && 
+      ticket.machine === selectedMachineData.equipment_description && 
       ticket.plannedCompletion && 
       ticket.status !== 'archived'
     );
-  }, [tickets, selectedMachine]);
+  }, [tickets, selectedMachine, selectedMachineData]);
 
   // Generate recurring maintenance tasks for the selected machine
   const maintenanceTasks = React.useMemo(() => {
-    if (!selectedMachine) return [];
-    
-    const machine = allMachines.find((m: any) => m.equipment_description === selectedMachine);
-    if (!machine) return [];
+    if (!selectedMachine || !selectedMachineData || loadingMachine) return [];
 
     // Calculate date range for current view (extend by 1 month on each side for safety)
     const startRange = view === 'week' 
@@ -165,8 +173,8 @@ const CalendarWidget: React.FC<CalendarWidgetProps> = ({ selectedMachine }) => {
       ? endOfWeek(addWeeks(currentDate, 2), { weekStartsOn: 1 })
       : endOfMonth(addMonths(currentDate, 1));
 
-    return generateMachineTaskOccurrences(machine, startRange, endRange);
-  }, [selectedMachine, allMachines, currentDate, view]);
+    return generateMachineTaskOccurrences(selectedMachineData, startRange, endRange);
+  }, [selectedMachine, selectedMachineData, loadingMachine, currentDate, view]);
 
   // Get tickets for a specific date
   const getTicketsForDate = (date: Date) => {
@@ -401,6 +409,25 @@ const CalendarWidget: React.FC<CalendarWidgetProps> = ({ selectedMachine }) => {
 
   return (
     <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+      {/* Machine info header */}
+      {selectedMachine && (
+        <Box sx={{ p: 2, borderBottom: 1, borderColor: 'divider', backgroundColor: 'grey.50' }}>
+          {loadingMachine ? (
+            <Typography variant="body2" color="text.secondary">
+              Maschine wird geladen...
+            </Typography>
+          ) : selectedMachineData ? (
+            <Typography variant="h6">
+              {selectedMachineData.equipment_description} (#{selectedMachineData.equipment_number})
+            </Typography>
+          ) : (
+            <Typography variant="body2" color="error">
+              Fehler beim Laden der Maschine
+            </Typography>
+          )}
+        </Box>
+      )}
+
       {/* Calendar header with navigation and view toggle */}
       <Box
         sx={{

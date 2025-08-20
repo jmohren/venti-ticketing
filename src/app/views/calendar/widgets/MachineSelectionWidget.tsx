@@ -115,8 +115,9 @@ const MachineSelectionWidget: React.FC<MachineSelectionWidgetProps> = ({
     return tickets.filter(ticket => ticket.machine === machineDescription).length;
   };
 
-  const handleMachineSelect = (machineDescription: string) => {
-    onMachineSelect(machineDescription === selectedMachine ? null : machineDescription);
+  const handleMachineSelect = (machine: MachineBasic) => {
+    const isCurrentlySelected = selectedMachine === machine.equipment_number;
+    onMachineSelect(isCurrentlySelected ? null : machine.equipment_number);
   };
 
   return (
@@ -176,13 +177,13 @@ const MachineSelectionWidget: React.FC<MachineSelectionWidgetProps> = ({
           <List sx={{ flex: 1, overflow: 'auto', p: 0 }}>
             {machines.map((machine) => {
             const ticketCount = getTicketCount(machine.equipment_description);
-            const isSelected = selectedMachine === machine.equipment_description;
+            const isSelected = selectedMachine === machine.equipment_number;
             
             return (
               <ListItem key={machine.equipment_number} disablePadding sx={{ borderBottom: 1, borderColor: 'divider' }}>
                 <StyledListItemButton
                   selected={isSelected}
-                  onClick={() => handleMachineSelect(machine.equipment_description)}
+                  onClick={() => handleMachineSelect(machine)}
                 >
                   <ListItemText
                     primary={

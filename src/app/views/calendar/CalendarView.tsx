@@ -23,7 +23,7 @@ const CalendarView: React.FC = () => {
       {/* Right column - Calendar (larger) */}
       <Column weight={3}>
         <Row>
-          <Widget title={selectedMachine ? `Kalender - ${selectedMachine}` : "Kalender Ansicht"}>
+          <Widget title="Kalender Ansicht">
             <CalendarWidget selectedMachine={selectedMachine} />
           </Widget>
         </Row>

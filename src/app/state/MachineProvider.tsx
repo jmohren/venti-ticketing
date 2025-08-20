@@ -222,6 +222,7 @@ export const MachineProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const getMachine = useCallback(async (machineId: string): Promise<Machine> => {
     try {
       const results = await restApiClient.get<Machine>('machines_imported', {
+        select: ['*'], // Explicitly select all columns including tasks
         equipment_number: `eq.${machineId}`,
         limit: 1
       });
