@@ -149,10 +149,6 @@ const AddTicketDialog: React.FC<AddTicketDialogProps> = ({
   const [machineLoading, setMachineLoading] = useState(false);
   const [equipmentLoading, setEquipmentLoading] = useState(false);
   
-  // Flags to prevent circular updates during cross-population
-  const [isUpdatingFromMachine, setIsUpdatingFromMachine] = useState(false);
-  const [isUpdatingFromEquipment, setIsUpdatingFromEquipment] = useState(false);
-
   // Debounced search for machines
   const searchMachines = useCallback(
     debounce(async (searchTerm: string) => {
@@ -236,7 +232,7 @@ const AddTicketDialog: React.FC<AddTicketDialogProps> = ({
   }, [technicians]);
   
   // URL state management for new ticket creation (single source of truth)
-  const { getFormData, updateType, updateMachine, updateEquipment, updateMachineOnly, updateEquipmentOnly, updateRoom, updateParams } = useTicketCreationUrlState();
+  const { getFormData, updateType, updateMachine, updateEquipment, updateRoom, updateParams } = useTicketCreationUrlState();
   
   // Determine if this is a new ticket
   const isNewTicket = !initialData && !ticketId;
@@ -300,7 +296,7 @@ const AddTicketDialog: React.FC<AddTicketDialogProps> = ({
   }, [technicians, getTechnicianDisplayName]);
 
   // Handle machine selection - auto-fill equipment number (only on explicit selection)
-  const handleMachineSelect = async (event: any, selectedMachine: string | null, reason: string) => {
+  const handleMachineSelect = async (_: any, selectedMachine: string | null, reason: string) => {
     console.log('🔧 handleMachineSelect called with:', { selectedMachine, reason });
     console.log('🔧 machineOptions:', machineOptions);
     
@@ -341,7 +337,7 @@ const AddTicketDialog: React.FC<AddTicketDialogProps> = ({
   };
 
   // Handle equipment number selection - auto-fill machine (only on explicit selection)
-  const handleEquipmentSelect = async (event: any, selectedEquipment: string | null, reason: string) => {
+  const handleEquipmentSelect = async (_: any, selectedEquipment: string | null, reason: string) => {
     console.log('🔧 handleEquipmentSelect called with:', { selectedEquipment, reason });
     console.log('🔧 equipmentOptions:', equipmentOptions);
     
