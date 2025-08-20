@@ -198,8 +198,11 @@ export const MachineProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   const updateMachine = useCallback(async (machineId: string, partial: Partial<Machine>) => {
     try {
-      const updatedMachine = await restApiClient.update<Machine>('machines_imported', machineId, partial);
-      return updatedMachine;
+      const results = await restApiClient.patch<Machine>('machines_imported', partial, { equipment_number: `eq.${machineId}` });
+      if (results.length === 0) {
+        throw new Error(`No machine found with equipment_number ${machineId}`);
+      }
+      return Array.isArray(results) ? results[0] : results;
     } catch (err) {
       console.error('Failed to update machine:', err);
       throw err;
