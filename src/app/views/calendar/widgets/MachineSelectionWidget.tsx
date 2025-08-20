@@ -43,7 +43,7 @@ const StyledListItemButton = styled(ListItemButton)(({ theme }) => ({
 
 interface MachineSelectionWidgetProps {
   selectedMachine: string | null;
-  onMachineSelect: (machine: string | null) => void;
+  onMachineSelect: (machineNumber: string | null) => void;
 }
 
 const MachineSelectionWidget: React.FC<MachineSelectionWidgetProps> = ({ 
