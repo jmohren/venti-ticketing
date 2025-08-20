@@ -86,7 +86,6 @@ export const UsersProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   useEffect(() => {
     const cachedData = getCachedUsers();
     if (cachedData) {
-      console.log('🚀 [USERS] Initializing with cached data from', new Date(cachedData.timestamp).toLocaleString());
       setUsers(cachedData.users);
       setLastFetchedAt(cachedData.timestamp);
     }
@@ -101,7 +100,6 @@ export const UsersProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       if (!forceRefresh) {
         const cachedData = getCachedUsers();
         if (cachedData) {
-          console.log('📦 [USERS] Using cached data from', new Date(cachedData.timestamp).toLocaleString());
           setUsers(cachedData.users);
           setLastFetchedAt(cachedData.timestamp);
           setLoading(false);

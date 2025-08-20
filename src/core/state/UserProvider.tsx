@@ -21,26 +21,10 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   useEffect(() => {
     const unsubscribe = authApiClient.subscribe((u) => {
-      console.log('🔄 User state changed:', u);
       setUser(u);
     });
     return unsubscribe;
   }, []);
-
-  // Log current user info whenever it changes
-  useEffect(() => {
-    if (user) {
-      console.log('👤 Current user information:', {
-        userId: user.userId,
-        email: user.email,
-        roles: user.roles,
-        profile: user.profile,
-        needsPasswordReset: authApiClient.needsReset()
-      });
-    } else {
-      console.log('🚪 No user logged in');
-    }
-  }, [user]);
 
   const roles = user?.roles ?? [];
   const isAdmin = roles.includes('admin');

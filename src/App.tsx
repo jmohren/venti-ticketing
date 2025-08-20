@@ -125,19 +125,12 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
   // Subscribe to AuthApiClient user changes to keep user state in sync
   useEffect(() => {
     const unsubscribe = authApiClient.subscribe((updatedUser: User | null) => {
-      console.log('🔄 User data updated from AuthApiClient:', updatedUser);
       if (updatedUser) {
-        console.log('📝 Setting user state to:', updatedUser);
         setUser(updatedUser);
       }
     });
     return unsubscribe;
   }, []);
-
-  // Debug: Log user state changes
-  useEffect(() => {
-    console.log('🔍 ProtectedRoute user state changed:', user);
-  }, [user]);
 
   // Handle logout
   const handleLogout = async () => {

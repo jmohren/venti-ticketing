@@ -166,6 +166,7 @@ class AxiosRestApiClient implements RestApiClient {
   // Get with count - returns data and total count
   async getWithCount<T = any>(table: string, params: QueryParams = {}): Promise<{ data: T[], count: number }> {
     try {
+      console.log('🚀 getWithCount called for table:', table);
       const response: AxiosResponse<T[]> = await this.axios.get(this.getTableUrl(table), {
         params: this.buildParams(params),
         headers: {
@@ -174,13 +175,15 @@ class AxiosRestApiClient implements RestApiClient {
       });
       
       // PostgREST returns count in Content-Range header: "0-99/1000" or "*/0"
-      const contentRange = response.headers['Content-Range'];
+      const contentRange = response.headers['content-range'];
+      console.log('📊 Content-Range header:', contentRange);
       let count = 0;
       
       if (contentRange) {
         const match = contentRange.match(/\/(\d+)$/);
         if (match) {
           count = parseInt(match[1], 10);
+          console.log('✅ Parsed count:', count);
         }
       } else {
         console.error('❌ Content-Range header missing!', response.headers);
