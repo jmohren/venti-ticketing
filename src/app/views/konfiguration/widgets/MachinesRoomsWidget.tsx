@@ -66,7 +66,7 @@ const MachineItem = styled(Box)({
 
 const MachinesRoomsWidget: React.FC<Props> = ({ onSelect, selectedId }) => {
   const { addMachine, updateMachine, deleteMachine } = useMachines();
-  const [machines, setMachines] = useState<Machine[]>([]);
+  const [machines] = useState<Machine[]>([]);
   
   const [search, setSearch] = useState('');
   const [machineDialogOpen, setMachineDialogOpen] = useState(false);
