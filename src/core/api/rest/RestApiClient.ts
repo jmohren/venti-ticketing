@@ -177,6 +177,14 @@ class AxiosRestApiClient implements RestApiClient {
       const contentRange = response.headers['content-range'];
       let count = 0;
       
+      // Debug logging for deployed environment
+      console.log('🔍 getWithCount debug:', {
+        table,
+        contentRange,
+        allHeaders: response.headers,
+        dataLength: response.data.length
+      });
+      
       if (contentRange) {
         const match = contentRange.match(/\/(\d+)$/);
         if (match) {

@@ -28,7 +28,6 @@ const BASE_VIEWS = [
   { value: 'instandhaltung', label: 'Instandhaltung', component: InstandhaltungView },
   { value: 'wissensdatenbank', label: 'Wissensdatenbank', component: WissensdatenbankView },
   { value: 'calendar', label: 'Kalender', component: CalendarView },
-  // { value: 'konfiguration', label: 'Konfiguration', component: KonfigurationView }, // TODO: Re-enable when we have a proper KonfigurationView
 ] as const;
 
 // Provider composition - add new providers here
