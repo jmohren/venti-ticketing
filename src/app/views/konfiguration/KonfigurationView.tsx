@@ -14,7 +14,7 @@ const KonfigurationView: React.FC = () => {
       <Column weight={1}>
         <Row>
           <Widget title="Maschinen">
-            <MachinesRoomsWidget onSelect={setSelectedMachine} selectedId={selectedMachine?.id} />
+            <MachinesRoomsWidget onSelect={setSelectedMachine} selectedId={selectedMachine?.equipment_number} />
           </Widget>
         </Row>
       </Column>

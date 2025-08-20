@@ -27,7 +27,7 @@ import MachineDialog from '@/app/dialogs/MachineDialog';
 
 interface Props {
   onSelect?: (machine: Machine) => void;
-  selectedId?: number;
+  selectedId?: string;
 }
 
 // Styled components matching existing table design patterns
@@ -65,7 +65,8 @@ const MachineItem = styled(Box)({
 });
 
 const MachinesRoomsWidget: React.FC<Props> = ({ onSelect, selectedId }) => {
-  const { machines, addMachine, updateMachine, deleteMachine } = useMachines();
+  const { addMachine, updateMachine, deleteMachine } = useMachines();
+  const [machines, setMachines] = useState<Machine[]>([]);
   
   const [search, setSearch] = useState('');
   const [machineDialogOpen, setMachineDialogOpen] = useState(false);
@@ -76,9 +77,9 @@ const MachinesRoomsWidget: React.FC<Props> = ({ onSelect, selectedId }) => {
   const [machineToDelete, setMachineToDelete] = useState<Machine | null>(null);
 
   // Filter machines based on search
-  const filteredMachines = machines.filter(machine => 
-      machine.name.toLowerCase().includes(search.toLowerCase()) ||
-    machine.machineNumber.toLowerCase().includes(search.toLowerCase())
+  const filteredMachines = machines.filter((machine: Machine) => 
+      machine.equipment_description.toLowerCase().includes(search.toLowerCase()) ||
+    machine.equipment_number.toLowerCase().includes(search.toLowerCase())
   );
 
   const handleMachineSelect = (machine: Machine) => {
@@ -104,7 +105,7 @@ const MachinesRoomsWidget: React.FC<Props> = ({ onSelect, selectedId }) => {
     if (!machineToDelete) return;
     
     try {
-      await deleteMachine(machineToDelete.id);
+      await deleteMachine(machineToDelete.equipment_number);
       setDeleteDialogOpen(false);
       setMachineToDelete(null);
     } catch (error) {
@@ -119,7 +120,7 @@ const MachinesRoomsWidget: React.FC<Props> = ({ onSelect, selectedId }) => {
 
   const handleMachineSave = (machine: Machine) => {
     if (editMachine) {
-      updateMachine(machine.id, machine);
+      updateMachine(machine.equipment_number, machine);
     } else {
       addMachine(machine);
     }
@@ -179,11 +180,11 @@ const MachinesRoomsWidget: React.FC<Props> = ({ onSelect, selectedId }) => {
         ) : (
           <List sx={{ flex: 1, overflow: 'auto', p: 0 }}>
             {filteredMachines.map((machine) => {
-              const isSelected = selectedId === machine.id;
+              const isSelected = selectedId === machine.equipment_number;
               const taskCount = machine.tasks?.length || 0;
               
               return (
-                <ListItem key={machine.id} disablePadding>
+                <ListItem key={machine.equipment_number} disablePadding>
                   <StyledListItemButton
                     selected={isSelected}
                     onClick={() => handleMachineSelect(machine)}
@@ -194,10 +195,10 @@ const MachinesRoomsWidget: React.FC<Props> = ({ onSelect, selectedId }) => {
                           primary={
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
                               <Typography variant="body2" fontWeight={isSelected ? 'bold' : 'normal'}>
-                                {machine.name}
+                                {machine.equipment_description}
               </Typography>
                               <Chip
-                                label={machine.machineNumber}
+                                label={machine.equipment_number}
                                 size="small"
                                 variant="outlined"
                                 sx={{ 
@@ -277,7 +278,7 @@ const MachinesRoomsWidget: React.FC<Props> = ({ onSelect, selectedId }) => {
         <DialogTitle>Maschine löschen</DialogTitle>
         <DialogContent>
           <Typography>
-            Sind Sie sicher, dass Sie die Maschine <strong>{machineToDelete?.name}</strong> löschen möchten?
+            Sind Sie sicher, dass Sie die Maschine <strong>{machineToDelete?.equipment_description}</strong> löschen möchten?
           </Typography>
         </DialogContent>
         <DialogActions>

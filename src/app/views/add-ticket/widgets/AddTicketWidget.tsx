@@ -13,7 +13,7 @@ import { useTicketCreationUrlState } from '@/app/hooks/useTicketUrlState';
 const AddTicketWidget: React.FC = () => {
   const cameraInputRef = useRef<HTMLInputElement>(null);
 
-  const { machines } = useMachines();
+  const { } = useMachines();
   const { addTicket } = useTickets();
   const { 
     isCreateDialogOpen, 
@@ -33,14 +33,9 @@ const AddTicketWidget: React.FC = () => {
       // In the future, you could process the image to extract QR code data
       console.log('Camera image captured:', file.name);
       
-      // Simulate QR code detection by randomly selecting a machine
-      if (machines && machines.length > 0) {
-        const randomMachineIndex = Math.floor(Math.random() * machines.length);
-        const selectedMachine = machines[randomMachineIndex];
-        openCreateTicket({ machine: selectedMachine.name });
-      } else {
-        openCreateTicket();
-      }
+      // For now, just open the create ticket dialog
+      // TODO: Process QR code to extract machine data
+      openCreateTicket();
     }
     
     // Reset the input so the same file can be selected again

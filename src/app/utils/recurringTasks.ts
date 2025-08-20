@@ -3,7 +3,7 @@ import { Task, Machine } from '@/app/state/MachineProvider';
 
 export interface TaskOccurrence {
   id: string;
-  machineId: number;
+  machineId: string;
   machineName: string;
   title: string;
   date: Date;
@@ -29,8 +29,8 @@ export function generateTaskOccurrences(
       if (task.daysOfWeek.includes(dayOfWeek)) {
         occurrences.push({
           id: `${task.id}-${format(currentDate, 'yyyy-MM-dd')}`,
-          machineId: machine.id,
-          machineName: machine.name,
+                  machineId: machine.equipment_number,
+        machineName: machine.equipment_description,
           title: task.title,
           date: new Date(currentDate),
           taskId: task.id,
@@ -55,8 +55,8 @@ export function generateTaskOccurrences(
           (isBefore(currentDate, endRange) || isSameDay(currentDate, endRange))) {
         occurrences.push({
           id: `${task.id}-${format(currentDate, 'yyyy-MM-dd')}`,
-          machineId: machine.id,
-          machineName: machine.name,
+                  machineId: machine.equipment_number,
+        machineName: machine.equipment_description,
           title: task.title,
           date: new Date(currentDate),
           taskId: task.id,

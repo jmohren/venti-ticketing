@@ -20,7 +20,7 @@ const MachineCalendarWidget: React.FC<Props> = ({ machine }) => {
     if (!machine) return [];
     const result: CalendarEvent[] = [];
     // tickets not done yet
-    tickets.filter(t => t.machine === machine.name && t.status !== 'done').forEach(t => {
+    tickets.filter(t => t.machine === machine.equipment_description && t.status !== 'done').forEach(t => {
       result.push({ date: dayjs().format('YYYY-MM-DD'), label: `Ticket: ${t.description}`, color: 'secondary' });
     });
     // tasks recurrence
@@ -87,7 +87,7 @@ const MachineCalendarWidget: React.FC<Props> = ({ machine }) => {
       <Typography variant="h6">Maschinen-Kalender</Typography>
       {machine ? (
         <>
-          <Typography variant="subtitle2" sx={{ mb:1 }}>{machine.name} ({machine.machineNumber})</Typography>
+          <Typography variant="subtitle2" sx={{ mb:1 }}>{machine.equipment_description} ({machine.equipment_number})</Typography>
           <LocalizationProvider dateAdapter={AdapterDateFns}>
             <DateCalendar 
               value={selectedDay} 

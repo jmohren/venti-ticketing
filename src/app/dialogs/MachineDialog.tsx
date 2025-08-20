@@ -72,9 +72,9 @@ const MachineDialog: React.FC<Props> = ({ open, onClose, onSave, initial }) => {
     if (!equipmentDescription.trim() || !equipmentNumber) return;
     
     const machine: Machine = {
-      ...(initial || { equipment_number: equipmentNumber }),
+      ...(initial || { equipment_number: equipmentNumber.toString() }),
       equipment_description: equipmentDescription,
-      equipment_number: equipmentNumber,
+      equipment_number: equipmentNumber.toString(),
       tasks,
       equipment_type: equipmentType || undefined,
       location: location || undefined,
