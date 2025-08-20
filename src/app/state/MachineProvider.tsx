@@ -1,13 +1,53 @@
 import React, { createContext, useContext, useState, useCallback, useMemo, useEffect } from 'react';
 import { restApiClient } from '@/core/api/rest/RestApiClient';
 
-export interface Machine {
-  id: number;
-  name: string;
-  machineNumber: string;
+export interface MachineFilters {
+  locations?: string[]; // Multi-select
+  work_stations?: string[]; // Multi-select
+  manufacturers?: string[]; // Multi-select
+  abc_classifications?: string[]; // Multi-select
+  equipment_types?: string[]; // Multi-select
+  search?: string; // Free text search
+}
+
+export interface MachinePagination {
+  page: number; // 0-based
+  limit: number; // machines per page
+  total: number; // total machines count
+  totalPages: number; // total pages
+}
+
+export interface MachineFilterOptions {
+  locations: string[];
+  work_stations: string[];
+  manufacturers: string[];
+  abc_classifications: string[];
+  equipment_types: string[];
+}
+
+// Minimal machine data for global loading
+export interface MachineBasic {
+  equipment_number: string; // Primary key, display as "Equipment Nummer"
+  equipment_description: string; // Display as "Name"
+}
+
+// Full machine data (loaded on demand)
+export interface Machine extends MachineBasic {
   tasks?: Task[];
   created_at?: string;
   updated_at?: string;
+  // Expanded fields with German display names
+  equipment_type?: string; // "Equipmenttyp"
+  location?: string; // "Standort"
+  sort_field?: string; // "Sortierfeld"
+  manufacturer_serial_number?: string; // "Hersteller Seriennummer"
+  work_station?: string; // "Arbeitsplatz"
+  type_designation?: string; // "Typbezeichnung"
+  manufacturer_part_number?: string; // "Hersteller Teilnummer"
+  construction_year?: number; // "Baujahr"
+  size_dimensions?: string; // "Größe/Abmessungen"
+  manufacturer?: string; // "Hersteller"
+  abc_classification?: 'A' | 'B' | 'C' | 'D'; // "ABC-Klassifizierung"
 }
 
 export interface Task {
@@ -23,107 +63,186 @@ export interface Task {
 }
 
 interface MachineContextValue {
-  machines: Machine[];
-  loading: boolean;
-  error: string | null;
-  addMachine: (machine: Omit<Machine, 'id' | 'created_at' | 'updated_at'>) => Promise<void>;
-  updateMachine: (machineId: number, partial: Partial<Machine>) => Promise<void>;
-  deleteMachine: (machineId: number) => Promise<void>;
-  getMachine: (machineId: number) => Machine | undefined;
-  getAllMachines: () => Machine[];
-  refreshMachines: () => Promise<void>;
+  // Shared data loading functions
+  loadMachines: (filters: MachineFilters, page: number, searchField?: 'equipment_number' | 'equipment_description') => Promise<{ data: MachineBasic[], count: number, totalPages: number }>;
+  filterOptions: MachineFilterOptions | null;
+  filterOptionsLoading: boolean;
+  
+  // Machine CRUD operations
+  addMachine: (machine: Omit<Machine, 'created_at' | 'updated_at'>) => Promise<Machine>;
+  updateMachine: (machineId: string, partial: Partial<Machine>) => Promise<Machine>;
+  deleteMachine: (machineId: string) => Promise<void>;
+  getMachine: (machineId: string) => Promise<Machine>; // Load full machine details on demand
 }
 
 const MachineContext = createContext<MachineContextValue | undefined>(undefined);
 
 export const MachineProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [machines, setMachines] = useState<Machine[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [filterOptions, setFilterOptions] = useState<MachineFilterOptions | null>(null);
+  const [filterOptionsLoading, setFilterOptionsLoading] = useState(false);
 
-  // Load machines from API
-  const loadMachines = useCallback(async () => {
+  // Shared function to load machines with pagination and filtering
+  const loadMachines = useCallback(async (currentFilters: MachineFilters, currentPage: number, searchField?: 'equipment_number' | 'equipment_description') => {
+    // Build query parameters
+    const params: any = {
+      select: ['equipment_number', 'equipment_description'],
+      order: ['equipment_description.asc'],
+      limit: 100, // Fixed limit
+      offset: currentPage * 100
+    };
+    
+    // Add filters
+    if (currentFilters.locations?.length) {
+      params.location = `in.(${currentFilters.locations.join(',')})`;
+    }
+    if (currentFilters.work_stations?.length) {
+      params.work_station = `in.(${currentFilters.work_stations.join(',')})`;
+    }
+    if (currentFilters.manufacturers?.length) {
+      params.manufacturer = `in.(${currentFilters.manufacturers.join(',')})`;
+    }
+    if (currentFilters.abc_classifications?.length) {
+      params.abc_classification = `in.(${currentFilters.abc_classifications.join(',')})`;
+    }
+    if (currentFilters.equipment_types?.length) {
+      params.equipment_type = `in.(${currentFilters.equipment_types.join(',')})`;
+    }
+    if (currentFilters.search?.trim()) {
+      const searchTerm = currentFilters.search.trim();
+      
+      if (searchField === 'equipment_number') {
+        // Equipment number field: now TEXT, supports LIKE operations
+        const isNumeric = /^\d+$/.test(searchTerm);
+        if (isNumeric) {
+          // Use LIKE for partial matching: "62" finds "629", "620", etc.
+          params.equipment_number = `like.${searchTerm}*`;
+        } else {
+          // For non-numeric, search in description
+          params.equipment_description = `ilike.*${searchTerm}*`;
+        }
+      } else if (searchField === 'equipment_description') {
+        // Machine description field: partial match
+        params.equipment_description = `ilike.*${searchTerm}*`;
+      } else {
+        // Default behavior for general searches (backward compatibility)
+        const isNumeric = /^\d+$/.test(searchTerm);
+        if (isNumeric) {
+          params.equipment_number = `eq.${searchTerm}`;
+        } else {
+          params.equipment_description = `ilike.*${searchTerm}*`;
+        }
+      }
+    }
+    
+    // Use PostgREST's native count mechanism
+    const result = await restApiClient.getWithCount<MachineBasic>('machines_imported', params);
+    const { data, count: total } = result;
+    const totalPages = Math.ceil(total / 100);
+    
+    return { data, count: total, totalPages };
+  }, []);
+
+  // Load filter options (for dropdown values)
+  const loadFilterOptions = useCallback(async () => {
     try {
-      setLoading(true);
-      setError(null);
-      const data = await restApiClient.get<Machine>('machines', {
-        order: ['name.asc']
+      setFilterOptionsLoading(true);
+      
+      // Get all machines with only the filter fields
+      const allMachines = await restApiClient.get<{
+        location?: string;
+        work_station?: string;
+        manufacturer?: string;
+        abc_classification?: string;
+        equipment_type?: string;
+      }>('machines_imported', {
+        select: ['location', 'work_station', 'manufacturer', 'abc_classification', 'equipment_type']
       });
-      setMachines(data);
+      
+      // Extract unique values for each filter
+      const locations = [...new Set(allMachines.map(m => m.location).filter((v): v is string => !!v))].sort();
+      const work_stations = [...new Set(allMachines.map(m => m.work_station).filter((v): v is string => !!v))].sort();
+      const manufacturers = [...new Set(allMachines.map(m => m.manufacturer).filter((v): v is string => !!v))].sort();
+      const abc_classifications = [...new Set(allMachines.map(m => m.abc_classification).filter((v): v is string => !!v))].sort();
+      const equipment_types = [...new Set(allMachines.map(m => m.equipment_type).filter((v): v is string => !!v))].sort();
+      
+      setFilterOptions({
+        locations,
+        work_stations,
+        manufacturers,
+        abc_classifications,
+        equipment_types
+      });
     } catch (err) {
-      console.error('Failed to load machines:', err);
-      setError('Failed to load machines');
+      console.error('Failed to load filter options:', err);
     } finally {
-      setLoading(false);
+      setFilterOptionsLoading(false);
     }
   }, []);
 
-  // Initial load
+  // Initial load of filter options
   useEffect(() => {
-    loadMachines();
-  }, [loadMachines]);
+    loadFilterOptions();
+  }, [loadFilterOptions]);
 
-  const addMachine = useCallback(async (machine: Omit<Machine, 'id' | 'created_at' | 'updated_at'>) => {
+  const addMachine = useCallback(async (machine: Omit<Machine, 'created_at' | 'updated_at'>) => {
     try {
-      setError(null);
       // Defensively strip server-managed fields in case they are present on the object
-      const { id: _omitId, created_at: _omitCreatedAt, updated_at: _omitUpdatedAt, ...payload } = machine as any;
-      const newMachine = await restApiClient.create<Machine>('machines', payload);
-      setMachines(prev => [...prev, newMachine]);
+      const { created_at: _omitCreatedAt, updated_at: _omitUpdatedAt, ...payload } = machine as any;
+      const newMachine = await restApiClient.create<Machine>('machines_imported', payload);
+      return newMachine;
     } catch (err) {
       console.error('Failed to add machine:', err);
-      setError('Failed to add machine');
       throw err;
     }
   }, []);
 
-  const updateMachine = useCallback(async (machineId: number, partial: Partial<Machine>) => {
+  const updateMachine = useCallback(async (machineId: string, partial: Partial<Machine>) => {
     try {
-      setError(null);
-      const updatedMachine = await restApiClient.update<Machine>('machines', machineId, partial);
-      setMachines(prev => prev.map(m => m.id === machineId ? updatedMachine : m));
+      const updatedMachine = await restApiClient.update<Machine>('machines_imported', machineId, partial);
+      return updatedMachine;
     } catch (err) {
       console.error('Failed to update machine:', err);
-      setError('Failed to update machine');
       throw err;
     }
   }, []);
 
-  const deleteMachine = useCallback(async (machineId: number) => {
+  const deleteMachine = useCallback(async (machineId: string) => {
     try {
-      setError(null);
-      await restApiClient.deleteById('machines', machineId);
-      setMachines(prev => prev.filter(m => m.id !== machineId));
+      await restApiClient.deleteById('machines_imported', machineId);
     } catch (err) {
       console.error('Failed to delete machine:', err);
-      setError('Failed to delete machine');
       throw err;
     }
   }, []);
 
-  const getMachine = useCallback((machineId: number) => {
-    return machines.find(m => m.id === machineId);
-  }, [machines]);
-
-  const getAllMachines = useCallback(() => {
-    return machines;
-  }, [machines]);
-
-  const refreshMachines = useCallback(async () => {
-    await loadMachines();
-  }, [loadMachines]);
+  // Get full machine details on demand
+  const getMachine = useCallback(async (machineId: string): Promise<Machine> => {
+    try {
+      const results = await restApiClient.get<Machine>('machines_imported', {
+        equipment_number: `eq.${machineId}`,
+        limit: 1
+      });
+      
+      if (results.length === 0) {
+        throw new Error(`Machine with equipment number ${machineId} not found`);
+      }
+      
+      return results[0];
+    } catch (err) {
+      console.error('Failed to load machine details:', err);
+      throw err;
+    }
+  }, []);
 
   const value = useMemo(() => ({
-    machines,
-    loading,
-    error,
+    loadMachines,
+    filterOptions,
+    filterOptionsLoading,
     addMachine,
     updateMachine,
     deleteMachine,
     getMachine,
-    getAllMachines,
-    refreshMachines,
-  }), [machines, loading, error, addMachine, updateMachine, deleteMachine, getMachine, getAllMachines, refreshMachines]);
+  }), [loadMachines, filterOptions, filterOptionsLoading, addMachine, updateMachine, deleteMachine, getMachine]);
 
   return <MachineContext.Provider value={value}>{children}</MachineContext.Provider>;
 };

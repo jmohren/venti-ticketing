@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   ToggleButton,
@@ -124,7 +124,21 @@ const CalendarWidget: React.FC<CalendarWidgetProps> = ({ selectedMachine }) => {
   const [selectedTicket, setSelectedTicket] = useState<number | null>(null);
   const [selectedMaintenanceTask, setSelectedMaintenanceTask] = useState<TaskOccurrence | null>(null);
   const { tickets } = useTickets();
-  const { getAllMachines } = useMachines();
+  const { loadMachines } = useMachines();
+  const [allMachines, setAllMachines] = useState<any[]>([]);
+
+  // Load machines for calendar
+  useEffect(() => {
+    const loadMachinesForCalendar = async () => {
+      try {
+        const result = await loadMachines({}, 0);
+        setAllMachines(result.data);
+      } catch (error) {
+        console.error('Failed to load machines for calendar:', error);
+      }
+    };
+    loadMachinesForCalendar();
+  }, [loadMachines]);
 
   // Filter tickets for the selected machine with planned completion dates
   const machineTickets = React.useMemo(() => {
@@ -140,8 +154,7 @@ const CalendarWidget: React.FC<CalendarWidgetProps> = ({ selectedMachine }) => {
   const maintenanceTasks = React.useMemo(() => {
     if (!selectedMachine) return [];
     
-    const allMachines = getAllMachines();
-    const machine = allMachines.find(m => m.name === selectedMachine);
+    const machine = allMachines.find((m: any) => m.equipment_description === selectedMachine);
     if (!machine) return [];
 
     // Calculate date range for current view (extend by 1 month on each side for safety)
@@ -153,7 +166,7 @@ const CalendarWidget: React.FC<CalendarWidgetProps> = ({ selectedMachine }) => {
       : endOfMonth(addMonths(currentDate, 1));
 
     return generateMachineTaskOccurrences(machine, startRange, endRange);
-  }, [selectedMachine, getAllMachines, currentDate, view]);
+  }, [selectedMachine, allMachines, currentDate, view]);
 
   // Get tickets for a specific date
   const getTicketsForDate = (date: Date) => {

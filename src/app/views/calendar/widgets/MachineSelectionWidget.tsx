@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Box, 
   List, 
@@ -7,11 +7,16 @@ import {
   ListItemText, 
   Typography,
   Chip,
-  Paper
+  Paper,
+  TextField,
+  InputAdornment,
+  Button,
 } from '@mui/material';
 import { styled } from '@mui/material/styles';
+import SearchIcon from '@mui/icons-material/Search';
 import { useTickets } from '@/app/hooks/useTickets';
-import { useMachines } from '@/app/hooks/useMachines';
+import { useMachines, MachineBasic, MachineFilters as MachineFiltersType, MachinePagination as MachinePaginationType } from '@/app/hooks/useMachines';
+import MachinePagination from '@/app/components/MachinePagination';
 
 // Styled components matching table design patterns
 const MachineListHeader = styled(Box)(({ theme }) => ({
@@ -46,53 +51,157 @@ const MachineSelectionWidget: React.FC<MachineSelectionWidgetProps> = ({
   onMachineSelect 
 }) => {
   const { tickets } = useTickets();
-  const { machines } = useMachines();
+  const { loadMachines } = useMachines();
 
-  // Get all machines from database
-  const machineNames = React.useMemo(() => {
-    return machines.map(machine => machine.name).sort();
-  }, [machines]);
+  // Local state for this view
+  const [machines, setMachines] = useState<MachineBasic[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [filters, setFilters] = useState<MachineFiltersType>({});
+  const [pagination, setPagination] = useState<MachinePaginationType>({
+    page: 0,
+    limit: 100,
+    total: 0,
+    totalPages: 0
+  });
+  const [searchTerm, setSearchTerm] = useState('');
 
-  // Count tickets per machine
-  const getTicketCount = (machine: string) => {
-    return tickets.filter(ticket => ticket.machine === machine).length;
+  // Load machines function
+  const searchMachines = async () => {
+    try {
+      setLoading(true);
+      const newFilters = { search: searchTerm.trim() || undefined };
+      setFilters(newFilters);
+      const result = await loadMachines(newFilters, 0);
+      setMachines(result.data);
+      setPagination(prev => ({
+        ...prev,
+        page: 0,
+        total: result.count,
+        totalPages: result.totalPages
+      }));
+    } catch (error) {
+      console.error('Failed to load machines:', error);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleMachineSelect = (machine: string) => {
-    onMachineSelect(machine === selectedMachine ? null : machine);
+  // Handle pagination changes
+  const handleSetPagination = async (page: number) => {
+    try {
+      setLoading(true);
+      const result = await loadMachines(filters, page);
+      setMachines(result.data);
+      setPagination(prev => ({
+        ...prev,
+        page,
+        total: result.count,
+        totalPages: result.totalPages
+      }));
+    } catch (error) {
+      console.error('Failed to load machines:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Initial load
+  useEffect(() => {
+    searchMachines();
+  }, []); // Only run once on mount
+
+  // Count tickets per machine (using equipment_description to match tickets)
+  const getTicketCount = (machineDescription: string) => {
+    return tickets.filter(ticket => ticket.machine === machineDescription).length;
+  };
+
+  const handleMachineSelect = (machineDescription: string) => {
+    onMachineSelect(machineDescription === selectedMachine ? null : machineDescription);
   };
 
   return (
-    <Paper sx={{ height: '100%', display: 'flex', flexDirection: 'column', border: 1, borderColor: 'divider' }}>
-      <MachineListHeader>
-        <Typography variant="subtitle2" fontWeight="bold">
-          Maschinen
-        </Typography>
-      </MachineListHeader>
-      
-      {machineNames.length === 0 ? (
-        <Box sx={{ p: 2 }}>
-          <Typography variant="body2" color="text.secondary">
-            Keine Maschinen gefunden
+    <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+      <Paper sx={{ height: '100%', display: 'flex', flexDirection: 'column', border: 1, borderColor: 'divider' }}>
+        <MachineListHeader>
+          <Typography variant="subtitle2" fontWeight="bold">
+            Maschinen Auswahl
           </Typography>
+        </MachineListHeader>
+        
+        {/* Search Filter */}
+        <Box sx={{ p: 2, borderBottom: 1, borderColor: 'divider', display: 'flex', gap: 1 }}>
+          <TextField
+            size="small"
+            placeholder="Suche nach Name oder Nummer..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            onKeyPress={(e) => e.key === 'Enter' && searchMachines()}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <SearchIcon color="action" />
+                </InputAdornment>
+              ),
+            }}
+            sx={{ flex: 1 }}
+          />
+          <Button
+            size="small"
+            onClick={searchMachines}
+            variant="outlined"
+            disabled={loading}
+            sx={{ minWidth: 80 }}
+          >
+            Suchen
+          </Button>
         </Box>
-      ) : (
-        <List sx={{ flex: 1, overflow: 'auto', p: 0 }}>
-          {machineNames.map((machine) => {
-            const ticketCount = getTicketCount(machine);
-            const isSelected = selectedMachine === machine;
+        
+        {loading ? (
+          <Box sx={{ p: 2 }}>
+            <Typography variant="body2" color="text.secondary">
+              Maschinen werden geladen...
+            </Typography>
+          </Box>
+        ) : machines.length === 0 ? (
+          <Box sx={{ p: 2 }}>
+            <Typography variant="body2" color="text.secondary">
+              Keine Maschinen gefunden
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+              Verwenden Sie die Filter oder "Suchen" Button
+            </Typography>
+          </Box>
+        ) : (
+          <List sx={{ flex: 1, overflow: 'auto', p: 0 }}>
+            {machines.map((machine) => {
+            const ticketCount = getTicketCount(machine.equipment_description);
+            const isSelected = selectedMachine === machine.equipment_description;
             
             return (
-              <ListItem key={machine} disablePadding sx={{ borderBottom: 1, borderColor: 'divider' }}>
+              <ListItem key={machine.equipment_number} disablePadding sx={{ borderBottom: 1, borderColor: 'divider' }}>
                 <StyledListItemButton
                   selected={isSelected}
-                  onClick={() => handleMachineSelect(machine)}
+                  onClick={() => handleMachineSelect(machine.equipment_description)}
                 >
                   <ListItemText
                     primary={
-                      <Typography variant="body2" fontWeight={isSelected ? 'bold' : 'normal'}>
-                        {machine}
-                      </Typography>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <Typography variant="body2" fontWeight={isSelected ? 'bold' : 'normal'}>
+                          {machine.equipment_description}
+                        </Typography>
+                        <Chip
+                          label={machine.equipment_number}
+                          size="small"
+                          variant="outlined"
+                          sx={{ 
+                            fontSize: '0.7rem',
+                            height: 18,
+                            minWidth: 'auto',
+                            color: 'primary.main',
+                            borderColor: 'primary.main',
+                          }}
+                        />
+                      </Box>
                     }
                     secondary={
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.5 }}>
@@ -116,7 +225,15 @@ const MachineSelectionWidget: React.FC<MachineSelectionWidgetProps> = ({
           })}
         </List>
       )}
-    </Paper>
+      </Paper>
+
+      {/* Pagination */}
+      <MachinePagination
+        pagination={pagination}
+        onPageChange={handleSetPagination}
+        loading={loading}
+      />
+    </Box>
   );
 };
 

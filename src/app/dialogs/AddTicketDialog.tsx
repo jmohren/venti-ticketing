@@ -1,4 +1,13 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
+
+// Debounce utility
+const debounce = <T extends (...args: any[]) => any>(func: T, delay: number): T => {
+  let timeoutId: NodeJS.Timeout;
+  return ((...args: any[]) => {
+    clearTimeout(timeoutId);
+    timeoutId = setTimeout(() => func(...args), delay);
+  }) as T;
+};
 import {
   Dialog,
   DialogTitle,
@@ -16,6 +25,7 @@ import {
   AccordionDetails,
   Typography,
   Autocomplete,
+  CircularProgress,
   OutlinedInput,
   ListItemText,
   Checkbox,
@@ -130,8 +140,73 @@ const AddTicketDialog: React.FC<AddTicketDialogProps> = ({
   const { user, profile } = useUser();
   const { updateTicket } = useTickets();
   const { technicians, getTechnicianDisplayName } = useTechnicians();
-  const { machines } = useMachines();
+  const { loadMachines } = useMachines();
   const { getDisplayNameFromUserIdSync } = useUsersContext();
+
+  // Local state for async autocomplete
+  const [machineOptions, setMachineOptions] = useState<{ label: string; value: string; equipmentNumber: string }[]>([]);
+  const [equipmentOptions, setEquipmentOptions] = useState<{ label: string; value: string; machineName: string }[]>([]);
+  const [machineLoading, setMachineLoading] = useState(false);
+  const [equipmentLoading, setEquipmentLoading] = useState(false);
+  
+  // Flags to prevent circular updates during cross-population
+  const [isUpdatingFromMachine, setIsUpdatingFromMachine] = useState(false);
+  const [isUpdatingFromEquipment, setIsUpdatingFromEquipment] = useState(false);
+
+  // Debounced search for machines
+  const searchMachines = useCallback(
+    debounce(async (searchTerm: string) => {
+      if (!searchTerm.trim()) {
+        setMachineOptions([]);
+        return;
+      }
+
+      try {
+        setMachineLoading(true);
+        const result = await loadMachines({ search: searchTerm.trim() }, 0, 'equipment_description');
+        const options = result.data.map(m => ({
+          label: m.equipment_description,
+          value: m.equipment_description, // Back to using description as value
+          equipmentNumber: m.equipment_number
+        }));
+        setMachineOptions(options);
+      } catch (error) {
+        console.error('Failed to search machines:', error);
+      } finally {
+        setMachineLoading(false);
+      }
+    }, 300),
+    [loadMachines]
+  );
+
+  // Debounced search for equipment numbers
+  const searchEquipment = useCallback(
+    debounce(async (searchTerm: string) => {
+      console.log('🔧 searchEquipment called with:', searchTerm);
+      if (!searchTerm.trim()) {
+        setEquipmentOptions([]);
+        return;
+      }
+
+      try {
+        setEquipmentLoading(true);
+        const result = await loadMachines({ search: searchTerm.trim() }, 0, 'equipment_number');
+        console.log('🔧 searchEquipment result:', result.data);
+        const options = result.data.map(m => ({
+          label: m.equipment_number,
+          value: m.equipment_number, // Already using equipment_number as value (unique key)
+          machineName: m.equipment_description
+        }));
+        console.log('🔧 equipmentOptions set to:', options);
+        setEquipmentOptions(options);
+      } catch (error) {
+        console.error('Failed to search equipment:', error);
+      } finally {
+        setEquipmentLoading(false);
+      }
+    }, 300),
+    [loadMachines]
+  );
 
   // Helper functions for field permissions
   const getFieldPermission = (field: keyof FieldPermissions): FieldPermission => {
@@ -161,7 +236,7 @@ const AddTicketDialog: React.FC<AddTicketDialogProps> = ({
   }, [technicians]);
   
   // URL state management for new ticket creation (single source of truth)
-  const { getFormData, updateType, updateMachine, updateEquipment, updateMachineOnly, updateEquipmentOnly, updateRoom } = useTicketCreationUrlState();
+  const { getFormData, updateType, updateMachine, updateEquipment, updateMachineOnly, updateEquipmentOnly, updateRoom, updateParams } = useTicketCreationUrlState();
   
   // Determine if this is a new ticket
   const isNewTicket = !initialData && !ticketId;
@@ -173,22 +248,45 @@ const AddTicketDialog: React.FC<AddTicketDialogProps> = ({
     return 'Demo User';
   };
 
-  // Autocomplete options for machines and equipment numbers
-  const machineOptions = useMemo(() => {
-    return machines.map(m => ({
-      label: m.name,
-      value: m.name,
-      equipmentNumber: m.machineNumber
-    }));
-  }, [machines]);
+  // Handle machine input change for async search (typing only - no cross-population)
+  const handleMachineInputChange = (_: any, value: string, reason: string) => {
+    // Don't update on selection - let handleMachineSelect handle that
+    if (reason === 'reset') return;
+    
+    // Update the field value for new tickets
+    if (isNewTicket) {
+      updateMachine(value);
+    } else {
+      setMachine(value);
+    }
+    
+    // Trigger search if there's a value
+    if (value) {
+      searchMachines(value);
+    } else {
+      setMachineOptions([]);
+    }
+  };
 
-  const equipmentOptions = useMemo(() => {
-    return machines.map(m => ({
-      label: m.machineNumber,
-      value: m.machineNumber,
-      machineName: m.name
-    }));
-  }, [machines]);
+  // Handle equipment input change for async search (typing only - no cross-population)
+  const handleEquipmentInputChange = (_: any, value: string, reason: string) => {
+    // Don't update on selection - let handleEquipmentSelect handle that
+    if (reason === 'reset') return;
+    
+    // Update the field value for new tickets
+    if (isNewTicket) {
+      updateEquipment(value);
+    } else {
+      setEquipmentNummer(value);
+    }
+    
+    // Trigger search if there's a value
+    if (value) {
+      searchEquipment(value);
+    } else {
+      setEquipmentOptions([]);
+    }
+  };
 
   // Use centralized function from UsersProvider (currently unused due to async nature)
   // const { getDisplayNameFromUserId } = useUsersContext();
@@ -201,65 +299,89 @@ const AddTicketDialog: React.FC<AddTicketDialogProps> = ({
     }));
   }, [technicians, getTechnicianDisplayName]);
 
-  // Handle machine selection - auto-fill equipment number
-  const handleMachineSelect = (selectedMachine: string | null) => {
-    const machineValue = selectedMachine || '';
+  // Handle machine selection - auto-fill equipment number (only on explicit selection)
+  const handleMachineSelect = async (event: any, selectedMachine: string | null, reason: string) => {
+    console.log('🔧 handleMachineSelect called with:', { selectedMachine, reason });
+    console.log('🔧 machineOptions:', machineOptions);
     
-    if (isNewTicket) {
-      // For new tickets, update URL (single source of truth)
-      updateMachine(machineValue);
-    } else {
-      // For existing tickets, use local state
-      setMachine(machineValue);
-      if (selectedMachine) {
-        const machineData = machines.find(m => m.name === selectedMachine);
-        if (machineData) {
-          setEquipmentNummer(machineData.machineNumber);
-        }
+    // Only do cross-population on explicit selection, not on input/typing
+    if (reason !== 'selectOption') {
+      console.log('🔧 Not a select-option, just updating field value');
+      // Just update the field value without cross-population
+      const machineValue = selectedMachine || '';
+      if (isNewTicket) {
+        updateMachine(machineValue);
+      } else {
+        setMachine(machineValue);
+      }
+      return;
+    }
+
+    // For new tickets, update both URL parameters directly
+    if (selectedMachine && isNewTicket) {
+      console.log('🔧 New ticket - looking for machine option:', selectedMachine);
+      const machineOption = machineOptions.find(m => m.value === selectedMachine);
+      console.log('🔧 Found machine option:', machineOption);
+      if (machineOption) {
+        console.log('🔧 Updating machine and equipment:', selectedMachine, machineOption.equipmentNumber);
+        // Update both parameters at once to avoid timing issues
+        updateParams({
+          'machine': selectedMachine,
+          'equipment': machineOption.equipmentNumber
+        });
+      }
+    } else if (selectedMachine && !isNewTicket) {
+      // For existing tickets, do direct cross-population
+      setMachine(selectedMachine);
+      const machineOption = machineOptions.find(m => m.value === selectedMachine);
+      if (machineOption) {
+        setEquipmentNummer(machineOption.equipmentNumber);
       }
     }
   };
 
-  // Handle equipment number selection - auto-fill machine
-  const handleEquipmentSelect = (selectedEquipment: string | null) => {
-    const equipmentValue = selectedEquipment || '';
+  // Handle equipment number selection - auto-fill machine (only on explicit selection)
+  const handleEquipmentSelect = async (event: any, selectedEquipment: string | null, reason: string) => {
+    console.log('🔧 handleEquipmentSelect called with:', { selectedEquipment, reason });
+    console.log('🔧 equipmentOptions:', equipmentOptions);
     
-    if (isNewTicket) {
-      // For new tickets, update URL (single source of truth)
-      updateEquipment(equipmentValue);
-    } else {
-      // For existing tickets, use local state
-      setEquipmentNummer(equipmentValue);
-      if (selectedEquipment) {
-        const machineData = machines.find(m => m.machineNumber === selectedEquipment);
-        if (machineData) {
-          setMachine(machineData.name);
-        }
+    // Only do cross-population on explicit selection, not on input/typing
+    if (reason !== 'selectOption') {
+      console.log('🔧 Not a select-option, just updating field value');
+      // Just update the field value without cross-population
+      const equipmentValue = selectedEquipment || '';
+      if (isNewTicket) {
+        updateEquipment(equipmentValue);
+      } else {
+        setEquipmentNummer(equipmentValue);
+      }
+      return;
+    }
+
+    // For new tickets, update both URL parameters directly
+    if (selectedEquipment && isNewTicket) {
+      console.log('🔧 New ticket - looking for equipment option:', selectedEquipment);
+      const equipmentOption = equipmentOptions.find(m => m.value === selectedEquipment);
+      console.log('🔧 Found equipment option:', equipmentOption);
+      if (equipmentOption) {
+        console.log('🔧 Updating equipment and machine:', selectedEquipment, equipmentOption.machineName);
+        // Update both parameters at once to avoid timing issues
+        updateParams({
+          'equipment': selectedEquipment,
+          'machine': equipmentOption.machineName
+        });
+      }
+    } else if (selectedEquipment && !isNewTicket) {
+      // For existing tickets, do direct cross-population
+      setEquipmentNummer(selectedEquipment);
+      const equipmentOption = equipmentOptions.find(m => m.value === selectedEquipment);
+      if (equipmentOption) {
+        setMachine(equipmentOption.machineName);
       }
     }
   };
 
-  // Handle equipment typing input (no cross-updating)
-  const handleEquipmentInput = (equipmentValue: string) => {
-    if (isNewTicket) {
-      // For new tickets, update only equipment in URL
-      updateEquipmentOnly(equipmentValue);
-    } else {
-      // For existing tickets, use local state
-      setEquipmentNummer(equipmentValue);
-    }
-  };
 
-  // Handle machine typing input (no cross-updating)
-  const handleMachineInput = (machineValue: string) => {
-    if (isNewTicket) {
-      // For new tickets, update only machine in URL
-      updateMachineOnly(machineValue);
-    } else {
-      // For existing tickets, use local state
-      setMachine(machineValue);
-    }
-  };
   
   // Handle ticket type change
   const handleTicketTypeChange = (newType: 'verwaltung' | 'betrieb') => {
@@ -486,8 +608,22 @@ const AddTicketDialog: React.FC<AddTicketDialogProps> = ({
 
   const formValidBase = description.trim().length > 0 && 
     (currentValues.ticketType === 'verwaltung' ? (currentValues.raumnummer || '').trim().length > 0 : 
-     currentValues.ticketType === 'betrieb' ? (currentValues.machine || '').trim().length > 0 && (currentValues.equipmentNummer || '').trim().length > 0 : false);
+     currentValues.ticketType === 'betrieb' ? ((currentValues.machine || '').trim().length > 0 && (currentValues.equipmentNummer || '').trim().length > 0) : false);
   const formValid = showSaveButton ? formValidBase : true;
+  
+  // Debug form validation
+  console.log('🔧 Form validation:', { 
+    description: description.trim(), 
+    ticketType: currentValues.ticketType,
+    machine: currentValues.machine,
+    equipmentNummer: currentValues.equipmentNummer,
+    raumnummer: currentValues.raumnummer,
+    formValidBase,
+    formValid
+  });
+  
+  // Debug dialog state
+  console.log('🔧 Dialog state:', { mode, fieldPermissions, hasEditableFields, showSaveButton, formValid, formValidBase });
 
   const handleSave = async () => {
     setIsSaving(true);
@@ -535,10 +671,15 @@ const AddTicketDialog: React.FC<AddTicketDialogProps> = ({
       responsible,
     });
       
+      // For betrieb tickets, always use equipment number as machine identifier
+      const machineIdentifier = currentValues.ticketType === 'verwaltung' 
+        ? 'Verwaltung' 
+        : currentValues.equipmentNummer; // Use equipment number, not description
+
       if (onSave) await onSave({ 
       description, 
       priority, 
-        machine: currentValues.ticketType === 'verwaltung' ? 'Verwaltung' : currentValues.machine, 
+        machine: machineIdentifier, 
       status: isFieldEditable('status') ? status : initialData?.status, 
         type: currentValues.ticketType,
         category,
@@ -841,17 +982,27 @@ const AddTicketDialog: React.FC<AddTicketDialogProps> = ({
               <Box sx={{ display: 'flex', gap: 2 }}>
                 {isFieldVisible('equipmentNummer') && (
                   <Autocomplete
-                    options={equipmentOptions.map(option => option.label)}
+                    options={equipmentOptions.map(option => option.value)} // Use equipment_number as options
                     value={currentValues.equipmentNummer}
-                    onChange={(_, newValue) => handleEquipmentSelect(newValue)}
-                    onInputChange={(event, newInputValue) => {
-                      // Only update equipment field during typing, no cross-updating
-                      if (event?.type === 'change') {
-                        handleEquipmentInput(newInputValue);
+                    onChange={(event, newValue, reason) => {
+                      console.log('🔧 Autocomplete onChange triggered:', { newValue, reason });
+                      handleEquipmentSelect(event, newValue, reason);
+                    }}
+                    onInputChange={(event, value, reason) => {
+                      console.log('🔧 Autocomplete onInputChange triggered:', { value, reason });
+                      handleEquipmentInputChange(event, value, reason);
+                    }}
+                    onClose={(event, reason) => {
+                      console.log('🔧 Autocomplete onClose triggered:', { reason, currentValue: currentValues.equipmentNummer });
+                      // If dropdown closed due to option selection and we have a value, trigger cross-population
+                      if (reason === 'selectOption' && currentValues.equipmentNummer) {
+                        handleEquipmentSelect(event, currentValues.equipmentNummer, 'selectOption');
                       }
                     }}
+                    loading={equipmentLoading}
                     freeSolo
                     disabled={!isFieldEditable('equipmentNummer')}
+                    filterOptions={(x) => x} // Disable client-side filtering
                     renderInput={(params) => (
                       <TextField
                         {...params}
@@ -859,6 +1010,15 @@ const AddTicketDialog: React.FC<AddTicketDialogProps> = ({
                         size="small"
                         placeholder="z.B. EQ-001, EQ-205"
                         sx={!isFieldEditable('equipmentNummer') ? disabledFieldStyles : {}}
+                        InputProps={{
+                          ...params.InputProps,
+                          endAdornment: (
+                            <>
+                              {equipmentLoading ? <CircularProgress color="inherit" size={20} /> : null}
+                              {params.InputProps.endAdornment}
+                            </>
+                          ),
+                        }}
                       />
                     )}
                     sx={{ flex: 1, ...(!isFieldEditable('equipmentNummer') ? disabledFieldStyles : {}) }}
@@ -869,15 +1029,12 @@ const AddTicketDialog: React.FC<AddTicketDialogProps> = ({
                   <Autocomplete
                     options={machineOptions.map(option => option.label)}
                     value={currentValues.machine}
-                    onChange={(_, newValue) => handleMachineSelect(newValue)}
-                    onInputChange={(event, newInputValue) => {
-                      // Only update machine field during typing, no cross-updating
-                      if (event?.type === 'change') {
-                        handleMachineInput(newInputValue);
-                      }
-                    }}
+                    onChange={(event, newValue, reason) => handleMachineSelect(event, newValue, reason)}
+                    onInputChange={handleMachineInputChange}
+                    loading={machineLoading}
                     freeSolo
                     disabled={!isFieldEditable('machine')}
+                    filterOptions={(x) => x} // Disable client-side filtering
                     renderInput={(params) => (
                       <TextField
                         {...params}
@@ -885,6 +1042,15 @@ const AddTicketDialog: React.FC<AddTicketDialogProps> = ({
                         size="small"
                         placeholder="z.B. Presse 1, Fräse A"
                         sx={!isFieldEditable('machine') ? disabledFieldStyles : {}}
+                        InputProps={{
+                          ...params.InputProps,
+                          endAdornment: (
+                            <>
+                              {machineLoading ? <CircularProgress color="inherit" size={20} /> : null}
+                              {params.InputProps.endAdornment}
+                            </>
+                          ),
+                        }}
                       />
                     )}
                     sx={{ flex: 1, ...(!isFieldEditable('machine') ? disabledFieldStyles : {}) }}

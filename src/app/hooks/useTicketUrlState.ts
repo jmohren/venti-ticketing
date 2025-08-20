@@ -1,6 +1,7 @@
+import { useState, useEffect } from 'react';
 import { useNumberParam, useStringParam, useUrlBatchUpdate } from '@/core/hooks/useUrlState';
 import { useTickets } from '@/app/hooks/useTickets';
-import { useMachines } from '@/app/hooks/useMachines';
+import { useMachines, MachineBasic } from '@/app/hooks/useMachines';
 
 /**
  * Hook for managing ticket dialog state through URL parameters
@@ -46,7 +47,21 @@ export const useTicketCreationUrlState = () => {
   const [roomParam] = useStringParam('room');
   const [machineParam] = useStringParam('machine');
   const { updateParams } = useUrlBatchUpdate();
-  const { machines } = useMachines();
+  const { loadMachines } = useMachines();
+  const [machines, setMachines] = useState<MachineBasic[]>([]);
+
+  // Load machines for cross-referencing
+  useEffect(() => {
+    const loadMachinesForUrlState = async () => {
+      try {
+        const result = await loadMachines({}, 0);
+        setMachines(result.data);
+      } catch (error) {
+        console.error('Failed to load machines for URL state:', error);
+      }
+    };
+    loadMachinesForUrlState();
+  }, [loadMachines]);
 
   // Check if create ticket dialog should be open (URL is source of truth)
   const isCreateDialogOpen = createTicket === 'true';
@@ -82,8 +97,8 @@ export const useTicketCreationUrlState = () => {
       let machineName = machineParam || '';
       if (!machineName && equipmentParam) {
         // Try to derive machine name from equipment number
-        const machineData = machines.find(m => m.machineNumber === equipmentParam);
-        machineName = machineData?.name || '';
+        const machineData = machines.find(m => m.equipment_number.toString() === equipmentParam);
+        machineName = machineData?.equipment_description || '';
       }
       
       return {
@@ -125,9 +140,9 @@ export const useTicketCreationUrlState = () => {
     
     // If machine exists in our list, also set equipment number
     if (machine) {
-      const machineData = machines.find(m => m.name === machine);
+      const machineData = machines.find(m => m.equipment_description === machine);
       if (machineData) {
-        updates.equipment = machineData.machineNumber;
+        updates.equipment = machineData.equipment_number.toString();
       }
       // Don't clear equipment if machine not found - allow free text
     } else {
@@ -147,9 +162,9 @@ export const useTicketCreationUrlState = () => {
     
     // If equipment exists in our list, also set machine name
     if (equipment) {
-      const machineData = machines.find(m => m.machineNumber === equipment);
+      const machineData = machines.find(m => m.equipment_number.toString() === equipment);
       if (machineData) {
-        updates.machine = machineData.name;
+        updates.machine = machineData.equipment_description;
       }
       // Don't clear machine if equipment not found - allow free text
     } else {
@@ -213,16 +228,16 @@ export const useTicketCreationUrlState = () => {
       updates.equipment = params.equipmentNummer;
       updates.room = null;
       // Try to find matching machine name
-      const machineData = machines.find(m => m.machineNumber === params.equipmentNummer);
-      updates.machine = machineData?.name || null;
+      const machineData = machines.find(m => m.equipment_number.toString() === params.equipmentNummer);
+      updates.machine = machineData?.equipment_description || null;
     } else if (params?.machine) {
       // Machine name provided → Store machine name and try to find equipment
       updates.type = 'betrieb';
       updates.machine = params.machine;
       updates.room = null;
       // Try to find matching equipment number
-      const machineData = machines.find(m => m.name === params.machine);
-      updates.equipment = machineData?.machineNumber || null;
+      const machineData = machines.find(m => m.equipment_description === params.machine);
+      updates.equipment = machineData?.equipment_number.toString() || null;
     } else if (params?.type) {
       // Only type provided → Set type, clear other parameters
       updates.type = params.type;
@@ -260,6 +275,7 @@ export const useTicketCreationUrlState = () => {
     updateMachineOnly,
     updateEquipmentOnly,
     updateRoom,
+    updateParams,
     openCreateTicket,
     closeCreateTicket
   };

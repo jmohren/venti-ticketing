@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { 
   Box, 
   Paper, 
@@ -6,8 +6,10 @@ import {
   Chip
 } from '@mui/material';
 import { styled } from '@mui/material/styles';
-import { useMachines } from '@/app/hooks/useMachines';
+import { useMachines, MachineBasic, MachineFilters as MachineFiltersType, MachinePagination as MachinePaginationType } from '@/app/hooks/useMachines';
 import { useTickets } from '@/app/hooks/useTickets';
+import MachineFilters from './MachineFilters';
+import MachinePagination from '@/app/components/MachinePagination';
 
 const MachineCard = styled(Paper)(({ theme }) => ({
   padding: theme.spacing(3),
@@ -48,8 +50,62 @@ const UrgencyBadge = styled(Box)<{ urgencyColor: string }>(({ theme, urgencyColo
 }));
 
 const MaschinenWidget: React.FC = () => {
-  const { machines } = useMachines();
+  const { loadMachines, filterOptions, filterOptionsLoading } = useMachines();
   const { tickets } = useTickets();
+
+  // Local state for this view
+  const [machines, setMachines] = useState<MachineBasic[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [filters, setFilters] = useState<MachineFiltersType>({});
+  const [pagination, setPagination] = useState<MachinePaginationType>({
+    page: 0,
+    limit: 100,
+    total: 0,
+    totalPages: 0
+  });
+
+  // Load machines function
+  const searchMachines = async () => {
+    try {
+      setLoading(true);
+      const result = await loadMachines(filters, 0); // Always start from first page on search
+      setMachines(result.data);
+      setPagination(prev => ({
+        ...prev,
+        page: 0,
+        total: result.count,
+        totalPages: result.totalPages
+      }));
+    } catch (error) {
+      console.error('Failed to load machines:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Handle pagination changes
+  const handleSetPagination = async (page: number) => {
+    try {
+      setLoading(true);
+      const result = await loadMachines(filters, page);
+      setMachines(result.data);
+      setPagination(prev => ({
+        ...prev,
+        page,
+        total: result.count,
+        totalPages: result.totalPages
+      }));
+    } catch (error) {
+      console.error('Failed to load machines:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Initial load
+  useEffect(() => {
+    searchMachines();
+  }, []); // Only run once on mount
 
   const priorityColors = {
     rot: '#f44336',
@@ -68,12 +124,12 @@ const MaschinenWidget: React.FC = () => {
 
     return machines.reduce((acc, machine) => {
       const machineTickets = tickets.filter(ticket => 
-        ticket.machine === machine.name && 
+        ticket.machine === machine.equipment_description && 
         ticket.status !== 'done' && 
         ticket.status !== 'archived'
       );
 
-      acc[machine.name] = {
+      acc[machine.equipment_number] = {
         rot: { count: machineTickets.filter(t => t.priority === 'rot').length },
         gelb: { count: machineTickets.filter(t => t.priority === 'gelb').length },
         gruen: { count: machineTickets.filter(t => t.priority === 'gruen').length }
@@ -84,55 +140,75 @@ const MaschinenWidget: React.FC = () => {
   }, [machines, tickets]);
 
   const handleMachineClick = (machine: any) => {
-    console.log('Machine clicked:', machine.name);
+    console.log('Machine clicked:', machine.equipment_description);
     // TODO: Navigate to machine detail or open machine dialog
   };
 
-  if (!machines) {
-    return (
-      <Box sx={{ p: 2, textAlign: 'center' }}>
-        <Typography variant="body2" color="text.secondary">
-          Laden...
-        </Typography>
-      </Box>
-    );
-  }
-
   return (
-    <Box
-      sx={{
-        p: 2,
-        height: '100%',
-        overflow: 'auto',
-        '&::-webkit-scrollbar': { width: '8px' },
-        '&::-webkit-scrollbar-track': { backgroundColor: 'grey.100', borderRadius: '4px' },
-        '&::-webkit-scrollbar-thumb': {
-          backgroundColor: 'grey.400',
-          borderRadius: '4px',
-          '&:hover': { backgroundColor: 'grey.500' },
-        },
-      }}
-    >
+    <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+      {/* Filters */}
+      <Box sx={{ px: 2, pt: 2 }}>
+        <MachineFilters
+          filters={filters}
+          filterOptions={filterOptions}
+          filterOptionsLoading={filterOptionsLoading}
+          onFiltersChange={setFilters}
+          onSearch={searchMachines}
+          loading={loading}
+        />
+      </Box>
+
+      {/* Machine Grid */}
       <Box
         sx={{
-          display: 'flex',
-          flexWrap: 'wrap',
-          gap: 3,
-          '& > *': {
-            width: 'calc(20% - 24px)', // Fixed width for 5 items per row
-            minWidth: '250px',
-            flexShrink: 0,
+          flex: 1,
+          p: 2,
+          overflow: 'auto',
+          '&::-webkit-scrollbar': { width: '8px' },
+          '&::-webkit-scrollbar-track': { backgroundColor: 'grey.100', borderRadius: '4px' },
+          '&::-webkit-scrollbar-thumb': {
+            backgroundColor: 'grey.400',
+            borderRadius: '4px',
+            '&:hover': { backgroundColor: 'grey.500' },
           },
         }}
       >
-        {machines.map((machine) => {
-          const ticketData = machineTicketData[machine.name] || { rot: { count: 0 }, gelb: { count: 0 }, gruen: { count: 0 } };
+        {loading ? (
+          <Box sx={{ textAlign: 'center', py: 4 }}>
+            <Typography variant="body2" color="text.secondary">
+              Maschinen werden geladen...
+            </Typography>
+          </Box>
+        ) : machines.length === 0 ? (
+          <Box sx={{ textAlign: 'center', py: 4 }}>
+            <Typography variant="body2" color="text.secondary">
+              Keine Maschinen gefunden.
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+              Versuchen Sie, die Filter zu ändern.
+            </Typography>
+          </Box>
+        ) : (
+          <Box
+            sx={{
+              display: 'flex',
+              flexWrap: 'wrap',
+              gap: 3,
+              '& > *': {
+                width: 'calc(20% - 24px)', // Fixed width for 5 items per row
+                minWidth: '250px',
+                flexShrink: 0,
+              },
+            }}
+          >
+            {machines.map((machine) => {
+          const ticketData = machineTicketData[machine.equipment_number] || { rot: { count: 0 }, gelb: { count: 0 }, gruen: { count: 0 } };
 
           return (
             <MachineCard 
               elevation={1}
               onClick={() => handleMachineClick(machine)}
-              key={machine.id}
+              key={machine.equipment_number}
             >
               <MachineHeader>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
@@ -144,10 +220,10 @@ const MaschinenWidget: React.FC = () => {
                       color: 'text.primary'
                     }}
                   >
-                    {machine.name}
+                    {machine.equipment_description}
                   </Typography>
                   <Chip
-                    label={machine.machineNumber}
+                    label={machine.equipment_number}
                     size="small"
                     variant="outlined"
                     sx={{
@@ -182,7 +258,16 @@ const MaschinenWidget: React.FC = () => {
             </MachineCard>
           );
         })}
+          </Box>
+        )}
       </Box>
+
+      {/* Pagination */}
+      <MachinePagination
+        pagination={pagination}
+        onPageChange={handleSetPagination}
+        loading={loading}
+      />
     </Box>
   );
 };

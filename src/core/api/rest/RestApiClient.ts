@@ -17,6 +17,7 @@ export type QueryParams = {
 export interface RestApiClient {
   // Generic CRUD operations with QueryParams support
   get<T = any>(table: string, params?: QueryParams): Promise<T[]>;
+  getWithCount<T = any>(table: string, params?: QueryParams): Promise<{ data: T[], count: number }>;
   post<T = any>(table: string, data: any): Promise<T>;
   patch<T = any>(table: string, data: any, params?: Omit<QueryParams, 'select' | 'order'>): Promise<T[]>;
   delete(table: string, params?: Omit<QueryParams, 'select' | 'order'>): Promise<void>;
@@ -158,6 +159,37 @@ class AxiosRestApiClient implements RestApiClient {
       return response.data;
     } catch (error) {
       console.error(`❌ GET ${table} failed:`, error);
+      throw error;
+    }
+  }
+
+  // Get with count - returns data and total count
+  async getWithCount<T = any>(table: string, params: QueryParams = {}): Promise<{ data: T[], count: number }> {
+    try {
+      const response: AxiosResponse<T[]> = await this.axios.get(this.getTableUrl(table), {
+        params: this.buildParams(params),
+        headers: {
+          'Prefer': 'count=exact'
+        }
+      });
+      
+      // PostgREST returns count in Content-Range header: "0-99/1000" or "*/0"
+      const contentRange = response.headers['content-range'];
+      let count = 0;
+      
+      if (contentRange) {
+        const match = contentRange.match(/\/(\d+)$/);
+        if (match) {
+          count = parseInt(match[1], 10);
+        }
+      }
+      
+      return {
+        data: response.data,
+        count
+      };
+    } catch (error) {
+      console.error(`❌ GET with count ${table} failed:`, error);
       throw error;
     }
   }

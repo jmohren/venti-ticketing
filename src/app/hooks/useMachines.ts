@@ -2,7 +2,10 @@ import { useMachineContext } from '@/app/state/MachineProvider';
 
 // Re-export types from the provider for convenience
 export type { 
-  Machine, 
+  Machine,
+  MachineBasic,
+  MachineFilters,
+  MachinePagination,
   Task 
 } from '@/app/state/MachineProvider';
 

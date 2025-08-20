@@ -165,9 +165,6 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
       setIsLoggingOut(false);
     }
   };
-
-  // Render based on authentication state
-  console.log('🎯 ProtectedRoute render - authState:', authState, 'user:', user);
   
   switch (authState) {
     case 'checking':
@@ -185,7 +182,6 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
       if (forceReset) {
         return <ForcePasswordChangeScreen onSuccess={() => setForceReset(false)} />;
       }
-      console.log('✅ Rendering AppBar with user:', user);
       return (
         <Box sx={{ 
           // Cross-browser viewport height with progressive enhancement

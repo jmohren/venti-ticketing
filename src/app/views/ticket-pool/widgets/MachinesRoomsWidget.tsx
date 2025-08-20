@@ -1,8 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Box, 
-  TextField, 
-  InputAdornment,
   List, 
   ListItem, 
   ListItemButton,
@@ -16,18 +14,21 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
+  TextField,
+  InputAdornment,
 } from '@mui/material';
 import { styled } from '@mui/material/styles';
-import SearchIcon from '@mui/icons-material/Search';
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
-import { useMachines, Machine } from '@/app/hooks/useMachines';
+import SearchIcon from '@mui/icons-material/Search';
+import { useMachines, Machine, MachineBasic, MachineFilters as MachineFiltersType, MachinePagination as MachinePaginationType } from '@/app/hooks/useMachines';
 import MachineDialog from '@/app/dialogs/MachineDialog';
+import MachinePagination from '@/app/components/MachinePagination';
 
 interface Props {
   onSelect?: (machine: Machine) => void;
-  selectedId?: number;
+  selectedId?: string;
 }
 
 // Styled components matching existing table design patterns
@@ -65,24 +66,80 @@ const MachineItem = styled(Box)({
 });
 
 const MachinesRoomsWidget: React.FC<Props> = ({ onSelect, selectedId }) => {
-  const { machines, addMachine, updateMachine, deleteMachine } = useMachines();
+  const { 
+    loadMachines,
+    addMachine, 
+    updateMachine, 
+    deleteMachine, 
+    getMachine 
+  } = useMachines();
   
-  const [search, setSearch] = useState('');
+  // Local state for this view
+  const [machines, setMachines] = useState<MachineBasic[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [filters, setFilters] = useState<MachineFiltersType>({});
+  const [pagination, setPagination] = useState<MachinePaginationType>({
+    page: 0,
+    limit: 100,
+    total: 0,
+    totalPages: 0
+  });
+  
+  const [searchTerm, setSearchTerm] = useState('');
   const [machineDialogOpen, setMachineDialogOpen] = useState(false);
   const [editMachine, setEditMachine] = useState<Machine | null>(null);
   
   // Delete confirmation dialog state
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [machineToDelete, setMachineToDelete] = useState<Machine | null>(null);
+  const [machineToDelete, setMachineToDelete] = useState<MachineBasic | null>(null);
 
-  // Filter machines based on search
-  const filteredMachines = machines.filter(machine => 
-      machine.name.toLowerCase().includes(search.toLowerCase()) ||
-    machine.machineNumber.toLowerCase().includes(search.toLowerCase())
-  );
+  // Load machines function
+  const searchMachines = async () => {
+    try {
+      setLoading(true);
+      const newFilters = { search: searchTerm.trim() || undefined };
+      setFilters(newFilters);
+      const result = await loadMachines(newFilters, 0);
+      setMachines(result.data);
+      setPagination(prev => ({
+        ...prev,
+        page: 0,
+        total: result.count,
+        totalPages: result.totalPages
+      }));
+    } catch (error) {
+      console.error('Failed to load machines:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  const handleMachineSelect = (machine: Machine) => {
-    onSelect?.(machine);
+  // Handle pagination changes
+  const handleSetPagination = async (page: number) => {
+    try {
+      setLoading(true);
+      const result = await loadMachines(filters, page);
+      setMachines(result.data);
+      setPagination(prev => ({
+        ...prev,
+        page,
+        total: result.count,
+        totalPages: result.totalPages
+      }));
+    } catch (error) {
+      console.error('Failed to load machines:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Initial load
+  useEffect(() => {
+    searchMachines();
+  }, []); // Only run once on mount
+
+  const handleMachineSelect = (machine: MachineBasic) => {
+    onSelect?.(machine as Machine); // Cast for compatibility with existing interface
   };
 
   const handleAddMachine = () => {
@@ -90,12 +147,22 @@ const MachinesRoomsWidget: React.FC<Props> = ({ onSelect, selectedId }) => {
     setMachineDialogOpen(true);
   };
 
-  const handleEditMachine = (machine: Machine) => {
-    setEditMachine(machine);
+  const handleEditMachine = async (machine: MachineBasic) => {
+    // Open dialog immediately with basic data
+    setEditMachine(machine as Machine);
     setMachineDialogOpen(true);
+    
+    try {
+      // Load full machine data in the background
+      const fullMachineData = await getMachine(machine.equipment_number);
+      setEditMachine(fullMachineData);
+    } catch (error) {
+      console.error('Failed to load machine data for editing:', error);
+      // Keep the basic machine data that's already set
+    }
   };
 
-  const handleDeleteMachine = (machine: Machine) => {
+  const handleDeleteMachine = (machine: MachineBasic) => {
     setMachineToDelete(machine);
     setDeleteDialogOpen(true);
   };
@@ -104,7 +171,7 @@ const MachinesRoomsWidget: React.FC<Props> = ({ onSelect, selectedId }) => {
     if (!machineToDelete) return;
     
     try {
-      await deleteMachine(machineToDelete.id);
+      await deleteMachine(machineToDelete.equipment_number);
       setDeleteDialogOpen(false);
       setMachineToDelete(null);
     } catch (error) {
@@ -119,7 +186,7 @@ const MachinesRoomsWidget: React.FC<Props> = ({ onSelect, selectedId }) => {
 
   const handleMachineSave = (machine: Machine) => {
     if (editMachine) {
-      updateMachine(machine.id, machine);
+      updateMachine(machine.equipment_number, machine);
     } else {
       addMachine(machine);
     }
@@ -135,8 +202,9 @@ const MachinesRoomsWidget: React.FC<Props> = ({ onSelect, selectedId }) => {
           <TextField
             size="small"
             placeholder="Maschinen durchsuchen..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            onKeyPress={(e) => e.key === 'Enter' && searchMachines()}
             InputProps={{
               startAdornment: (
                 <InputAdornment position="start">
@@ -146,6 +214,15 @@ const MachinesRoomsWidget: React.FC<Props> = ({ onSelect, selectedId }) => {
             }}
             sx={{ flex: 1, minWidth: 0 }}
           />
+          <Button
+            size="small"
+            onClick={searchMachines}
+            variant="outlined"
+            disabled={loading}
+            sx={{ minWidth: 80 }}
+          >
+            Suchen
+          </Button>
           <Button
             size="small"
             startIcon={<AddIcon />}
@@ -158,25 +235,30 @@ const MachinesRoomsWidget: React.FC<Props> = ({ onSelect, selectedId }) => {
         </MachineListHeader>
 
         {/* Machine List */}
-        {filteredMachines.length === 0 ? (
+        {loading ? (
           <Box sx={{ textAlign: 'center', mt: 4, p: 2 }}>
             <Typography color="text.secondary">
-              {search ? 'Keine Maschinen gefunden' : 'Keine Maschinen verfügbar'}
+              Maschinen werden geladen...
             </Typography>
-            {!search && (
-              <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                Klicken Sie auf "Hinzufügen" um eine neue Maschine zu erstellen
-              </Typography>
-            )}
+          </Box>
+        ) : machines.length === 0 ? (
+          <Box sx={{ textAlign: 'center', mt: 4, p: 2 }}>
+            <Typography color="text.secondary">
+              Keine Maschinen gefunden
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+              Verwenden Sie die Filter oder klicken Sie auf "Hinzufügen"
+            </Typography>
           </Box>
         ) : (
           <List sx={{ flex: 1, overflow: 'auto', p: 0 }}>
-            {filteredMachines.map((machine) => {
-              const isSelected = selectedId === machine.id;
-              const taskCount = machine.tasks?.length || 0;
+            {machines.map((machine) => {
+              const isSelected = selectedId === machine.equipment_number;
+              // Task count not available in MachineBasic, would need separate query
+              const taskCount = 0;
               
               return (
-                <ListItem key={machine.id} disablePadding>
+                <ListItem key={machine.equipment_number} disablePadding>
                   <StyledListItemButton
                     selected={isSelected}
                     onClick={() => handleMachineSelect(machine)}
@@ -189,10 +271,10 @@ const MachinesRoomsWidget: React.FC<Props> = ({ onSelect, selectedId }) => {
                           primary={
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0 }}>
                               <Typography variant="body2" fontWeight={isSelected ? 'bold' : 'normal'} sx={{ m: 0 }}>
-                                {machine.name}
+                                {machine.equipment_description}
               </Typography>
                               <Chip
-                                label={machine.machineNumber}
+                                label={machine.equipment_number}
                                 size="small"
                                 variant="outlined"
                                 sx={{ 
@@ -251,6 +333,13 @@ const MachinesRoomsWidget: React.FC<Props> = ({ onSelect, selectedId }) => {
         )}
       </Paper>
 
+      {/* Pagination */}
+      <MachinePagination
+        pagination={pagination}
+        onPageChange={handleSetPagination}
+        loading={loading}
+      />
+
       {/* Machine Dialog */}
       <MachineDialog
         open={machineDialogOpen}
@@ -272,7 +361,7 @@ const MachinesRoomsWidget: React.FC<Props> = ({ onSelect, selectedId }) => {
         <DialogTitle>Maschine löschen</DialogTitle>
         <DialogContent>
           <Typography>
-            Sind Sie sicher, dass Sie die Maschine <strong>{machineToDelete?.name}</strong> löschen möchten?
+            Sind Sie sicher, dass Sie die Maschine <strong>{machineToDelete?.equipment_description}</strong> löschen möchten?
           </Typography>
         </DialogContent>
         <DialogActions>
