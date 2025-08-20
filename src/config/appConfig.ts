@@ -39,14 +39,6 @@ export const getAppConfig = (): AppConfig => {
     environment: isDevelopment ? 'development' : 'production'
   };
 
-  // Debug: log env variables and derived baseUrl (remove or guard when not needed)
-  console.log('[appConfig] env values', {
-    DEV: import.meta.env.DEV,
-    MODE: import.meta.env.MODE,
-    VITE_BACKEND_URL: import.meta.env.VITE_BACKEND_URL,
-    currentOrigin: typeof window !== 'undefined' ? window.location.origin : 'N/A',
-  }, '→ baseUrl used:', config.api.baseUrl);
-
   return config;
 };
 

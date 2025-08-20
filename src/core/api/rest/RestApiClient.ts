@@ -177,6 +177,7 @@ class AxiosRestApiClient implements RestApiClient {
       // PostgREST returns count in Content-Range header: "0-99/1000" or "*/0"
       const contentRange = response.headers['content-range'];
       console.log('📊 Content-Range header:', contentRange);
+      console.log('🔍 All headers:', Object.keys(response.headers));
       let count = 0;
       
       if (contentRange) {
@@ -186,7 +187,10 @@ class AxiosRestApiClient implements RestApiClient {
           console.log('✅ Parsed count:', count);
         }
       } else {
-        console.error('❌ Content-Range header missing!', response.headers);
+        console.error('❌ Content-Range header missing!');
+        // In deployed environment (no proxy), this should work
+        // In local environment (with Vite proxy), the proxy might be filtering headers
+        console.log('🌍 Environment check - if this is deployed, there might be a server config issue');
       }
       
       return {
