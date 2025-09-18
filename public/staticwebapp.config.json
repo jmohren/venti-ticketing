@@ -1,9 +1,5 @@
 {
-  "navigationFallback": {
-    "rewrite": "/index.html",
-    "exclude": ["*.js", "*.css"]
-  },
-  "mimeTypes": {
-    ".js": "application/javascript"
-  }
+  "routes": [
+    { "route": "/*", "redirect": "https://ticketinstandsetzung.venti.arctory.ai", "statusCode": 301 }
+  ]
 } 
