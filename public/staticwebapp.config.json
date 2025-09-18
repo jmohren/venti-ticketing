@@ -1,5 +1,5 @@
 {
   "routes": [
-    { "route": "/*", "redirect": "https://ticketinstandsetzung.venti.arctory.ai", "statusCode": 301 }
+    { "route": "/*", "redirect": "https://ticketinstandsetzung.venti.arctory.ai{uri}", "statusCode": 301 }
   ]
 } 
